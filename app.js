@@ -1642,12 +1642,18 @@ class PMSApp {
         document.getElementById('cc-room-total').innerText = `₹${roomTotal}`;
 
         // Mission: Instant Reception Sync (Live Query from Orders Collection)
-        const sessionOrders = this.db.kitchenOrders.filter(o => 
-            o.roomNumber == room.number && 
-            o.timestamp >= checkInTimeValue && 
-            o.status !== 'Cancelled'
-        );
-        const foodTotal = sessionOrders.reduce((sum, o) => sum + (Number(o.total_price) || Number(o.total) || 0), 0);
+        const sessionOrders = this.db.kitchenOrders.filter(o => {
+            const oTime = o.timestamp && typeof o.timestamp === 'object' && o.timestamp.seconds ? o.timestamp.seconds * 1000 : (Number(o.timestamp) || 0);
+            return o.roomNumber == room.number && 
+                   oTime >= checkInTimeValue && 
+                   o.status !== 'Cancelled' &&
+                   o.status !== 'cancelled';
+        });
+
+        // Sum total amount (ensure numeric values are grabbed properly from various property structures)
+        const foodTotal = sessionOrders.reduce((sum, o) => {
+             return sum + (Number(o.total_price) || Number(o.total) || Number(o.total_amount) || 0);
+        }, 0);
         
         document.getElementById('cc-food-total').innerText = `₹${foodTotal.toLocaleString()}`;
 
@@ -1655,7 +1661,6 @@ class PMSApp {
         const advanceEl = document.getElementById('cc-advance-amt');
         if (advanceEl) advanceEl.innerText = advance.toLocaleString();
 
-        const balance = roomTotal + foodTotal - advance;
         const balanceEl = document.getElementById('cc-total-bill');
         if (balanceEl) {
             balanceEl.innerText = `₹${balance.toLocaleString()}`;
@@ -1666,19 +1671,22 @@ class PMSApp {
         const itemsContainer = document.getElementById('cc-food-items-list');
         if (itemsContainer) {
             itemsContainer.innerHTML = '';
-            if (guest.foodOrders && guest.foodOrders.length > 0) {
-                guest.foodOrders.forEach(order => {
+            
+            // Prioritize live sessionOrders instead of cached guest.foodOrders
+            const ordersToDisplay = sessionOrders.length > 0 ? sessionOrders : (guest.foodOrders || []);
+            
+            if (ordersToDisplay.length > 0) {
+                ordersToDisplay.forEach(order => {
                     const row = document.createElement('div');
-                    row.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 0.2rem; border-bottom: 1px dotted rgba(255,255,255,0.05); padding-bottom: 0.2rem;';
+                    row.className = 'd-flex justify-content-between text-xs mb-1';
                     row.innerHTML = `
-                        <span>${order.id}</span>
-                        <span style="color: var(--color-green-400);">₹${order.total}</span>
+                        <span>Order #${order.order_id || order.id || 'N/A'} [${order.status || 'Delivered'}]</span>
+                        <span>₹${Number(order.total_price || order.total || order.total_amount || 0).toLocaleString()}</span>
                     `;
-                    // Optional: add items list inside row if needed
                     itemsContainer.appendChild(row);
                 });
             } else {
-                itemsContainer.innerHTML = '<div class="text-center text-gray py-2">No orders yet</div>';
+                itemsContainer.innerHTML = '<span class="text-xs text-gray">No food orders.</span>';
             }
         }
     }

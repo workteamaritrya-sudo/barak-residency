@@ -158,9 +158,10 @@
                                     <span id="cc-total-bill">₹ 0</span>
                                 </div>
                             </div>
-                            <div class="cc-actions mt-4" style="border-top: 1px solid var(--glass-border); padding-top: 1.5rem; display: flex; gap: 1rem;">
-                                <button class="btn btn-outline flex-1" onclick="app.toggleOrderHistory()">History</button>
-                                <button class="btn btn-primary flex-1" onclick="app.generateInvoice()">Checkout</button>
+                            <div class="cc-actions mt-4" style="border-top: 1px solid var(--glass-border); padding-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                                <button class="btn btn-outline" style="flex:1" onclick="app.toggleOrderHistory()">History</button>
+                                <button class="btn btn-primary" style="flex:1" onclick="app.generateInvoice()">Print Bill</button>
+                                <button class="btn btn-success" style="flex:1" onclick="app.finalizePayAndCheckout()">Finalize Checkout</button>
                             </div>
                         </div>
 

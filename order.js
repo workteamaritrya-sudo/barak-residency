@@ -257,11 +257,17 @@ class GuestPortal {
             wFn('roomNumber', '==', String(this.roomNumber))
         );
         onSnapshot(roomOrdersQuery, (snap) => {
-            if (snap.empty) return;
+            if (snap.empty) {
+                this.renderSessionHistory([]);
+                return;
+            }
+            
+            const allOrders = snap.docs.map(d => d.data());
+            this.renderSessionHistory(allOrders);
+
             // Pick the most recent non-delivered order
-            const active = snap.docs
-                .map(d => d.data())
-                .filter(o => o.status !== 'Delivered' && o.status !== 'delivered')
+            const active = allOrders
+                .filter(o => o.status !== 'Delivered' && o.status !== 'delivered' && o.status !== 'Cancelled' && o.status !== 'cancelled')
                 .sort((a, b) => {
                     const ta = a.timestamp?.seconds ? a.timestamp.seconds*1000 : (a.timestamp || 0);
                     const tb = b.timestamp?.seconds ? b.timestamp.seconds*1000 : (b.timestamp || 0);
@@ -272,6 +278,11 @@ class GuestPortal {
                 const latest = active[0];
                 this.activeOrderId = latest.order_id || latest.id;
                 localStorage.setItem(`br_active_order_${this.roomNumber}`, this.activeOrderId);
+                
+                // Set the ID display in Tracker
+                const tid = document.getElementById('order-id-display');
+                if (tid) tid.innerText = `ID: #${this.activeOrderId}`;
+                
                 this.updateTrackingUI(latest.status);
                 this.updateActivePreview(true);
             } else {
@@ -283,6 +294,47 @@ class GuestPortal {
                 }, 5000);
             }
         });
+    }
+
+    renderSessionHistory(orders) {
+        const listContainer = document.getElementById('session-items-list');
+        if (!listContainer) return;
+        
+        const validOrders = orders.filter(o => o.status !== 'Cancelled' && o.status !== 'cancelled').sort((a, b) => {
+            const ta = a.timestamp?.seconds ? a.timestamp.seconds*1000 : (a.timestamp || 0);
+            const tb = b.timestamp?.seconds ? b.timestamp.seconds*1000 : (b.timestamp || 0);
+            return tb - ta; // Newest first
+        });
+
+        if (validOrders.length === 0) {
+            listContainer.innerHTML = '<div style="opacity: 0.5; font-size: 0.9rem;">No orders in this session yet.</div>';
+            return;
+        }
+
+        listContainer.innerHTML = validOrders.map(o => {
+            const total = Number(o.total_price || o.total_amount || o.total || 0);
+            let stat = o.status || 'Unknown';
+            let statColor = '#94A3B8';
+            if (stat.toLowerCase() === 'delivered') { stat = 'Delivered'; statColor = '#4ade80'; }
+            else { statColor = '#F59E0B'; }
+            
+            const itemsList = (o.items || []).map(i => {
+                const name = typeof i === 'object' ? i.name : i;
+                const qty = typeof i === 'object' ? (i.qty || 1) : 1;
+                return `${name} x${qty}`;
+            }).join(', ');
+            
+            return `
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); padding: 10px; border-radius: 12px; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; margin-bottom: 4px;">
+                        <span>Order #${o.order_id || o.id}</span>
+                        <span>₹${total}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 4px;">${itemsList}</div>
+                    <div style="font-size: 0.75rem; color: ${statColor}; font-weight: bold;">Status: ${stat}</div>
+                </div>
+            `;
+        }).join('');
     }
 
     updateBranding() {
@@ -299,7 +351,12 @@ class GuestPortal {
         if (hour < 12) intro = "Good Morning";
         else if (hour < 17) intro = "Good Afternoon";
 
-        greetEl.innerText = `${intro}, ${this.salutation} ${this.guestName.split(' ')[0]}`;
+        greetEl.innerText = `Welcome to Barak Residency`;
+        
+        const heroGreet = document.getElementById('hero-greeting');
+        if (heroGreet) {
+             heroGreet.innerText = `${intro}, ${this.salutation} ${this.guestName.split(' ')[0]}`;
+        }
     }
 
     renderMenu() {
@@ -577,27 +634,41 @@ class GuestPortal {
         const progress = document.getElementById('timeline-progress');
         
         const steps = {
-            'Pending': { p: '0% ghost', n: 1, text: 'Order Placed' },
-            'Kitchen': { p: '33%', n: 2, text: 'Being Prepared' },
-            'preparing': { p: '33%', n: 2, text: 'Being Prepared' },
-            'Served': { p: '66%', n: 3, text: 'Order Ready' },
-            'ready': { p: '66%', n: 3, text: 'Order Ready' },
-            'On the Way': { p: '66%', n: 3, text: 'On the Way' },
-            'ontheway': { p: '66%', n: 3, text: 'On the Way' },
-            'delivered': { p: '100%', n: 4, text: 'Delivered' },
-            'Delivered': { p: '100%', n: 4, text: 'Delivered' }
+            'Pending': { p: '0%', n: 1, text: 'Order Placed', title3: 'Out for Delivery', msg3: 'Waiting for dispatcher' },
+            'Kitchen': { p: '33%', n: 2, text: 'Preparing Meal', title3: 'Out for Delivery', msg3: 'Chef is cooking your meal' },
+            'preparing': { p: '33%', n: 2, text: 'Preparing Meal', title3: 'Out for Delivery', msg3: 'Chef is cooking your meal' },
+            'Served': { p: '66%', n: 3, text: 'Order Ready', title3: 'Out for Delivery', msg3: 'Order packed! Waiting for waiter.' },
+            'ready': { p: '66%', n: 3, text: 'Order Ready', title3: 'Out for Delivery', msg3: 'Order packed! Waiting for waiter.' },
+            'On the Way': { p: '85%', n: 3, text: 'On the Way', title3: 'On the Way', msg3: `Coming to Room ${this.roomNumber}` },
+            'ontheway': { p: '85%', n: 3, text: 'On the Way', title3: 'On the Way', msg3: `Coming to Room ${this.roomNumber}` },
+            'delivered': { p: '100%', n: 4, text: 'Delivered', title3: 'Delivered', msg3: 'Delivered' },
+            'Delivered': { p: '100%', n: 4, text: 'Delivered', title3: 'Delivered', msg3: 'Delivered' }
         };
 
         const current = steps[status] || steps['Pending'];
         if (label) label.innerText = current.text;
         if (progress) progress.style.height = current.p;
+        
+        const title3 = document.getElementById('step-3-title');
+        const msg3 = document.getElementById('step-3-msg');
+        if (title3) title3.innerText = current.title3;
+        if (msg3) msg3.innerHTML = current.msg3;
 
         for (let i = 1; i <= 4; i++) {
             const s = document.getElementById(`step-${i}`);
             if (s) {
                 s.classList.remove('active', 'done');
-                if (i < current.n) s.classList.add('done');
-                if (i === current.n) s.classList.add('active');
+                if (i <= current.n) {
+                    // For steps up to N, they are DONE unless it's exactly N and not 100% completed
+                    if (i < current.n) s.classList.add('done');
+                    else s.classList.add('active'); // i == current.n
+                    
+                    // Specific override for "ready": It COMPLETES step 2, but step 3 is waiting actively
+                    if ((status.toLowerCase() === 'ready' || status === 'Served') && i === 2) {
+                        s.classList.remove('active');
+                        s.classList.add('done');
+                    }
+                }
             }
         }
 
@@ -605,6 +676,9 @@ class GuestPortal {
             localStorage.removeItem(`br_active_order_${this.roomNumber}`);
             this.activeOrderId = null;
             setTimeout(() => this.updateActivePreview(false), 5000);
+            
+            // Re-fetch session data to populate order history after delivery
+            setTimeout(() => this.fetchGuestData(), 1000);
         }
     }
 
