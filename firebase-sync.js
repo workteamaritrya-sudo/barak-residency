@@ -2,7 +2,7 @@ import { firebaseConfig } from "./firebase-config.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
 import { getDatabase, ref, set, onValue, get, push } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, getDocs, or, enableIndexedDbPersistence, deleteDoc, Timestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, getDocs, or, enableIndexedDbPersistence, deleteDoc, Timestamp, runTransaction } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
 // Initialize Firebase with Public Configuration
@@ -23,7 +23,7 @@ enableIndexedDbPersistence(firestore).catch((err) => {
 // Make available globally for app.js and order.js
 window.firebaseFS = firestore;
 window.firebaseST = storage;
-window.firebaseHooks = { doc, collection, query, where, updateDoc, addDoc, serverTimestamp, onSnapshot, getDocs, setDoc, sRef, uploadBytes, getDownloadURL, or, deleteDoc, Timestamp };
+window.firebaseHooks = { doc, collection, query, where, updateDoc, addDoc, serverTimestamp, onSnapshot, getDocs, setDoc, sRef, uploadBytes, getDownloadURL, or, deleteDoc, Timestamp, runTransaction };
 
 class FirebaseSyncEngine {
     constructor() {
@@ -47,29 +47,28 @@ class FirebaseSyncEngine {
         onSnapshot(roomsCol, (snapshot) => {
             if (this.isSyncing) return;
             const roomsData = {};
-            const roomsArr = [];
             snapshot.forEach(d => {
                 const data = d.data();
-                roomsData[data.number] = data;
-                roomsArr.push(data);
+                // Key by both numeric and string forms for bullet-proof lookup
+                const key = data.number;
+                roomsData[key] = data;
+                if (typeof key === 'number') roomsData[String(key)] = data;
+                if (typeof key === 'string') roomsData[Number(key)] = data;
             });
-            
+            const roomsArr = Object.values(roomsData);
+
             if (roomsArr.length > 0) {
                 this.syncArrayToIDB('rooms', roomsArr);
                 if (window.app && window.app.db) {
                     window.app.db.rooms = roomsData;
-                    if (window.app.currentPortal === 'reception') window.app.renderRoomGrid();
-                }
-                
-                /* Guest Portal Redirect/Expiry Logic - DISABLED per Mission Fix
-                if (window.portal && window.portal.roomNumber) {
-                    const roomInfo = roomsData[window.portal.roomNumber];
-                    if (roomInfo && roomInfo.status === 'available') {
-                        localStorage.removeItem('br_guest_session');
-                        localStorage.removeItem(`br_active_order_${window.portal.roomNumber}`);
-                        window.portal.showError("Session Expired", "You have been checked out. Thank you!");
+                    if (window.app.currentPortal === 'reception') {
+                        window.app.renderRoomGrid();
+                        window.app.renderRoomOrderPanel();
+                        window.app.renderServiceRequests();
+                        // Refresh command center if a room is selected
+                        if (window.app.selectedRoomId) window.app.updateCommandCenter();
                     }
-                } */
+                }
             }
         });
 
@@ -102,7 +101,34 @@ class FirebaseSyncEngine {
             }
         });
 
-        // --- 4. GLOBAL SETTINGS SYNC ---
+        // --- 4. SERVICE REQUESTS SYNC ---
+        const serviceCol = collection(window.firebaseFS, 'serviceRequests');
+        onSnapshot(serviceCol, (snapshot) => {
+            const requests = [];
+            let hasNew = false;
+            snapshot.docChanges().forEach(change => {
+                if (change.type === "added" && change.doc.data().status === 'pending') {
+                    hasNew = true;
+                }
+            });
+
+            snapshot.forEach(d => {
+                requests.push({ id: d.id, ...d.data() });
+            });
+
+            if (window.app && window.app.db) {
+                window.app.db.serviceRequests = requests;
+                if (window.app.currentPortal === 'reception') {
+                    window.app.renderServiceRequests();
+                    if (hasNew) {
+                        this.playReceptionAlert();
+                        this.playKitchenAlert(); // Alert both for service
+                    }
+                }
+            }
+        });
+
+        // --- 5. GLOBAL SETTINGS SYNC ---
         const settingsDoc = doc(window.firebaseFS, 'settings', 'global');
         onSnapshot(settingsDoc, (snapshot) => {
             if (snapshot.exists()) {
@@ -124,15 +150,20 @@ class FirebaseSyncEngine {
                 const order = change.doc.data();
                 if (change.type === "modified" && order.status === 'Served') {
                     this.playWaiterAlert();
-                } else if (change.type === "added" && order.status === 'Pending') {
-                    this.playKitchenAlert();
-                    this.playReceptionAlert();
+                } else if ((change.type === "added" || change.type === "modified") && (order.status === 'Pending' || order.status === 'Kitchen')) {
+                    // Play alerts for new orders or updates
+                    if (change.type === "added") {
+                        this.playKitchenAlert();
+                        this.playReceptionAlert();
+                    }
+                    
                     // Mission: Auto-notify Reception Dashboard for Badge Update
-                    if (window.app && window.app.db && order.roomId) {
-                        window.app.db.addNotification('order', `New Order: Room ${order.roomId}`, 'reception', { 
+                    if (window.app && window.app.db && order.roomNumber) {
+                        const msg = change.type === "added" ? `New Order: Room ${order.roomNumber}` : `Update: Room ${order.roomNumber} (Add-on)`;
+                        window.app.db.addNotification('order', msg, 'reception', { 
                             type: 'room', 
                             orderId: order.order_id || order.id, 
-                            roomId: order.roomId 
+                            roomNumber: order.roomNumber 
                         });
                     }
                 }
@@ -141,7 +172,6 @@ class FirebaseSyncEngine {
             const orderList = [];
             snapshot.forEach(d => {
                 const data = d.data();
-                // Placeholder logic for fetch errors or missing fields
                 orderList.push({
                     ...data, 
                     id: data.order_id || d.id,
@@ -149,8 +179,15 @@ class FirebaseSyncEngine {
                     status: data.status || 'Pending'
                 });
             });
+
             if (window.app && window.app.db) {
+                window.app.db.kitchenOrders = orderList;
                 this.syncArrayToIDB('kitchenOrders', orderList);
+                if (window.app.currentPortal === 'kitchen') window.app.renderKDS();
+                if (window.app.currentPortal === 'reception') {
+                    window.app.syncState();
+                    window.app.renderRoomOrderPanel(); // Forced re-render
+                }
             }
         });
     }

@@ -485,7 +485,9 @@ body.isolated-mode .portal-content {
 .room-status { font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-weight: 600; text-transform: uppercase; }
 .status-available { background: rgba(74, 222, 128, 0.1); color: var(--color-green-400); border: 1px solid rgba(74, 222, 128, 0.2); }
 .status-occupied { background: rgba(99, 102, 241, 0.1); color: var(--color-indigo-400); border: 1px solid rgba(99, 102, 241, 0.2); }
-.room-guest { font-size: 1rem; color: var(--color-slate-200); min-height: 1.5rem; }
+.status-reserved { background: rgba(168, 85, 247, 0.1); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.2); }
+.room-guest { font-size: 0.95rem; color: var(--color-slate-200); min-height: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.room-arrival { font-size: 0.75rem; color: #a855f7; margin-top: 0.25rem; font-weight: 600; }
 
 /* Side Panel 3D */
 .command-center { position: absolute; top: 0; right: 0; width: 420px; height: 100%; padding: 1.5rem; perspective: 1500px; pointer-events: none; z-index: 20; }

@@ -12,7 +12,8 @@ class GuestPortal {
         this.sessionHistory = []; // Full history of items in this session
         this.activeOrderId = null;
         this.menu = [];
-        this.db = null;
+        this.roomStatus = 'available';
+        this.salutation = '';
         this.sessionToken = null;
 
         this.init();
@@ -123,6 +124,18 @@ class GuestPortal {
                 console.log("[Guest Portal] Menu updated from 'menuItems'");
             }
         });
+        
+        // 2. Real-time Room Status Listener (New Requirement)
+        const roomRef = doc(window.firebaseFS, 'rooms', this.roomNumber.toString());
+        onSnapshot(roomRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                this.roomStatus = data.status || 'available';
+                this.salutation = data.salutation || '';
+                this.guestName = data.guestName || 'Guest';
+                this.setupGreeting();
+            }
+        });
 
         // 3. Targeted Active Guest Listener (Mission Fix)
         const guestsCol = collection(window.firebaseFS, 'guests');
@@ -143,6 +156,7 @@ class GuestPortal {
                 const guestData = guestDoc.data();
                 
                 this.guestName = guestData.guestName || guestData.fullName || guestData.name || "Guest";
+                this.salutation = guestData.salutation || "";
                 this.currentGuestId = guestDoc.id;
                 
                 document.getElementById('room-display').innerText = `Room ${this.roomNumber} • ${this.guestName}`;
@@ -159,7 +173,7 @@ class GuestPortal {
                 if (activeOrderListener) activeOrderListener(); // Unsubscribe old
                 
                 const ordersCol = collection(window.firebaseFS, 'orders');
-                const sessionQuery = query(ordersCol, where('guestId', '==', this.currentGuestId), where('roomId', '==', this.roomNumber));
+                const sessionQuery = query(ordersCol, where('guestId', '==', this.currentGuestId), where('roomNumber', '==', this.roomNumber));
                 
                 activeOrderListener = onSnapshot(sessionQuery, (orderSnap) => {
                     const cloudHistory = [];
@@ -185,15 +199,26 @@ class GuestPortal {
     }
 
     setupGreeting() {
-        const hour = new Date().getHours();
-        let greeting = "Welcome";
-        if (hour >= 5 && hour < 12) greeting = "Good Morning";
-        else if (hour >= 12 && hour < 17) greeting = "Good Afternoon";
-        else if (hour >= 17 || hour < 5) greeting = "Good Evening";
-
-        const name = this.guestName ? this.guestName.split(' ')[0] : 'Guest';
         const greetEl = document.getElementById('greeting');
-        if (greetEl) greetEl.innerText = `${greeting}, ${name}!`;
+        if (!greetEl) return;
+
+        if (this.roomStatus === 'available') {
+            greetEl.innerHTML = `<span style="color: var(--color-red-500); font-size: 1rem; line-height: 1.4;">Welcome to Barak Residency!<br>Please complete your registration at the Reception first to enable room service.</span>`;
+            document.getElementById('room-display').innerText = `Room ${this.roomNumber} (Unregistered)`;
+            return;
+        }
+
+        const hour = new Date().getHours();
+        let intro = "Welcome";
+        if (hour >= 5 && hour < 12) intro = "Good Morning";
+        else if (hour >= 12 && hour < 17) intro = "Good Afternoon";
+        else if (hour >= 17 || hour < 5) intro = "Good Evening";
+
+        const salutation = this.salutation ? this.salutation + " " : "";
+        const name = this.guestName ? this.guestName.split(' ')[0] : 'Guest';
+        
+        greetEl.innerHTML = `${intro}, ${salutation}${name}!<br><span style="font-size: 0.9rem; opacity: 0.8;">How can we serve you today?</span>`;
+        document.getElementById('room-display').innerText = `Room ${this.roomNumber} • ${salutation}${this.guestName}`;
     }
 
     renderMenu() {
@@ -272,31 +297,31 @@ class GuestPortal {
 
         const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
         
-        // Mission Sync: Clear cart immediately and let cloud handle history
-        this.cart = [];
-        this.updateCartBar();
-        this.renderHistory();
-
         const orderObj = {
             id: orderIdStr,
             order_id: orderIdStr,
-            roomId: this.roomNumber,
+            roomNumber: this.roomNumber,
             tableId: null,
             guestId: this.currentGuestId,
             items: this.cart.map(i => ({ 
                 id: i.id, 
                 name: i.name, 
                 qty: i.qty, 
-                price: i.price,
+                price: Number(i.price),
                 variant: i.variant || 'Full'
             })), 
             timestamp: Date.now(),
             status: 'Pending',
-            total: total,
-            total_price: total,
+            total: Number(total),
+            total_price: Number(total),
             orderType: 'Room',
             guestName: this.guestName
         };
+
+        // Mission Sync: Clear cart AFTER orderObj is created
+        this.cart = [];
+        this.updateCartBar();
+        this.renderHistory();
 
         // Mission 3: Write directly to Cloud
         if (window.FirebaseSync) {
@@ -460,12 +485,87 @@ class GuestPortal {
 
     activateReorder() {
         document.getElementById('tracker')?.classList.remove('active');
+        this.switchView('menu');
     }
 
     showTracker() {
         const success = document.getElementById('success-screen');
         if (success) success.style.display = 'none';
         document.getElementById('tracker')?.classList.add('active');
+    }
+
+    switchView(view) {
+        const views = ['dashboard', 'menu', 'service'];
+        views.forEach(v => {
+            const el = document.getElementById(`view-${v}`);
+            if (el) el.style.display = 'none';
+        });
+        const target = document.getElementById(`view-${view}`);
+        if (target) target.style.display = 'block';
+
+        // The cart bar only shows in menu view
+        const cartBar = document.getElementById('cart-bar');
+        if (cartBar) cartBar.style.display = (view === 'menu') ? '' : 'none';
+    }
+
+    async sendQuickRequest(type) {
+        if (!this.roomNumber) return;
+
+        const btn = event && event.target;
+        if (btn) { btn.innerText = '⏳ Sending...'; btn.disabled = true; }
+
+        try {
+            const db = window.firebaseFS;
+            const { collection, addDoc, serverTimestamp } = window.firebaseHooks;
+            await addDoc(collection(db, 'serviceRequests'), {
+                roomNumber: this.roomNumber,
+                type: type,
+                message: '',
+                status: 'pending',
+                timestamp: Date.now(),
+                serverTimestamp: serverTimestamp()
+            });
+
+            if (btn) { btn.innerText = `✓ ${type} Sent!`; btn.style.color = '#4ade80'; }
+            setTimeout(() => {
+                if (btn) {
+                    const icons = { Blanket: '🛏️', Bedsheet: '🧴', Water: '💧', Cleaning: '🧹' };
+                    btn.innerText = `${icons[type] || '🔔'} ${type}`; 
+                    btn.disabled = false; 
+                    btn.style.color = ''; 
+                }
+            }, 3000);
+        } catch (e) {
+            console.error("Service request failed", e);
+            if (btn) { btn.innerText = '❌ Failed'; btn.disabled = false; }
+        }
+    }
+
+    async sendCustomRequest() {
+        const msg = document.getElementById('service-message')?.value?.trim();
+        if (!msg) {
+            alert('Please enter a message');
+            return;
+        }
+
+        try {
+            const db = window.firebaseFS;
+            const { collection, addDoc, serverTimestamp } = window.firebaseHooks;
+            await addDoc(collection(db, 'serviceRequests'), {
+                roomNumber: this.roomNumber,
+                type: 'Custom Request',
+                message: msg,
+                status: 'pending',
+                timestamp: Date.now(),
+                serverTimestamp: serverTimestamp()
+            });
+
+            document.getElementById('service-message').value = '';
+            alert('✓ Request sent! Our staff will attend to you shortly.');
+        } catch (e) {
+            console.error("Custom request failed", e);
+            alert('Failed to send request. Please try again.');
+        }
     }
 }
 

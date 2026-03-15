@@ -158,7 +158,7 @@ class CentralDatabase {
                 const snapshot = await getDocs(menuCol);
                 const cloudMenu = [];
                 snapshot.forEach(doc => cloudMenu.push(doc.data()));
-                
+
                 if (cloudMenu.length > 0) {
                     this.menu = cloudMenu;
                     localStorage.setItem('br_menu', JSON.stringify(this.menu));
@@ -166,7 +166,7 @@ class CentralDatabase {
                     return;
                 }
             }
-            
+
             // Fallback: Local Storage Cache
             const cached = localStorage.getItem('br_menu');
             if (cached) {
@@ -320,8 +320,12 @@ class CentralDatabase {
         return {
             number: number,
             floor: floor,
-            status: 'available', // available, occupied
-            guest: null
+            status: 'available', 
+            guest: null,
+            guestName: null,
+            guestPhone: null,
+            currentGuestId: null,
+            orderSerial: 0
         };
     }
 
@@ -371,10 +375,19 @@ class CentralDatabase {
 
     // Helper to format time in IST (Force GMT+5:30)
     formattedIST(timestamp) {
+        // Handle Firestore Timestamp objects
+        if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
+            timestamp = timestamp.seconds * 1000;
+        }
+        if (!timestamp) return '---';
         return new Date(timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
     }
 
     timeOnlyIST(timestamp) {
+        if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
+            timestamp = timestamp.seconds * 1000;
+        }
+        if (!timestamp) return '---';
         return new Date(timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', timeStyle: 'short', hour12: true });
     }
 }
@@ -384,6 +397,8 @@ class PMSApp {
     constructor(isolatedView = null) {
         this.isolatedView = isolatedView;
         this.db = new CentralDatabase();
+        this.db.kitchenOrders = [];
+        this.db.serviceRequests = [];
         this.selectedRoomId = null; // Used for Reception Command Center focus
         this.currentPortal = isolatedView || 'reception';
         this.revenueChart = null;
@@ -688,6 +703,7 @@ class PMSApp {
         // Sync Reception
         if (!this.isolatedView && this.currentPortal === 'reception') {
             this.renderRoomGrid();
+            this.renderRoomOrderPanel(); // Mission Sync: Ensure orders show in Desk
             if (this.selectedRoomId) this.updateCommandCenter();
         }
 
@@ -796,16 +812,28 @@ class PMSApp {
             card.onclick = () => this.selectRoom(room.number);
 
             const isOccupied = room.status === 'occupied';
-            const statusClass = isOccupied ? 'status-occupied' : 'status-available';
-            const statusText = isOccupied ? 'Occupied' : 'Available';
-            const guestName = isOccupied ? room.guest.name : '&nbsp;';
+            const isReserved = room.status === 'reserved';
+            
+            let statusClass = 'status-available';
+            let statusText = 'Available';
+            if (isOccupied) { statusClass = 'status-occupied'; statusText = 'Occupied'; }
+            if (isReserved) { statusClass = 'status-reserved'; statusText = 'Reserved'; }
+            
+            // Mission Fix: Use consistent guestName key with fallback
+            const displaySalutation = room.salutation || '';
+            const displayName = room.guestName || (room.guest ? (room.guest.guestName || room.guest.name) : null);
+            const fallbackName = isOccupied ? 'Occupied' : (isReserved ? 'Reserved' : '&nbsp;');
+            const fullDisplayName = (isOccupied || isReserved) ? (displayName ? (displaySalutation ? `${displaySalutation} ${displayName}` : displayName) : fallbackName) : '&nbsp;';
+
+            const arrivalHtml = isReserved && room.arrivalDate ? `<div class="room-arrival">ETA: ${this.db.formattedIST(room.arrivalDate)}</div>` : '';
 
             card.innerHTML = `
                 <div class="room-header">
                     <span class="room-number">${room.number}</span>
                     <span class="room-status ${statusClass}">${statusText}</span>
                 </div>
-                <div class="room-guest">${guestName}</div>
+                <div class="room-guest">${fullDisplayName}</div>
+                ${arrivalHtml}
             `;
 
             if (room.floor === 1) floor1.appendChild(card);
@@ -834,24 +862,172 @@ class PMSApp {
         document.getElementById('cc-room-title').innerText = `Room ${room.number}`;
 
         const emptyView = document.getElementById('cc-content-empty');
-        if (!emptyView) return;
         const checkinView = document.getElementById('cc-content-checkin');
-        if (!checkinView) return;
+        const reservedView = document.getElementById('cc-content-reserved');
         const occupiedView = document.getElementById('cc-content-occupied');
-        if (!occupiedView) return;
 
-        [emptyView, checkinView, occupiedView].forEach(v => v.style.display = 'none');
+        if (!emptyView || !checkinView || !reservedView || !occupiedView) return;
+
+        [emptyView, checkinView, reservedView, occupiedView].forEach(v => v.style.display = 'none');
 
         if (room.status === 'available') {
             emptyView.style.display = 'block';
             this.currentRoom = room.number;
-            // Booking Guard: Hide actions for available rooms
             document.querySelector('.cc-actions').style.display = 'none';
+        } else if (room.status === 'reserved') {
+            reservedView.style.display = 'block';
+            this.currentRoom = room.number;
+            document.querySelector('.cc-actions').style.display = 'none';
+
+            document.getElementById('cc-res-name').innerText = (room.salutation ? room.salutation + ' ' : '') + (room.guestName || '---');
+            document.getElementById('cc-res-phone').innerText = room.guestPhone || '---';
+            document.getElementById('cc-res-arrival').innerText = room.arrivalDate ? this.db.formattedIST(room.arrivalDate) : '---';
         } else {
             occupiedView.style.display = 'block';
             document.querySelector('.cc-actions').style.display = 'block';
             this.populateOccupiedView(room);
         }
+    }
+
+    // --- RESERVATION FLOW ---
+    openReserveModal() {
+        if (!this.selectedRoomId) return;
+        document.getElementById('reserve-room-num').innerText = this.selectedRoomId;
+        document.getElementById('res-name').value = '';
+        document.getElementById('res-phone').value = '';
+        // Set default arrival to today + 2 hours
+        const now = new Date();
+        now.setHours(now.getHours() + 2);
+        document.getElementById('res-arrival').value = now.toISOString().slice(0, 16);
+        
+        document.getElementById('reserve-modal').style.display = 'flex';
+    }
+
+    async submitReservation() {
+        const roomNum = this.selectedRoomId;
+        const salutation = document.getElementById('res-salutation').value;
+        const name = document.getElementById('res-name').value;
+        const phone = document.getElementById('res-phone').value;
+        const arrival = document.getElementById('res-arrival').value;
+
+        if (!name || !phone) {
+            this.showToast("Please enter guest name and phone.", "error");
+            return;
+        }
+
+        try {
+            const db = window.firebaseFS;
+            const { doc, updateDoc, serverTimestamp, Timestamp } = window.firebaseHooks;
+            const roomRef = doc(db, 'rooms', roomNum.toString());
+
+            const arrivalDate = new Date(arrival);
+            
+            await updateDoc(roomRef, {
+                status: 'reserved',
+                salutation: salutation,
+                guestName: name,
+                guestPhone: phone,
+                arrivalDate: Timestamp.fromDate(arrivalDate),
+                last_updated: serverTimestamp()
+            });
+
+            this.showToast(`Room ${roomNum} reserved for ${salutation} ${name}`, "success");
+            document.getElementById('reserve-modal').style.display = 'none';
+        } catch (e) {
+            console.error("Reservation failed", e);
+            this.showToast("Reservation failed. Check console.", "error");
+        }
+    }
+
+    async convertResToCheckin() {
+        const room = this.db.rooms[this.selectedRoomId];
+        if (!room) return;
+
+        // Pre-fill check-in form with reservation data
+        document.getElementById('sci-salutation').value = room.salutation || 'Mr.';
+        document.getElementById('sci-name').value = room.guestName || '';
+        document.getElementById('sci-phone').value = room.guestPhone || '';
+        
+        this.showCheckInForm();
+    }
+
+    async cancelReservation() {
+        if (!confirm("Are you sure you want to cancel this reservation?")) return;
+        const roomNum = this.selectedRoomId;
+        
+        try {
+            const db = window.firebaseFS;
+            const { doc, updateDoc, serverTimestamp } = window.firebaseHooks;
+            const roomRef = doc(db, 'rooms', roomNum.toString());
+
+            await updateDoc(roomRef, {
+                status: 'available',
+                salutation: null,
+                guestName: null,
+                guestPhone: null,
+                arrivalDate: null,
+                currentGuestId: null,
+                last_updated: serverTimestamp()
+            });
+
+            this.showToast("Reservation cancelled.", "info");
+        } catch (e) {
+            console.error("Cancellation failed", e);
+        }
+    }
+
+    // --- SERVICE REQUESTS ---
+    renderServiceRequests() {
+        const container = document.getElementById('service-requests-panel');
+        if (!container) return;
+        
+        const countEl = document.getElementById('service-req-count');
+        const pending = this.db.serviceRequests.filter(r => r.status === 'pending');
+        if (countEl) countEl.innerText = pending.length;
+
+        if (this.db.serviceRequests.length === 0) {
+            container.innerHTML = '<div class="text-gray" style="text-align: center; margin-top: 1rem;">No pending requests</div>';
+            return;
+        }
+
+        container.innerHTML = '';
+        this.db.serviceRequests.sort((a,b) => b.timestamp - a.timestamp).forEach(req => {
+            const div = document.createElement('div');
+            div.className = 'room-order-notification';
+            div.style.borderTopColor = '#f43f5e';
+            if (req.status === 'completed') div.style.opacity = '0.6';
+
+            div.innerHTML = `
+                <div class="room-order-header">
+                    <div>Room <span style="font-weight:900;">${req.roomNumber}</span></div>
+                    <div style="font-size:0.7rem; color:var(--text-gray);">${this.db.timeOnlyIST(req.timestamp)}</div>
+                </div>
+                <div style="font-weight:700; color:white; margin-bottom:0.5rem;">${req.type.toUpperCase()}</div>
+                <div style="font-size:0.85rem; color:var(--text-gray); margin-bottom:1rem;">${req.message || 'No additional note'}</div>
+                <div class="d-flex gap-2">
+                    ${req.status === 'pending' ? `<button class="btn btn-success" style="flex:1; font-size:0.7rem; padding:0.3rem;" onclick="app.completeServiceRequest('${req.id}')">MARK DONE</button>` : '<span class="color-success">COMPLETED ✓</span>'}
+                    <button class="btn btn-danger" style="font-size:0.7rem; padding:0.3rem;" onclick="app.deleteServiceRequest('${req.id}')">🗑️</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    async completeServiceRequest(id) {
+        try {
+            const db = window.firebaseFS;
+            const { doc, updateDoc } = window.firebaseHooks;
+            await updateDoc(doc(db, 'serviceRequests', id), { status: 'completed' });
+        } catch (e) { console.error(e); }
+    }
+
+    async deleteServiceRequest(id) {
+        if (!confirm("Remove this request?")) return;
+        try {
+            const db = window.firebaseFS;
+            const { doc, deleteDoc } = window.firebaseHooks;
+            await deleteDoc(doc(db, 'serviceRequests', id));
+        } catch (e) { console.error(e); }
     }
 
     // --- SEQUENTIAL SMART CHECK-IN FLOW ---
@@ -866,7 +1042,7 @@ class PMSApp {
 
         document.getElementById('smart-checkin-modal').style.display = 'flex';
         this.sciNext(1);
-        
+
         document.getElementById('summary-room').innerText = this.currentRoom || '--';
     }
 
@@ -874,17 +1050,17 @@ class PMSApp {
         document.querySelectorAll('.step-indicator').forEach(el => el.classList.remove('active'));
         const indicator = document.getElementById(`ci-step-${step}`);
         if (indicator) indicator.classList.add('active');
-        
+
         document.querySelectorAll('.ci-view').forEach(el => el.style.display = 'none');
         document.getElementById(`ci-view-${step}`).style.display = 'block';
-        
+
         if (step === 4) {
             document.getElementById('summary-name').innerText = document.getElementById('sci-name').value;
             document.getElementById('summary-phone').innerText = document.getElementById('sci-phone').value;
             document.getElementById('summary-tariff').innerText = document.getElementById('sci-tariff').value;
             document.getElementById('summary-advance').innerText = document.getElementById('sci-advance').value;
         }
-        
+
         if (step !== 2) {
             this.stopScanner();
         }
@@ -897,7 +1073,7 @@ class PMSApp {
         }
         const video = document.getElementById('sci-video');
         if (video) video.srcObject = null;
-        
+
         document.getElementById('sci-start-cam').style.display = 'inline-block';
         document.getElementById('sci-capture-btn').style.display = 'none';
     }
@@ -905,11 +1081,11 @@ class PMSApp {
     async startScanner() {
         try {
             const video = document.getElementById('sci-video');
-            this.cameraStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
+            this.cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
             });
             video.srcObject = this.cameraStream;
-            
+
             document.getElementById('sci-start-cam').style.display = 'none';
             document.getElementById('sci-capture-btn').style.display = 'inline-block';
             document.getElementById('sci-scan-status').style.display = 'none';
@@ -933,7 +1109,7 @@ class PMSApp {
             this.capturedIdFile = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
             document.getElementById('sci-scan-status').style.display = 'block';
             this.showToast("Frame Captured!", "success");
-            
+
             // Auto-advance or wait for user to click next? Let's stay on screen to show success.
             this.stopScanner();
         }, 'image/jpeg', 0.8);
@@ -974,32 +1150,34 @@ class PMSApp {
         }
     }
 
-    async confirmSmartCheckin() {
+    async submitCheckIn() {
+        const salutation = document.getElementById('sci-salutation').value;
         const name = document.getElementById('sci-name').value;
         const phone = document.getElementById('sci-phone').value;
         const age = parseInt(document.getElementById('sci-age').value) || 0;
         const tariff = parseFloat(document.getElementById('sci-tariff').value) || 0;
         const advance = parseFloat(document.getElementById('sci-advance').value) || 0;
-        
+
         if (!name || !phone) {
             this.showToast("Please fill Name and Phone", "warning");
             return;
         }
 
         const roomNum = this.currentRoom;
-        this.showToast("Finalizing Check-in & Cloud Sync...", "info");
+        this.showToast("Executing Atomic Check-in Transaction...", "info");
 
         let idUrl = "";
         try {
             if (this.capturedIdFile && window.FirebaseSync) {
                 idUrl = await window.FirebaseSync.uploadIdFile(this.capturedIdFile, phone);
             }
-        } catch(e) { 
+        } catch (e) {
             console.error("ID upload failed", e);
-            this.showToast("Compliance Warning: ID upload failed.", "warning"); 
+            this.showToast("Compliance Warning: ID upload failed.", "warning");
         }
 
         const guestData = {
+            salutation: salutation,
             guestName: name || "Unknown Guest",
             fullName: name || "Unknown Guest",
             guestPhone: phone || "---",
@@ -1018,47 +1196,72 @@ class PMSApp {
             foodSync: "active",
             status: "active"
         };
-        
+
         // Ensure no undefined values
         Object.keys(guestData).forEach(key => {
             if (guestData[key] === undefined) guestData[key] = null;
         });
 
         try {
-            // Mission 1 & 3: Push Guest and Government Compliance Log
+            // Mission: Unified Cloud Transaction
             let cloudGuestId = "";
             if (window.FirebaseSync) {
-                cloudGuestId = await window.FirebaseSync.pushGuestToCloud(guestData);
+                const { doc, collection, runTransaction, serverTimestamp, Timestamp } = window.firebaseHooks;
+                const db = window.firebaseFS;
+                
+                // Pre-generate Guest ID
+                const guestsRef = collection(db, 'guests');
+                const newGuestRef = doc(guestsRef); 
+                cloudGuestId = newGuestRef.id;
+
+                const roomRef = doc(db, 'rooms', roomNum.toString());
+
+                await runTransaction(db, async (transaction) => {
+                    // Step A: Create guest document
+                    transaction.set(newGuestRef, {
+                        ...guestData,
+                        id: cloudGuestId,
+                        cloudId: cloudGuestId,
+                        last_updated: serverTimestamp()
+                    });
+
+                    // Step B: Update room document (Top-level sync)
+                    transaction.update(roomRef, {
+                        status: 'occupied',
+                        salutation: salutation,
+                        guestName: name,
+                        guestPhone: phone,
+                        checkInDate: Timestamp.now(),
+                        currentGuestId: cloudGuestId,
+                        last_updated: serverTimestamp()
+                    });
+                });
+
+                // Mission 3: Compliance Log 
+                const policeRef = collection(db, 'police_logs');
+                await window.firebaseHooks.addDoc(policeRef, {
+                    ...guestData,
+                    originalGuestId: cloudGuestId,
+                    complianceTimestamp: serverTimestamp(),
+                    logType: 'GOVT_MANDATORY_LOG'
+                });
             }
 
-            // Mission 2: Live Room Update (Status + guestName + currentGuestId)
+            // Local State Sync
             if (this.db.rooms[roomNum]) {
                 const room = this.db.rooms[roomNum];
                 room.status = 'occupied';
-                room.guestName = name; // Enforced Key
+                room.salutation = salutation;
+                room.guestName = name;
+                room.guestPhone = phone;
                 room.guest = { ...guestData, cloudId: cloudGuestId };
-                room.currentGuestId = cloudGuestId; 
-                
+                room.currentGuestId = cloudGuestId;
                 localStorage.setItem(`br_room_serial_${roomNum}`, "0");
-                
                 this.db.persistRooms();
-                
-                // Mission: Force Room Update with guestName before success
-                if (window.FirebaseSync) {
-                    const { doc, updateDoc } = window.firebaseHooks;
-                    const roomRef = doc(window.firebaseFS, 'rooms', roomNum.toString());
-                    await updateDoc(roomRef, { 
-                        status: 'occupied', 
-                        guestName: name, 
-                        currentGuestId: cloudGuestId,
-                        last_updated: (window.firebaseHooks.serverTimestamp())
-                    });
-                }
             }
 
-            // Mission 5: UI Feedback (Step 5) and Form Clear
             this.renderRoomGrid();
-            this.sciNext(5); // Show Success Checkmark
+            this.sciNext(5); 
             
             // Clear Form
             document.getElementById('sci-name').value = "";
@@ -1074,9 +1277,12 @@ class PMSApp {
         }
     }
 
+    // Alias for legacy calls
+    confirmSmartCheckin() { this.submitCheckIn(); }
+
     closeSmartCheckin() {
         document.getElementById('smart-checkin-modal').style.display = 'none';
-        if (this.html5QrCode) this.html5QrCode.stop().catch(() => {});
+        if (this.html5QrCode) this.html5QrCode.stop().catch(() => { });
     }
 
     showEmptyState() {
@@ -1086,14 +1292,16 @@ class PMSApp {
 
     populateOccupiedView(room) {
         const guest = room.guest || {};
+        const salutation = room.salutation || guest.salutation || '';
+        const name = room.guestName || guest.guestName || guest.name || 'No Name Found';
 
-        document.getElementById('cc-guest-name').innerText = guest.guestName || guest.name || 'No Name Found';
+        document.getElementById('cc-guest-name').innerText = salutation ? `${salutation} ${name}` : name;
         document.getElementById('cc-guest-age').innerText = guest.age || '---';
-        document.getElementById('cc-guest-phone').innerText = guest.guestPhone || guest.phone || '---';
+        document.getElementById('cc-guest-phone').innerText = room.guestPhone || guest.guestPhone || guest.phone || '---';
 
         const idEl = document.getElementById('cc-guest-id');
         const idUrl = guest.idProofUrl || guest.idImageUrl;
-        
+
         if (idUrl) {
             idEl.innerHTML = `<a href="${idUrl}" target="_blank" style="color: inherit; text-decoration: none;">View ID</a>`;
             idEl.style.color = 'var(--color-green-400)';
@@ -1116,10 +1324,10 @@ class PMSApp {
 
         const roomTotal = tariff * daysBilled;
         document.getElementById('cc-room-total').innerText = `₹${roomTotal}`;
-        
+
         const foodTotal = Number(guest.foodTotal) || 0;
         document.getElementById('cc-food-total').innerText = `₹${foodTotal}`;
-        
+
         const advance = Number(guest.advance) || 0;
         document.getElementById('cc-advance').innerText = advance;
 
@@ -1170,7 +1378,7 @@ class PMSApp {
         };
         room.guest = guestData;
         e.target.reset();
-        this.db.persistRoom(this.selectedRoomId); 
+        this.db.persistRoom(this.selectedRoomId);
 
         // 1 & 3 Mission: Guest & Room Status Sync (updateDoc) - Mission 3
         if (window.FirebaseSync) {
@@ -1210,15 +1418,15 @@ class PMSApp {
 
             try {
                 const { doc, updateDoc, collection, addDoc, serverTimestamp, deleteDoc, getDoc } = window.firebaseHooks;
-                
+
                 // 1. NaN-Proof Calculations (Mission Fix)
                 const tariff = Number(guest.tariff) || 0;
                 const advance = Number(guest.advance) || 0;
                 const foodTotal = Number(guest.foodTotal) || 0;
-                
+
                 // The user's specific request for totalBill math
-                const totalBill = tariff - advance; 
-                
+                const totalBill = tariff - advance;
+
                 const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : guest.checkInTime);
                 const days = this.calculateBilledDays(checkInTimeValue);
                 const roomCharges = days * tariff;
@@ -1262,13 +1470,13 @@ class PMSApp {
                 room.guest = null;
                 room.currentGuestId = null;
                 localStorage.setItem(`br_room_serial_${roomNum}`, "0");
-                
-                this.db.persistRoom(roomNum); 
-                this.syncState(); 
+
+                this.db.persistRoom(roomNum);
+                this.syncState();
                 this.closeCommandCenter();
                 this.showToast("Checkout Complete & Recorded.", "success");
 
-            } catch(err) {
+            } catch (err) {
                 // 4. Detailed Error Handling
                 console.error("UNIFIED CHECKOUT ERROR:", err);
                 this.showToast(`Transaction Failed: ${err.message || 'Check Connection'}`, "error");
@@ -1316,8 +1524,8 @@ class PMSApp {
 
             // Explicit color map by index
             const orderColors = {
-                1: '#FF3131',   // Red
-                2: '#39FF14',   // Green
+                1: '#d800008c',   // Red
+                2: '#28b110ff',   // Green
                 3: '#1F51FF',   // Blue
                 4: '#FFF01F',   // Yellow
                 5: '#A020F0'    // Purple (Linked Table)
@@ -1914,8 +2122,8 @@ class PMSApp {
         const list = document.getElementById(`${portalCtx}-orders-list`);
         if (!orderPanel || !list) return;
 
-        const activeOrders = this.db.kitchenOrders.filter(o => 
-            (o.roomId === targetId.toString() || o.tableId === targetId.toString()) && 
+        const activeOrders = this.db.kitchenOrders.filter(o =>
+            (o.roomId === targetId.toString() || o.tableId === targetId.toString()) &&
             ['Pending', 'Kitchen', 'Served', 'preparing', 'ready'].includes(o.status)
         );
 
@@ -1951,7 +2159,7 @@ class PMSApp {
             title.innerText = `NEW ORDER for ${target}`;
             this.showToast("Mode: Creating New Sequential ID", "info");
         }
-        
+
         // Highlight selection
         const btns = document.querySelectorAll(`#${portalCtx}-orders-list .btn`);
         btns.forEach(b => {
@@ -1967,48 +2175,48 @@ class PMSApp {
         });
     }
 
-        renderWaiterMenu(portalCtx, searchTerm = '') {
-            const grid = document.getElementById(`${portalCtx}-menu-grid`);
-            if (!grid) return;
-            grid.innerHTML = '';
+    renderWaiterMenu(portalCtx, searchTerm = '') {
+        const grid = document.getElementById(`${portalCtx}-menu-grid`);
+        if (!grid) return;
+        grid.innerHTML = '';
 
-            const filteredMenu = this.db.menu.filter(item =>
-                (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))) &&
-                (item.isAvailable !== false && !this.db.unavailableItems.includes(item.id))
-            );
+        const filteredMenu = this.db.menu.filter(item =>
+            (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))) &&
+            (item.isAvailable !== false && !this.db.unavailableItems.includes(item.id))
+        );
 
-            if (filteredMenu.length === 0) {
-                grid.innerHTML = `<div style="text-align:center; padding: 2rem; color: gray; width: 100%;">No available items found</div>`;
-                return;
-            }
+        if (filteredMenu.length === 0) {
+            grid.innerHTML = `<div style="text-align:center; padding: 2rem; color: gray; width: 100%;">No available items found</div>`;
+            return;
+        }
 
-            // Group by category
-            const categories = {};
-            filteredMenu.forEach(item => {
-                const cat = item.category || 'General';
-                if (!categories[cat]) categories[cat] = [];
-                categories[cat].push(item);
-            });
+        // Group by category
+        const categories = {};
+        filteredMenu.forEach(item => {
+            const cat = item.category || 'General';
+            if (!categories[cat]) categories[cat] = [];
+            categories[cat].push(item);
+        });
 
-            Object.keys(categories).forEach(cat => {
-                const catHeader = document.createElement('div');
-                catHeader.className = 'menu-category-header';
-                catHeader.style.cssText = 'grid-column: 1 / -1; color: var(--gold-primary); font-family: "Outfit", sans-serif; font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;';
-                catHeader.innerText = cat.toUpperCase();
-                grid.appendChild(catHeader);
+        Object.keys(categories).forEach(cat => {
+            const catHeader = document.createElement('div');
+            catHeader.className = 'menu-category-header';
+            catHeader.style.cssText = 'grid-column: 1 / -1; color: var(--gold-primary); font-family: "Outfit", sans-serif; font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;';
+            catHeader.innerText = cat.toUpperCase();
+            grid.appendChild(catHeader);
 
-                categories[cat].forEach(item => {
-                    const el = document.createElement('div');
-                    el.className = 'menu-item';
-                    el.style.display = 'flex';
-                    el.style.flexDirection = 'column';
-                    el.style.gap = '5px';
+            categories[cat].forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'menu-item';
+                el.style.display = 'flex';
+                el.style.flexDirection = 'column';
+                el.style.gap = '5px';
 
-                    const imgUrl = item.image ? item.image : '';
-                    const photoHtml = imgUrl ? `<img src="${imgUrl}" style="width:100%; height:80px; object-fit:cover; border-radius:8px; margin-bottom:5px;" onerror="this.style.display='none'">` : '';
+                const imgUrl = item.image ? item.image : '';
+                const photoHtml = imgUrl ? `<img src="${imgUrl}" style="width:100%; height:80px; object-fit:cover; border-radius:8px; margin-bottom:5px;" onerror="this.style.display='none'">` : '';
 
-                    el.innerHTML = `
+                el.innerHTML = `
                     ${photoHtml}
                     <div style="display:flex; justify-content:space-between; align-items:start;">
                         <div class="menu-icon">${item.icon || '🍽️'}</div>
@@ -2018,185 +2226,185 @@ class PMSApp {
                     <div class="menu-desc" style="font-size:0.7rem; color:var(--color-slate-400); height:30px; overflow:hidden; line-height: 1.2;">${item.description || ''}</div>
                     <button class="menu-add-btn" style="margin-top:auto;" onclick="app.promptItemVariant({id: '${item.id}', name: '${item.name}', price: ${item.price}}, '${portalCtx}')">Add</button>
                 `;
-                    grid.appendChild(el);
-                });
+                grid.appendChild(el);
             });
+        });
+    }
+
+    filterWaiterMenu(portalCtx) {
+        const input = document.getElementById(`${portalCtx}-menu-search`);
+        if (input) {
+            this.renderWaiterMenu(portalCtx, input.value);
+        }
+    }
+
+    // --- PICKUP ORDER SYSTEM ---
+    generatePickupOrder() {
+        let globalPickupCounter = parseInt(localStorage.getItem('br_pickup_counter') || '0');
+        globalPickupCounter++;
+        localStorage.setItem('br_pickup_counter', globalPickupCounter);
+
+        const pickupId = `P${globalPickupCounter}`;
+        this.db.activeRoomContext = pickupId;
+
+        document.getElementById('pickup-pos-title').innerText = `New Pickup: ${pickupId}`;
+        this.switchPortal('rest-pickup');
+
+        // Clear cart for fresh pickup
+        this.db.cart = [];
+        this.renderWaiterCart('rest-pickup');
+    }
+
+    promptItemVariant(item, context) {
+        this.pendingCartItem = item;
+        this.pendingCartContext = context;
+        this.pendingCartVariant = 'Full';
+
+        document.getElementById('qp-item-name').innerText = item.name;
+
+        // Reset Views
+        document.getElementById('qp-view-variant').style.display = 'flex';
+        document.getElementById('qp-view-quantity').style.display = 'none';
+
+        document.getElementById('quantity-prompt-modal').style.display = 'flex';
+    }
+
+    qpSelectVariant(variantMode) {
+        this.pendingCartVariant = variantMode;
+        document.getElementById('qp-selected-variant-text').innerText = variantMode === 'Half' ? 'Half Plate (Special Price)' : 'Full Plate';
+
+        // Reset Qty Drawer
+        document.getElementById('qp-qty').value = 1;
+
+        // Slide Views
+        document.getElementById('qp-view-variant').style.display = 'none';
+        document.getElementById('qp-view-quantity').style.display = 'flex';
+    }
+
+    qpBackToVariant() {
+        // Slide Views Backwards
+        document.getElementById('qp-view-quantity').style.display = 'none';
+        document.getElementById('qp-view-variant').style.display = 'flex';
+    }
+
+    submitItemQuantity() {
+        if (!this.pendingCartItem) return;
+
+        const variant = this.pendingCartVariant;
+        const qty = parseInt(document.getElementById('qp-qty').value) || 1;
+        document.getElementById('quantity-prompt-modal').style.display = 'none';
+
+        // Clone item to append variant tag and adjust price
+        const finalItem = { ...this.pendingCartItem };
+        if (variant === 'Half') {
+            finalItem.name = `${finalItem.name} [Half]`;
+            finalItem.id = `${finalItem.id}-h`;
+            finalItem.price = Math.floor(finalItem.price * 0.6); // standard half pricing rule
         }
 
-        filterWaiterMenu(portalCtx) {
-            const input = document.getElementById(`${portalCtx}-menu-search`);
-            if (input) {
-                this.renderWaiterMenu(portalCtx, input.value);
+        this.addToCart(finalItem, qty, this.pendingCartContext);
+    }
+
+    addToCart(item, qtyToAppend, context) {
+        const existing = this.db.cart.find(c => c.item.id === item.id);
+        if (existing) existing.qty += qtyToAppend;
+        else this.db.cart.push({ item: item, qty: qtyToAppend });
+
+        if (context === 'guest') this.renderGuestCart();
+        else this.renderWaiterCart(context);
+    }
+
+    renderWaiterCart(portalCtx) {
+        const cartEl = document.getElementById(`${portalCtx}-cart-items`);
+        if (!cartEl) return;
+        const totalEl = document.getElementById(`${portalCtx}-cart-total`);
+        if (!totalEl) return;
+        const btn = document.getElementById(`btn-${portalCtx}-order`);
+        if (!btn) return;
+
+        if (this.db.cart.length === 0) {
+            cartEl.innerHTML = '<div class="empty-cart">Cart is empty</div>';
+            totalEl.innerText = '0';
+            btn.disabled = true;
+            return;
+        }
+
+        cartEl.innerHTML = '';
+        let total = 0;
+
+        this.db.cart.forEach(cartItem => {
+            const itemTotal = cartItem.qty * cartItem.item.price;
+            total += itemTotal;
+            const el = document.createElement('div');
+            el.className = 'cart-item';
+            el.innerHTML = `<div><span class="cart-item-qty">${cartItem.qty}x</span><span>${cartItem.item.name}</span></div><span>₹${itemTotal}</span>`;
+            cartEl.appendChild(el);
+        });
+
+        totalEl.innerText = total;
+        btn.disabled = false;
+
+        // Update header banner dynamically with live total
+        if (portalCtx === 'rest-waiter') {
+            const el = document.getElementById('rest-waiter-table-info');
+            if (el && el.innerText) {
+                const baseText = el.innerText.split(' | Total:')[0];
+                el.innerHTML = `${baseText} <span class="color-success font-bold" style="margin-left: 0.5rem;">| Total: ₹${total}</span>`;
+
+                // Recalculate global total for sync
+                this.db.totalPrice = total;
+
+                // Trigger storage event for Desk sync
+                window.dispatchEvent(new Event('storage'));
             }
         }
-
-        // --- PICKUP ORDER SYSTEM ---
-        generatePickupOrder() {
-            let globalPickupCounter = parseInt(localStorage.getItem('br_pickup_counter') || '0');
-            globalPickupCounter++;
-            localStorage.setItem('br_pickup_counter', globalPickupCounter);
-
-            const pickupId = `P${globalPickupCounter}`;
-            this.db.activeRoomContext = pickupId;
-
-            document.getElementById('pickup-pos-title').innerText = `New Pickup: ${pickupId}`;
-            this.switchPortal('rest-pickup');
-
-            // Clear cart for fresh pickup
-            this.db.cart = [];
-            this.renderWaiterCart('rest-pickup');
-        }
-
-        promptItemVariant(item, context) {
-            this.pendingCartItem = item;
-            this.pendingCartContext = context;
-            this.pendingCartVariant = 'Full';
-
-            document.getElementById('qp-item-name').innerText = item.name;
-
-            // Reset Views
-            document.getElementById('qp-view-variant').style.display = 'flex';
-            document.getElementById('qp-view-quantity').style.display = 'none';
-
-            document.getElementById('quantity-prompt-modal').style.display = 'flex';
-        }
-
-        qpSelectVariant(variantMode) {
-            this.pendingCartVariant = variantMode;
-            document.getElementById('qp-selected-variant-text').innerText = variantMode === 'Half' ? 'Half Plate (Special Price)' : 'Full Plate';
-
-            // Reset Qty Drawer
-            document.getElementById('qp-qty').value = 1;
-
-            // Slide Views
-            document.getElementById('qp-view-variant').style.display = 'none';
-            document.getElementById('qp-view-quantity').style.display = 'flex';
-        }
-
-        qpBackToVariant() {
-            // Slide Views Backwards
-            document.getElementById('qp-view-quantity').style.display = 'none';
-            document.getElementById('qp-view-variant').style.display = 'flex';
-        }
-
-        submitItemQuantity() {
-            if (!this.pendingCartItem) return;
-
-            const variant = this.pendingCartVariant;
-            const qty = parseInt(document.getElementById('qp-qty').value) || 1;
-            document.getElementById('quantity-prompt-modal').style.display = 'none';
-
-            // Clone item to append variant tag and adjust price
-            const finalItem = { ...this.pendingCartItem };
-            if (variant === 'Half') {
-                finalItem.name = `${finalItem.name} [Half]`;
-                finalItem.id = `${finalItem.id}-h`;
-                finalItem.price = Math.floor(finalItem.price * 0.6); // standard half pricing rule
-            }
-
-            this.addToCart(finalItem, qty, this.pendingCartContext);
-        }
-
-        addToCart(item, qtyToAppend, context) {
-            const existing = this.db.cart.find(c => c.item.id === item.id);
-            if (existing) existing.qty += qtyToAppend;
-            else this.db.cart.push({ item: item, qty: qtyToAppend });
-
-            if (context === 'guest') this.renderGuestCart();
-            else this.renderWaiterCart(context);
-        }
-
-        renderWaiterCart(portalCtx) {
-            const cartEl = document.getElementById(`${portalCtx}-cart-items`);
-            if (!cartEl) return;
-            const totalEl = document.getElementById(`${portalCtx}-cart-total`);
-            if (!totalEl) return;
-            const btn = document.getElementById(`btn-${portalCtx}-order`);
-            if (!btn) return;
-
-            if (this.db.cart.length === 0) {
-                cartEl.innerHTML = '<div class="empty-cart">Cart is empty</div>';
-                totalEl.innerText = '0';
-                btn.disabled = true;
-                return;
-            }
-
-            cartEl.innerHTML = '';
-            let total = 0;
-
-            this.db.cart.forEach(cartItem => {
-                const itemTotal = cartItem.qty * cartItem.item.price;
-                total += itemTotal;
-                const el = document.createElement('div');
-                el.className = 'cart-item';
-                el.innerHTML = `<div><span class="cart-item-qty">${cartItem.qty}x</span><span>${cartItem.item.name}</span></div><span>₹${itemTotal}</span>`;
-                cartEl.appendChild(el);
-            });
-
-            totalEl.innerText = total;
-            btn.disabled = false;
-
-            // Update header banner dynamically with live total
-            if (portalCtx === 'rest-waiter') {
-                const el = document.getElementById('rest-waiter-table-info');
-                if (el && el.innerText) {
-                    const baseText = el.innerText.split(' | Total:')[0];
-                    el.innerHTML = `${baseText} <span class="color-success font-bold" style="margin-left: 0.5rem;">| Total: ₹${total}</span>`;
-
-                    // Recalculate global total for sync
-                    this.db.totalPrice = total;
-
-                    // Trigger storage event for Desk sync
-                    window.dispatchEvent(new Event('storage'));
-                }
-            }
-        }
+    }
 
 
-        // --- GUEST PORTAL (Mobile Override) ---
+    // --- GUEST PORTAL (Mobile Override) ---
 
-        initGuestPortal(roomNumber) {
-            // Validate room
-            const room = this.db.rooms[roomNumber];
-            if (!room || room.status !== 'occupied') {
-                document.getElementById('guest-menu-grid').innerHTML = `
+    initGuestPortal(roomNumber) {
+        // Validate room
+        const room = this.db.rooms[roomNumber];
+        if (!room || room.status !== 'occupied') {
+            document.getElementById('guest-menu-grid').innerHTML = `
                 <div style="text-align:center; padding:2rem;">
                     <h2>Session Invalid</h2>
                     <p class="text-gray mt-2">Room is not occupied or invalid QR.</p>
                 </div>
             `;
-                return;
-            }
+            return;
+        }
 
-            this.db.activeRoomContext = roomNumber;
-            document.getElementById('guest-room-number').innerText = `Room ${roomNumber} • ${room.guest.name}`;
+        this.db.activeRoomContext = roomNumber;
+        document.getElementById('guest-room-number').innerText = `Room ${roomNumber} • ${room.guest.name}`;
 
-            // Render Swiggy-style Categorized Mobile Menu
-            const grid = document.getElementById('guest-menu-grid');
-            grid.innerHTML = '';
+        // Render Swiggy-style Categorized Mobile Menu
+        const grid = document.getElementById('guest-menu-grid');
+        grid.innerHTML = '';
 
-            const availableMenu = this.db.menu.filter(item => item.isAvailable !== false && !this.db.unavailableItems.includes(item.id));
+        const availableMenu = this.db.menu.filter(item => item.isAvailable !== false && !this.db.unavailableItems.includes(item.id));
 
-            // Group by category
-            const categories = {};
-            availableMenu.forEach(item => {
-                const cat = item.category || 'General';
-                if (!categories[cat]) categories[cat] = [];
-                categories[cat].push(item);
-            });
+        // Group by category
+        const categories = {};
+        availableMenu.forEach(item => {
+            const cat = item.category || 'General';
+            if (!categories[cat]) categories[cat] = [];
+            categories[cat].push(item);
+        });
 
-            Object.keys(categories).forEach(cat => {
-                const catHeader = document.createElement('div');
-                catHeader.style.cssText = 'width:100%; color: var(--gold-primary); font-size: 1.4rem; font-weight: 800; padding: 1.5rem 1rem 0.5rem; text-transform: uppercase; letter-spacing: 1px;';
-                catHeader.innerText = cat;
-                grid.appendChild(catHeader);
+        Object.keys(categories).forEach(cat => {
+            const catHeader = document.createElement('div');
+            catHeader.style.cssText = 'width:100%; color: var(--gold-primary); font-size: 1.4rem; font-weight: 800; padding: 1.5rem 1rem 0.5rem; text-transform: uppercase; letter-spacing: 1px;';
+            catHeader.innerText = cat;
+            grid.appendChild(catHeader);
 
-                categories[cat].forEach(item => {
-                    const el = document.createElement('div');
-                    el.className = 'guest-item';
-                    const photoHtml = item.photo ? `<img src="${item.photo}" style="width:80px; height:80px; object-fit:cover; border-radius:12px; margin-right:1rem;">` : `<div style="font-size: 3rem; margin-right: 1rem; align-self: center;">${item.icon}</div>`;
+            categories[cat].forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'guest-item';
+                const photoHtml = item.photo ? `<img src="${item.photo}" style="width:80px; height:80px; object-fit:cover; border-radius:12px; margin-right:1rem;">` : `<div style="font-size: 3rem; margin-right: 1rem; align-self: center;">${item.icon}</div>`;
 
-                    el.innerHTML = `
+                el.innerHTML = `
                     ${photoHtml}
                     <div class="guest-item-info">
                         <div class="guest-item-name">${item.name}</div>
@@ -2207,239 +2415,240 @@ class PMSApp {
                         <button class="guest-add-btn" onclick="app.promptItemVariant({id: '${item.id}', name: '${item.name}', price: ${item.price}}, 'guest')">Add</button>
                     </div>
                 `;
-                    grid.appendChild(el);
-                });
+                grid.appendChild(el);
             });
+        });
+    }
+
+    renderGuestCart() {
+        const bar = document.getElementById('guest-cart-bar');
+        if (this.db.cart.length === 0) {
+            bar.style.transform = 'translateY(100%)';
+            return;
         }
 
-        renderGuestCart() {
-            const bar = document.getElementById('guest-cart-bar');
-            if (this.db.cart.length === 0) {
-                bar.style.transform = 'translateY(100%)';
-                return;
-            }
+        bar.style.transform = 'translateY(0%)';
+        const itemCount = this.db.cart.reduce((sum, item) => sum + item.qty, 0);
+        const total = this.db.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
-            bar.style.transform = 'translateY(0%)';
-            const itemCount = this.db.cart.reduce((sum, item) => sum + item.qty, 0);
-            const total = this.db.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        document.getElementById('guest-cart-count').innerText = `${itemCount} ITEMS`;
+        document.getElementById('guest-cart-total').innerText = total;
+    }
 
-            document.getElementById('guest-cart-count').innerText = `${itemCount} ITEMS`;
-            document.getElementById('guest-cart-total').innerText = total;
+    // --- SHARED ORDER PLACEMENT LOGIC (Waiter & Guest) ---
+
+    showPlaceOrderConfirm(context) {
+        if (!context) return;
+        if (context !== 'rest-waiter') {
+            this.placeOrder(context);
+            return;
         }
 
-        // --- SHARED ORDER PLACEMENT LOGIC (Waiter & Guest) ---
+        const targetId = this.db.activeRoomContext;
+        if (!targetId) return;
 
-        showPlaceOrderConfirm(context) {
-            if (!context) return;
-            if (context !== 'rest-waiter') {
-                this.placeOrder(context);
-                return;
-            }
-
-            const targetId = this.db.activeRoomContext;
-            if (!targetId) return;
-
-            // Generate pre-emptive Order ID for display
-            const isTable = typeof targetId === 'string' && /^[A-H]$/.test(targetId);
-            let orderIdStr;
-            if (isTable) {
-                const table = this.db.restaurantTables[targetId];
-                const nextSeq = (table.orderSeq || 10) + 1;
-                orderIdStr = `${targetId}${nextSeq}`;
-            } else {
-                const nextId = this.db.lastOrderId + 1;
-                orderIdStr = `ROOM ${targetId}-${nextId}`;
-            }
-
-            const itemsListHTML = this.db.cart.map(c => `<div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;"><span style="color:var(--color-slate-400)">${c.qty}x</span> <span>${c.item.name}</span> <span class="color-primary">₹${c.qty * c.item.price}</span></div>`).join('');
-            const total = this.db.cart.reduce((sum, c) => sum + (c.item.price * c.qty), 0);
-
-            document.getElementById('confirm-order-id').innerText = orderIdStr;
-            document.getElementById('confirm-order-items').innerHTML = itemsListHTML + `<div style="margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--glass-border); display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem;"><span>Total</span><span class="color-success">₹${total}</span></div>`;
-
-            this.pendingOrderContext = context;
-            document.getElementById('order-confirm-modal').style.display = 'flex';
+        // Generate pre-emptive Order ID for display
+        const isTable = typeof targetId === 'string' && /^[A-H]$/.test(targetId);
+        let orderIdStr;
+        if (isTable) {
+            const table = this.db.restaurantTables[targetId];
+            const nextSeq = (table.orderSeq || 10) + 1;
+            orderIdStr = `${targetId}${nextSeq}`;
+        } else {
+            const nextId = this.db.lastOrderId + 1;
+            orderIdStr = `ROOM ${targetId}-${nextId}`;
         }
 
-        confirmAndSendOrder() {
-            if (!this.pendingOrderContext) return;
-            document.getElementById('order-confirm-modal').style.display = 'none';
-            this.placeOrder(this.pendingOrderContext);
-            this.pendingOrderContext = null;
-        }
+        const itemsListHTML = this.db.cart.map(c => `<div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;"><span style="color:var(--color-slate-400)">${c.qty}x</span> <span>${c.item.name}</span> <span class="color-primary">₹${c.qty * c.item.price}</span></div>`).join('');
+        const total = this.db.cart.reduce((sum, c) => sum + (c.item.price * c.qty), 0);
 
-        playConfirmationSound() {
-            try {
-                const audio = new Audio('orderconfirm.mp3');
-                audio.play().catch(e => console.log('Audio restricted:', e));
-            } catch (e) { }
-        }
+        document.getElementById('confirm-order-id').innerText = orderIdStr;
+        document.getElementById('confirm-order-items').innerHTML = itemsListHTML + `<div style="margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--glass-border); display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem;"><span>Total</span><span class="color-success">₹${total}</span></div>`;
 
-        async placeOrder(context) {
-            const targetId = this.db.activeRoomContext;
-            if (!targetId) return;
+        this.pendingOrderContext = context;
+        document.getElementById('order-confirm-modal').style.display = 'flex';
+    }
 
-            let total = 0;
-            const itemsList = [];
-            this.db.cart.forEach(c => {
-                total += (c.item.price * c.qty);
-                itemsList.push(`${c.qty}x ${c.item.name}`);
-            });
+    confirmAndSendOrder() {
+        if (!this.pendingOrderContext) return;
+        document.getElementById('order-confirm-modal').style.display = 'none';
+        this.placeOrder(this.pendingOrderContext);
+        this.pendingOrderContext = null;
+    }
 
-            this.showToast("Syncing with Cloud Orders...", "info");
+    playConfirmationSound() {
+        try {
+            const audio = new Audio('orderconfirm.mp3');
+            audio.play().catch(e => console.log('Audio restricted:', e));
+        } catch (e) { }
+    }
 
-            let orderIdStr = this.db.editingOrderId;
-            let isUpdatingExisting = !!orderIdStr;
+    async placeOrder(context) {
+        const targetId = this.db.activeRoomContext;
+        if (!targetId) return;
 
-            // Mission 2: Smart Sequential ID Logic
-            if (!isUpdatingExisting) {
-                if (window.FirebaseSync) {
-                    const room = this.db.rooms[targetId];
-                    const guestId = room ? room.currentGuestId : null;
-                    orderIdStr = await window.FirebaseSync.getNextOrderSerial(targetId, guestId);
-                } else {
-                    this.db.lastOrderId++;
-                    orderIdStr = `BR${this.db.lastOrderId}`;
-                }
-            }
+        let total = 0;
+        const itemsList = [];
+        this.db.cart.forEach(c => {
+            total += (c.item.price * c.qty);
+            itemsList.push(`${c.qty}x ${c.item.name}`);
+        });
 
-            // Create standard order object
-            // Determine if it's a room based on portal context OR if the ID is numeric (room number)
-            const isRoomOrder = context === 'hotel-waiter' || (!isNaN(targetId) && targetId.toString().length === 3);
-            const activeRoom = this.db.rooms[targetId];
-            
-            // Mission 4: Smart Order ID Logic [RoomNumber][OrderSerial]
-            // We'll use the guest session counter logic which resets serial per guest checkout.
-            
-            const orderObj = {
-                id: orderIdStr,
-                order_id: orderIdStr,
-                roomId: isRoomOrder ? targetId.toString() : null,
-                tableId: !isRoomOrder ? targetId.toString() : null,
-                guestId: (isRoomOrder && activeRoom) ? activeRoom.currentGuestId : null,
-                items: this.db.cart.map(c => ({ 
-                    id: c.item.id, 
-                    name: c.item.name, 
-                    price: Number(c.item.price), 
-                    qty: Number(c.qty), 
-                    variant: c.variant || 'Full' 
-                })),
-                total: Number(total),
-                total_price: Number(total),
-                status: 'Pending',
-                timestamp: Date.now(),
-                orderType: isRoomOrder ? 'Room' : 'Table'
-            };
+        this.showToast("Syncing with Cloud Orders...", "info");
 
-            // Logic for Appending (Add-on)
-            if (isUpdatingExisting) {
-                const existingOrder = this.db.kitchenOrders.find(o => o.id === orderIdStr);
-                if (existingOrder) {
-                    orderObj.items = [...existingOrder.items, ...orderObj.items];
-                    orderObj.total = (existingOrder.total || existingOrder.total_price || 0) + total;
-                    orderObj.total_price = orderObj.total;
-                    orderObj.status = existingOrder.status; // Keep current status
-                }
-            }
+        let orderIdStr = this.db.editingOrderId;
+        let isUpdatingExisting = !!orderIdStr;
 
-            // Sync to Local Database (IDB) for immediate reactivity
-            if (this.db.idb) {
-                try {
-                    const tx = this.db.idb.transaction(['kitchenOrders'], 'readwrite');
-                    tx.objectStore('kitchenOrders').put(orderObj);
-                } catch(e) { console.warn("IDB update failed", e); }
-            }
-            
-            // Sync to Cloud
+        // Mission 2: Smart Sequential ID Logic
+        if (!isUpdatingExisting) {
             if (window.FirebaseSync) {
-                await window.FirebaseSync.pushOrderToCloud(orderObj);
-            }
-
-            // Global Notify
-            const note = {
-                id: Date.now(),
-                type: 'order',
-                message: `Order ${orderIdStr} placed for ${isRoomOrder ? 'Room' : 'Table'} ${targetId}.`,
-                timestamp: Date.now(),
-                status: 'new'
-            };
-            this.db.notifications.unshift(note);
-            if (this.db.notifications.length > 50) this.db.notifications.pop();
-            localStorage.setItem('yukt_notifications', JSON.stringify(this.db.notifications));
-
-            // Update local Room/Table state for Reception/Desk portals
-            if (isRoomOrder) {
                 const room = this.db.rooms[targetId];
-                if (room && room.guest) {
-                    if (!room.guest.foodOrders) room.guest.foodOrders = [];
-                    // Check if already in foodOrders to update or push
-                    const existingIdx = room.guest.foodOrders.findIndex(o => o.id === orderIdStr);
-                    if (existingIdx !== -1) room.guest.foodOrders[existingIdx] = orderObj;
-                    else room.guest.foodOrders.push(orderObj);
-
-                    room.guest.foodTotal = (room.guest.foodTotal || 0) + total;
-                    this.db.persistRooms();
-                }
+                const guestId = room ? room.currentGuestId : null;
+                orderIdStr = await window.FirebaseSync.getNextOrderSerial(targetId, guestId);
             } else {
-                const table = this.db.restaurantTables[targetId];
-                if (table) {
-                    if (!table.orders) table.orders = [];
-                    const existingIdx = table.orders.findIndex(o => o.id === orderIdStr);
-                    if (existingIdx !== -1) table.orders[existingIdx] = orderObj;
-                    else table.orders.push(orderObj);
-
-                    table.total = (table.total || 0) + total;
-                    this.db.persistTables();
-                }
+                this.db.lastOrderId++;
+                orderIdStr = `BR${this.db.lastOrderId}`;
             }
-
-            // Feedback & UI Update
-            this.playConfirmationSound();
-            const successPayload = {
-                id: orderIdStr,
-                total: total,
-                items: itemsList,
-                roomId: isRoomOrder ? targetId : null,
-                tableId: !isRoomOrder ? targetId : null,
-                status: orderObj.status
-            };
-            this.triggerSuccessOverlay(context, successPayload, isUpdatingExisting);
-            
-            this.db.cart = [];
-            this.db.editingOrderId = null;
-            this.syncState();
-
-            this.db.editingOrderId = null;
-            this.syncState();
         }
 
-        triggerSuccessOverlay(context, orderDetails = null, isAddon = false) {
-            const overlay = document.getElementById('success-overlay-pms');
-            const chime = document.getElementById('success-chime');
-            if (overlay) {
-                if (orderDetails) {
-                    const target = orderDetails.tableId ? `Table ${orderDetails.tableId}` : `Room ${orderDetails.roomId}`;
-                    let successText = isAddon ? `ADD-ON ${orderDetails.id}` : `ORDER ${orderDetails.id}`;
+        // Create standard order object
+        // Determine if it's a room based on portal context OR if the ID is numeric (room number)
+        const isRoomOrder = context === 'hotel-waiter' || (!isNaN(targetId) && targetId.toString().length === 3);
+        const activeRoom = this.db.rooms[targetId];
 
-                    if (orderDetails.linked) {
-                        successText = `LINKED: ${orderDetails.id}`;
-                    }
+        // Mission 4: Smart Order ID Logic [RoomNumber][OrderSerial]
+        // We'll use the guest session counter logic which resets serial per guest checkout.
 
-                    this.db.addNotification('order', `${successText}: ${target}`);
+        const orderObj = {
+            id: orderIdStr,
+            order_id: orderIdStr,
+            roomNumber: isRoomOrder ? targetId.toString() : null,
+            tableId: !isRoomOrder ? targetId.toString() : null,
+            guestId: (isRoomOrder && activeRoom) ? activeRoom.currentGuestId : null,
+            items: this.db.cart.map(c => ({
+                id: c.item.id,
+                name: c.item.name,
+                price: Number(c.item.price),
+                qty: Number(c.qty),
+                variant: c.variant || 'Full'
+            })),
+            total: Number(total),
+            total_price: Number(total),
+            status: 'Pending',
+            timestamp: Date.now(),
+            orderType: isRoomOrder ? 'Room' : 'Table',
+            guestName: isRoomOrder && activeRoom ? activeRoom.guestName : (this.db.restaurantTables[targetId]?.guestName || 'Walk-in')
+        };
 
-                    let textColor = '#10B981'; // Premium Emerald Green (Success)
-                    if (orderDetails.tableId) {
-                        const table = this.db.restaurantTables[orderDetails.tableId];
-                        if (table && table.activeBills) {
-                            const targetBill = table.activeBills.find(b => b.billID === orderDetails.id && (orderDetails.linked ? b.colorIndex === 5 : true));
-                            if (targetBill) {
-                                const orderColors = { 1: '#FF3131', 2: '#39FF14', 3: '#1F51FF', 4: '#FFF01F', 5: '#A020F0' };
-                                textColor = orderColors[targetBill.colorIndex] || '#10B981';
-                            }
+        // Logic for Appending (Add-on)
+        if (isUpdatingExisting) {
+            const existingOrder = this.db.kitchenOrders.find(o => o.id === orderIdStr);
+            if (existingOrder) {
+                orderObj.items = [...existingOrder.items, ...orderObj.items];
+                orderObj.total = (existingOrder.total || existingOrder.total_price || 0) + total;
+                orderObj.total_price = orderObj.total;
+                orderObj.status = existingOrder.status; // Keep current status
+            }
+        }
+
+        // Sync to Local Database (IDB) for immediate reactivity
+        if (this.db.idb) {
+            try {
+                const tx = this.db.idb.transaction(['kitchenOrders'], 'readwrite');
+                tx.objectStore('kitchenOrders').put(orderObj);
+            } catch (e) { console.warn("IDB update failed", e); }
+        }
+
+        // Sync to Cloud
+        if (window.FirebaseSync) {
+            await window.FirebaseSync.pushOrderToCloud(orderObj);
+        }
+
+        // Global Notify
+        const note = {
+            id: Date.now(),
+            type: 'order',
+            message: `Order ${orderIdStr} placed for ${isRoomOrder ? 'Room' : 'Table'} ${targetId}.`,
+            timestamp: Date.now(),
+            status: 'new'
+        };
+        this.db.notifications.unshift(note);
+        if (this.db.notifications.length > 50) this.db.notifications.pop();
+        localStorage.setItem('yukt_notifications', JSON.stringify(this.db.notifications));
+
+        // Update local Room/Table state for Reception/Desk portals
+        if (isRoomOrder) {
+            const room = this.db.rooms[targetId];
+            if (room && room.guest) {
+                if (!room.guest.foodOrders) room.guest.foodOrders = [];
+                // Check if already in foodOrders to update or push
+                const existingIdx = room.guest.foodOrders.findIndex(o => o.id === orderIdStr);
+                if (existingIdx !== -1) room.guest.foodOrders[existingIdx] = orderObj;
+                else room.guest.foodOrders.push(orderObj);
+
+                room.guest.foodTotal = (room.guest.foodTotal || 0) + total;
+                this.db.persistRooms();
+            }
+        } else {
+            const table = this.db.restaurantTables[targetId];
+            if (table) {
+                if (!table.orders) table.orders = [];
+                const existingIdx = table.orders.findIndex(o => o.id === orderIdStr);
+                if (existingIdx !== -1) table.orders[existingIdx] = orderObj;
+                else table.orders.push(orderObj);
+
+                table.total = (table.total || 0) + total;
+                this.db.persistTables();
+            }
+        }
+
+        // Feedback & UI Update
+        this.playConfirmationSound();
+        const successPayload = {
+            id: orderIdStr,
+            total: total,
+            items: itemsList,
+            roomId: isRoomOrder ? targetId : null,
+            tableId: !isRoomOrder ? targetId : null,
+            status: orderObj.status
+        };
+        this.triggerSuccessOverlay(context, successPayload, isUpdatingExisting);
+
+        this.db.cart = [];
+        this.db.editingOrderId = null;
+        this.syncState();
+
+        this.db.editingOrderId = null;
+        this.syncState();
+    }
+
+    triggerSuccessOverlay(context, orderDetails = null, isAddon = false) {
+        const overlay = document.getElementById('success-overlay-pms');
+        const chime = document.getElementById('success-chime');
+        if (overlay) {
+            if (orderDetails) {
+                const target = orderDetails.tableId ? `Table ${orderDetails.tableId}` : `Room ${orderDetails.roomId}`;
+                let successText = isAddon ? `ADD-ON ${orderDetails.id}` : `ORDER ${orderDetails.id}`;
+
+                if (orderDetails.linked) {
+                    successText = `LINKED: ${orderDetails.id}`;
+                }
+
+                this.db.addNotification('order', `${successText}: ${target}`);
+
+                let textColor = '#10B981'; // Premium Emerald Green (Success)
+                if (orderDetails.tableId) {
+                    const table = this.db.restaurantTables[orderDetails.tableId];
+                    if (table && table.activeBills) {
+                        const targetBill = table.activeBills.find(b => b.billID === orderDetails.id && (orderDetails.linked ? b.colorIndex === 5 : true));
+                        if (targetBill) {
+                            const orderColors = { 1: '#FF3131', 2: '#39FF14', 3: '#1F51FF', 4: '#FFF01F', 5: '#A020F0' };
+                            textColor = orderColors[targetBill.colorIndex] || '#10B981';
                         }
                     }
+                }
 
-                    overlay.innerHTML = `
+                overlay.innerHTML = `
                     <div class="success-check-wrapper">
                         <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
                             <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none" style="stroke: ${textColor} !important;"/>
@@ -2453,96 +2662,96 @@ class PMSApp {
                     </div>
                     <div class="mt-4 font-bold text-xl color-primary">${isAddon ? 'Delta Sync Complete' : 'Total: ₹' + orderDetails.total}</div>
                 `;
-                }
-                overlay.style.display = 'flex';
             }
-
-            if (chime) {
-                chime.play().catch(e => console.log('Audio restricted:', e));
-            }
-
-            setTimeout(() => {
-                if (overlay) overlay.style.display = 'none';
-                this.db.activeRoomContext = null;
-                if (this.currentPortal === 'rest-waiter' || this.currentPortal === 'rest-pickup') {
-                    this.renderRestWaiterSidebar();
-                    const area = document.getElementById('rest-waiter-pos-area');
-                    if (area) {
-                        area.style.opacity = '1';
-                        area.style.pointerEvents = 'none';
-                        document.getElementById('rest-waiter-pos-title').innerText = 'Select a table';
-                        document.getElementById('rest-waiter-table-info').innerText = '';
-                        document.getElementById('rest-waiter-cart-items').innerHTML = '';
-                        document.getElementById('rest-waiter-cart-total').innerText = '0';
-                        const btn = document.getElementById('btn-rest-waiter-order');
-                        if (btn) btn.disabled = true;
-                    }
-                }
-                if (this.currentPortal === 'hotel-waiter') {
-                    this.renderHotelWaiterSidebar();
-                    const area = document.getElementById('hotel-waiter-pos-area');
-                    if (area) {
-                        area.style.opacity = '1';
-                        area.style.pointerEvents = 'none';
-                        document.getElementById('hotel-waiter-pos-title').innerText = 'Select a room to order';
-                        document.getElementById('hotel-waiter-cart-items').innerHTML = '';
-                        document.getElementById('hotel-waiter-cart-total').innerText = '0';
-                        const btn = document.getElementById('btn-hotel-waiter-order');
-                        if (btn) btn.disabled = true;
-                    }
-                }
-                if (this.currentPortal === 'rest-desk') {
-                    this.renderRestDesk();
-                    this.renderNotificationSidebar();
-                }
-            }, 1500); // 1.5s Golden Tick display before returning to Table Grid
-        } // end triggerSuccessOverlay
-
-
-        // --- KITCHEN PORTAL (KDS) & KOT PRINTER ---
-
-        checkKDSAlerts() {
-            const activeOrders = this.db.kitchenOrders.filter(o => o.status === 'preparing');
-            if (activeOrders.length > 0) {
-                // Audio ping if higher than before
-                this.lastKDSCount = this.lastKDSCount || 0;
-                if (activeOrders.length > this.lastKDSCount) {
-                    try {
-                        const audio = new Audio('kitchensound.mp3.mpeg'); 
-                        audio.play().catch(e => {
-                            console.log('Kitchen Audio restricted - Please click Enable Audio button');
-                        });
-                    } catch (e) { }
-                }
-                this.lastKDSCount = activeOrders.length;
-
-                // Visual badge ping
-                const badge = document.getElementById('kds-badge');
-                if (badge) {
-                    badge.style.display = 'inline-block';
-                    badge.innerText = activeOrders.length;
-                    badge.style.transform = 'scale(1.2)';
-                    setTimeout(() => badge.style.transform = 'scale(1)', 300);
-                }
-            } else {
-                this.lastKDSCount = 0;
-            }
+            overlay.style.display = 'flex';
         }
 
-        generateKOT(orderObj) {
-            const copies = [
-                { id: 'Kitchen', type: 'KITCHEN KOT' },
-                { id: 'Waiter', type: 'WAITER KOT' },
-                { id: 'Audit', type: 'AUDIT KOT' }
-            ];
+        if (chime) {
+            chime.play().catch(e => console.log('Audio restricted:', e));
+        }
 
-            const printArea = document.getElementById('print-area');
-            printArea.innerHTML = '';
+        setTimeout(() => {
+            if (overlay) overlay.style.display = 'none';
+            this.db.activeRoomContext = null;
+            if (this.currentPortal === 'rest-waiter' || this.currentPortal === 'rest-pickup') {
+                this.renderRestWaiterSidebar();
+                const area = document.getElementById('rest-waiter-pos-area');
+                if (area) {
+                    area.style.opacity = '1';
+                    area.style.pointerEvents = 'none';
+                    document.getElementById('rest-waiter-pos-title').innerText = 'Select a table';
+                    document.getElementById('rest-waiter-table-info').innerText = '';
+                    document.getElementById('rest-waiter-cart-items').innerHTML = '';
+                    document.getElementById('rest-waiter-cart-total').innerText = '0';
+                    const btn = document.getElementById('btn-rest-waiter-order');
+                    if (btn) btn.disabled = true;
+                }
+            }
+            if (this.currentPortal === 'hotel-waiter') {
+                this.renderHotelWaiterSidebar();
+                const area = document.getElementById('hotel-waiter-pos-area');
+                if (area) {
+                    area.style.opacity = '1';
+                    area.style.pointerEvents = 'none';
+                    document.getElementById('hotel-waiter-pos-title').innerText = 'Select a room to order';
+                    document.getElementById('hotel-waiter-cart-items').innerHTML = '';
+                    document.getElementById('hotel-waiter-cart-total').innerText = '0';
+                    const btn = document.getElementById('btn-hotel-waiter-order');
+                    if (btn) btn.disabled = true;
+                }
+            }
+            if (this.currentPortal === 'rest-desk') {
+                this.renderRestDesk();
+                this.renderNotificationSidebar();
+            }
+        }, 1500); // 1.5s Golden Tick display before returning to Table Grid
+    } // end triggerSuccessOverlay
 
-            const pDate = this.db.timeOnlyIST(orderObj.timestamp);
 
-            copies.forEach(copy => {
-                const html = `
+    // --- KITCHEN PORTAL (KDS) & KOT PRINTER ---
+
+    checkKDSAlerts() {
+        const activeOrders = this.db.kitchenOrders.filter(o => o.status === 'preparing');
+        if (activeOrders.length > 0) {
+            // Audio ping if higher than before
+            this.lastKDSCount = this.lastKDSCount || 0;
+            if (activeOrders.length > this.lastKDSCount) {
+                try {
+                    const audio = new Audio('kitchensound.mp3.mpeg');
+                    audio.play().catch(e => {
+                        console.log('Kitchen Audio restricted - Please click Enable Audio button');
+                    });
+                } catch (e) { }
+            }
+            this.lastKDSCount = activeOrders.length;
+
+            // Visual badge ping
+            const badge = document.getElementById('kds-badge');
+            if (badge) {
+                badge.style.display = 'inline-block';
+                badge.innerText = activeOrders.length;
+                badge.style.transform = 'scale(1.2)';
+                setTimeout(() => badge.style.transform = 'scale(1)', 300);
+            }
+        } else {
+            this.lastKDSCount = 0;
+        }
+    }
+
+    generateKOT(orderObj) {
+        const copies = [
+            { id: 'Kitchen', type: 'KITCHEN KOT' },
+            { id: 'Waiter', type: 'WAITER KOT' },
+            { id: 'Audit', type: 'AUDIT KOT' }
+        ];
+
+        const printArea = document.getElementById('print-area');
+        printArea.innerHTML = '';
+
+        const pDate = this.db.timeOnlyIST(orderObj.timestamp);
+
+        copies.forEach(copy => {
+            const html = `
                 <div class="invoice-copy" style="font-family: monospace; font-size: 1.1rem;">
                     <div style="text-align:center; font-weight:bold; font-size: 1.5rem; text-decoration: underline;">${copy.type}</div>
                     <div style="margin-top: 1rem;">
@@ -2560,195 +2769,331 @@ class PMSApp {
                     </table>
                 </div>
             `;
-                printArea.innerHTML += html;
-            });
+            printArea.innerHTML += html;
+        });
 
-            // Using Success Overlay natively triggers for Waiters. 
-            // We only show Alert for Reception if generating KOT manually outside isolated flows.
-            if (this.currentPortal === 'reception') {
-                this.showAlert(`KOT Printed (3 Copies) for ${orderObj.tableId || orderObj.roomId}`);
-            }
+        // Using Success Overlay natively triggers for Waiters. 
+        // We only show Alert for Reception if generating KOT manually outside isolated flows.
+        if (this.currentPortal === 'reception') {
+            this.showAlert(`KOT Printed (3 Copies) for ${orderObj.tableId || orderObj.roomId}`);
+        }
+    }
+
+    async generateFinalBill() {
+        const roomNum = this.selectedRoomId;
+        const room = this.db.rooms[roomNum];
+        if (!room || !room.guest) {
+            this.showToast("No active guest to bill.", "warning");
+            return;
         }
 
-        generateInvoice() {
-            const roomNum = this.selectedRoomId;
-            const room = this.db.rooms[roomNum];
-            if (!room || !room.guest) {
-                this.showToast("No active guest to bill.", "warning");
-                return;
-            }
+        this.showToast("Fetching Order History & Calculating GST...", "info");
 
-            const guest = room.guest;
-            const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : guest.checkInTime);
-            const days = this.calculateBilledDays(checkInTimeValue);
-            const tariff = Number(guest.tariff) || 0;
-            const roomTotal = days * tariff;
-            const foodTotal = Number(guest.foodTotal) || 0;
-            const totalBill = roomTotal + foodTotal;
-            const advance = Number(guest.advance) || 0;
-            const balance = totalBill - advance;
+        const guest = room.guest;
+        const guestId = guest.cloudId || room.currentGuestId;
 
-            const printArea = document.getElementById('print-area');
-            printArea.innerHTML = `
-                <div class="printable-invoice" style="padding: 40px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; background: white; max-width: 800px; margin: auto;">
-                    <div style="text-align: center; border-bottom: 2px solid #D4AF37; padding-bottom: 20px; margin-bottom: 30px;">
-                        <h1 style="margin: 0; color: #1a237e; font-size: 2.5rem; letter-spacing: 2px;">BARAK RESIDENCY</h1>
-                        <p style="margin: 5px 0; color: #666;">Luxury Apartment & Hotel • Silchar, Assam</p>
-                        <p style="margin: 0; font-weight: bold;">INVOICE</p>
-                    </div>
+        // 2. Itemized Billing Logic: Fetch orders from Cloud
+        let orders = [];
+        if (window.FirebaseSync && window.firebaseFS) {
+            const { collection, query, where, getDocs } = window.firebaseHooks;
+            const ordersRef = collection(window.firebaseFS, 'orders');
+            const q = query(ordersRef, where('roomId', '==', roomNum.toString()));
+            const snap = await getDocs(q);
+            snap.forEach(d => orders.push(d.data()));
+        } else {
+            orders = guest.foodOrders || [];
+        }
 
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+        // 3. Advanced GST Calculator
+        const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : guest.checkInTime);
+        const days = this.calculateBilledDays(checkInTimeValue);
+        const tariff = Number(guest.tariff) || 0;
+        const roomSubtotal = days * tariff;
+
+        // Room GST Rules
+        let roomGSTPerc = 0;
+        if (tariff > 7500) roomGSTPerc = 18;
+        else if (tariff > 1000) roomGSTPerc = 12;
+        const roomGSTValue = (roomSubtotal * roomGSTPerc) / 100;
+
+        const foodSubtotal = orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+        const foodGSTPerc = 5;
+        const foodGSTValue = (foodSubtotal * foodGSTPerc) / 100;
+
+        const advance = Number(guest.advance) || 0;
+        const grandTotal = (roomSubtotal + roomGSTValue) + (foodSubtotal + foodGSTValue);
+        const balancePayable = grandTotal - advance;
+
+        const numberToWords = (num) => {
+            const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+            const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            const inWords = (n) => {
+                if ((n = n.toString()).length > 9) return 'overflow';
+                let nArr = ('000000000' + n).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+                if (!nArr) return '';
+                let str = '';
+                str += nArr[1] != 0 ? (a[Number(nArr[1])] || b[nArr[1][0]] + ' ' + a[nArr[1][1]]) + 'Crore ' : '';
+                str += nArr[2] != 0 ? (a[Number(nArr[2])] || b[nArr[2][0]] + ' ' + a[nArr[2][1]]) + 'Lakh ' : '';
+                str += nArr[3] != 0 ? (a[Number(nArr[3])] || b[nArr[3][0]] + ' ' + a[nArr[3][1]]) + 'Thousand ' : '';
+                str += nArr[4] != 0 ? (a[Number(nArr[4])] || b[nArr[4][0]] + ' ' + a[nArr[4][1]]) + 'Hundred ' : '';
+                str += nArr[5] != 0 ? ((str != '') ? 'and ' : '') + (a[Number(nArr[5])] || b[nArr[5][0]] + ' ' + a[nArr[5][1]]) : '';
+                return str;
+            };
+            return inWords(Math.floor(num)) + 'Rupees Only';
+        };
+
+        // 4. Printable Invoice UI
+        const printArea = document.getElementById('print-area');
+        printArea.innerHTML = `
+                <div class="printable-invoice" style="padding: 40px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a1a; background: white; max-width: 900px; margin: auto; border: 1px solid #eee;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #D4AF37; padding-bottom: 20px; margin-bottom: 30px;">
                         <div>
-                            <h4 style="margin: 0 0 10px 0; color: #D4AF37;">GUEST DETAILS</h4>
-                            <p style="margin: 2px 0;"><strong>Name:</strong> ${guest.name}</p>
-                            <p style="margin: 2px 0;"><strong>Phone:</strong> ${guest.phone}</p>
-                            <p style="margin: 2px 0;"><strong>Room No:</strong> ${roomNum}</p>
+                            <h1 style="margin: 0; color: #1a237e; font-size: 2.2rem; letter-spacing: 1px;">BARAK RESIDENCY</h1>
+                            <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">Luxury Apartment & Hotel • Silchar, Assam</p>
+                            <p style="margin: 2px 0; font-size: 0.8rem; color: #888;">GSTIN: 18AABCB1234F1Z5</p>
                         </div>
                         <div style="text-align: right;">
-                            <h4 style="margin: 0 0 10px 0; color: #D4AF37;">STAY DETAILS</h4>
-                            <p style="margin: 2px 0;"><strong>Check-in:</strong> ${this.db.formattedIST(checkInTimeValue)}</p>
-                            <p style="margin: 2px 0;"><strong>Days:</strong> ${days}</p>
-                            <p style="margin: 2px 0;"><strong>Tariff:</strong> ₹${tariff}/day</p>
+                            <h2 style="margin: 0; color: #D4AF37; font-size: 1.5rem;">FINAL TAX INVOICE</h2>
+                            <p style="margin: 5px 0; font-size: 0.9rem;">Invoice No: BR/${roomNum}/${Date.now().toString().substr(-6)}</p>
+                            <p style="margin: 0; font-size: 0.9rem;">Date: ${new Date().toLocaleDateString()}</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 35px; background: #fcfcfc; padding: 20px; border-radius: 8px;">
+                        <div>
+                            <h4 style="margin: 0 0 10px 0; color: #D4AF37; border-bottom: 1px solid #eee; padding-bottom: 5px;">GUEST INFORMATION</h4>
+                            <p style="margin: 4px 0;"><strong>Name:</strong> ${guest.guestName || guest.name}</p>
+                            <p style="margin: 4px 0;"><strong>Phone:</strong> ${guest.guestPhone || guest.phone}</p>
+                            <p style="margin: 4px 0;"><strong>ID Ref:</strong> ${guestId.substr(0, 8).toUpperCase()}</p>
+                        </div>
+                        <div>
+                            <h4 style="margin: 0 0 10px 0; color: #D4AF37; border-bottom: 1px solid #eee; padding-bottom: 5px;">STAY LOGISTICS</h4>
+                            <p style="margin: 4px 0;"><strong>Room No:</strong> ${roomNum}</p>
+                            <p style="margin: 4px 0;"><strong>Check-in:</strong> ${this.db.formattedIST(checkInTimeValue)}</p>
+                            <p style="margin: 4px 0;"><strong>Check-out:</strong> ${new Date().toLocaleString()}</p>
                         </div>
                     </div>
 
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
                         <thead>
-                            <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                                <th style="padding: 12px; text-align: left;">Description</th>
-                                <th style="padding: 12px; text-align: right;">Amount</th>
+                            <tr style="background: #1a237e; color: white;">
+                                <th style="padding: 12px; text-align: left; border: 1px solid #eee;">Service Description</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #eee;">Qty/Days</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #eee;">Base Price</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #eee;">GST %</th>
+                                <th style="padding: 12px; text-align: right; border: 1px solid #eee;">Total</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 12px;">Room Charges (${days} Days x ₹${tariff})</td>
-                                <td style="padding: 12px; text-align: right;">₹${roomTotal.toFixed(2)}</td>
+                            <tr>
+                                <td style="padding: 12px; border: 1px solid #eee;">Room Accommodation (Luxury)</td>
+                                <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${days}</td>
+                                <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${roomSubtotal.toFixed(2)}</td>
+                                <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${roomGSTPerc}%</td>
+                                <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${(roomSubtotal + roomGSTValue).toFixed(2)}</td>
                             </tr>
-                            <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 12px;">Itemized Food Bill</td>
-                                <td style="padding: 12px; text-align: right;">₹${foodTotal.toFixed(2)}</td>
+                            <tr>
+                                <td style="padding: 12px; border: 1px solid #eee;">Food & Beverage Services</td>
+                                <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${orders.length} Orders</td>
+                                <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${foodSubtotal.toFixed(2)}</td>
+                                <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${foodGSTPerc}%</td>
+                                <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${(foodSubtotal + foodGSTValue).toFixed(2)}</td>
                             </tr>
                         </tbody>
+                        <tfoot>
+                            <tr style="background: #f9f9f9; font-weight: bold;">
+                                <td colspan="4" style="padding: 12px; text-align: right; border:1px solid #eee;">Gross Total (Inc. Taxes)</td>
+                                <td style="padding: 12px; text-align: right; border:1px solid #eee; color: #1a237e;">₹${grandTotal.toFixed(2)}</td>
+                            </tr>
+                            <tr style="color: #2e7d32;">
+                                <td colspan="4" style="padding: 12px; text-align: right; border:1px solid #eee;">Less: Advance Paid</td>
+                                <td style="padding: 12px; text-align: right; border:1px solid #eee;">- ₹${advance.toFixed(2)}</td>
+                            </tr>
+                            <tr style="background: #fefcf0; font-size: 1.3rem; color: #c62828;">
+                                <td colspan="4" style="padding: 12px; text-align: right; border:1px solid #eee;">Net Balance Payable</td>
+                                <td style="padding: 12px; text-align: right; border:1px solid #eee; font-weight: 900;">₹${balancePayable.toFixed(2)}</td>
+                            </tr>
+                        </tfoot>
                     </table>
 
-                    <div style="display: flex; justify-content: flex-end;">
-                        <div style="width: 300px;">
-                            <div style="display: flex; justify-content: space-between; padding: 5px 0;">
-                                <span>Subtotal:</span>
-                                <span>₹${totalBill.toFixed(2)}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #2e7d32;">
-                                <span>Advance Paid:</span>
-                                <span>- ₹${advance.toFixed(2)}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #D4AF37; font-size: 1.2rem; font-weight: bold; margin-top: 10px;">
-                                <span>Balance Payable:</span>
-                                <span style="color: #c62828;">₹${balance.toFixed(2)}</span>
-                            </div>
+                    <div style="margin-bottom: 40px; padding: 15px; background: #fdfdfd; border: 1px dashed #ddd; border-radius: 4px;">
+                        <p style="margin: 0; font-size: 0.9rem; font-style: italic; color: #444;"><strong>Amount in Words:</strong> ${numberToWords(balancePayable)}</p>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 60px;">
+                        <div style="text-align: center; width: 200px;">
+                            <div style="border-top: 1px solid #333; padding-top: 5px; font-size: 0.8rem;">Guest Signature</div>
+                        </div>
+                        <div style="text-align: center; width: 200px;">
+                            <p style="margin: 0; font-weight: bold; font-size: 0.9rem;">For BARAK RESIDENCY</p>
+                            <div style="height: 50px;"></div>
+                            <div style="border-top: 1px solid #333; padding-top: 5px; font-size: 0.8rem;">Authorized Signatory</div>
                         </div>
                     </div>
 
-                    <div style="margin-top: 50px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
-                        <p style="color: #888; font-size: 0.9rem;">Thank you for staying with Barak Residency!</p>
-                        <p style="margin-top: 40px; font-size: 0.8rem; opacity: 0.5;">Authorized Signature</p>
+                    <div style="margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+                        <p style="color: #888; font-size: 0.8rem; margin: 0;">Computer generated invoice. No signature required for validity.</p>
+                        <p style="color: #1a237e; font-weight: bold; margin: 5px 0;">Thank you for staying with us!</p>
                     </div>
                 </div>
             `;
 
-            window.print();
+        window.print();
+
+        // 5. Mission: Finalize Checkout after printing/viewing
+        this.finalInvoiceData = {
+            roomNum,
+            guestId,
+            totals: { roomSubtotal, roomGSTValue, foodSubtotal, foodGSTValue, grandTotal, advance, balancePayable },
+            timestamp: Date.now()
+        };
+    }
+
+    async finalizePayAndCheckout() {
+        if (!this.finalInvoiceData) {
+            this.showToast("Please generate the Final Bill first.", "warning");
+            return;
         }
 
-        renderKDS() {
-            const grid = document.getElementById('kds-grid');
-            if (!grid) return;
-            grid.innerHTML = '';
+        this.showToast("Saving Final Invoice & Clearing Room...", "info");
 
-            const allOrders = this.db.kitchenOrders.filter(o => 
-                o.status === 'preparing' || o.status === 'ready' || 
-                o.status === 'Pending' || o.status === 'Kitchen' || o.status === 'Served'
-            );
-            if (allOrders.length === 0) {
-                grid.innerHTML = `<div class="text-gray" style="font-size:1.2rem; padding: 2rem;">No active orders. Kitchen is relaxed.</div>`;
-                return;
-            }
+        try {
+            const { doc, updateDoc, collection, addDoc, serverTimestamp, deleteDoc } = window.firebaseHooks;
+            const db = window.firebaseFS;
 
-            // Grouping Logic: Session-Based Grouping
-            const groups = {};
-            allOrders.forEach(o => {
-                const baseId = o.id.replace('ADDON ', '');
-                if (!groups[baseId]) {
-                    groups[baseId] = {
-                        id: baseId,
-                        orders: [],
-                        status: 'ready',
-                        timestamp: o.timestamp,
-                        orderType: o.orderType,
-                        roomId: o.roomId,
-                        tableId: o.tableId
-                    };
-                }
-                groups[baseId].orders.push(o);
-                // If any order in group is active, group carries that focus
-                if (o.status === 'preparing' || o.status === 'Pending' || o.status === 'Kitchen') {
-                    groups[baseId].status = 'Kitchen';
-                }
-                // Use earliest timestamp for sorting
-                if (o.timestamp < groups[baseId].timestamp) groups[baseId].timestamp = o.timestamp;
+            // Step A: Save final JSON to ledger
+            await addDoc(collection(db, 'ledger'), {
+                ...this.finalInvoiceData,
+                logType: 'FINAL_TAX_INVOICE_SETTLEMENT',
+                timestamp: serverTimestamp()
             });
 
-            const sortedGroups = Object.values(groups).sort((a, b) => b.timestamp - a.timestamp).slice(0, 12);
-            const now = new Date().getTime();
+            // Step B: Clear Room & Guest
+            const roomRef = doc(db, 'rooms', this.finalInvoiceData.roomNum.toString());
+            await updateDoc(roomRef, {
+                status: 'available',
+                guest: null,
+                currentGuestId: null,
+                orderSerial: 0,
+                last_updated: serverTimestamp()
+            });
 
-            sortedGroups.forEach(group => {
-                const isGroupReady = group.status === 'Served' || group.status === 'ready';
-                const minsElapsed = Math.floor((now - group.timestamp) / 60000);
-                const isUrgent = !isGroupReady && minsElapsed >= 10;
+            if (this.finalInvoiceData.guestId) {
+                await deleteDoc(doc(db, 'guests', this.finalInvoiceData.guestId));
+            }
 
-                const card = document.createElement('div');
-                card.style.position = 'relative';
+            // Local State Sync
+            const room = this.db.rooms[this.finalInvoiceData.roomNum];
+            if (room) {
+                room.status = 'available';
+                room.guest = null;
+                room.currentGuestId = null;
+            }
 
-                let borderClass = 'kds-ticket-room';
-                let dynamicBorderColor = '';
-                if (group.orderType === 'table') borderClass = 'kds-ticket-table';
-                else if (group.orderType === 'pickup') { borderClass = 'kds-ticket-pickup'; dynamicBorderColor = '#A020F0'; }
+            this.syncState();
+            this.closeCommandCenter();
+            this.finalInvoiceData = null;
+            this.showToast("Checkout Finalized. Room is now Available.", "success");
 
-                card.className = `kds-ticket ${borderClass} ${isUrgent ? 'urgent' : ''} ${isGroupReady ? 'ready-freeze' : ''}`;
-                if (dynamicBorderColor) card.style.borderColor = dynamicBorderColor;
+        } catch (err) {
+            console.error("Checkout Finalization Error:", err);
+            this.showToast("Failed to finalize checkout. Check console.", "error");
+        }
+    }
 
-                if (isGroupReady) {
-                    card.style.opacity = '0.6';
-                    card.style.filter = 'grayscale(0.5)';
-                }
+    generateInvoice() { this.generateFinalBill(); }
 
-                const freezeOverlay = isGroupReady ? `
+    renderKDS() {
+        const grid = document.getElementById('kds-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const allOrders = this.db.kitchenOrders.filter(o =>
+            o.status === 'preparing' || o.status === 'ready' ||
+            o.status === 'Pending' || o.status === 'Kitchen' || o.status === 'Served'
+        );
+        if (allOrders.length === 0) {
+            grid.innerHTML = `<div class="text-gray" style="font-size:1.2rem; padding: 2rem;">No active orders. Kitchen is relaxed.</div>`;
+            return;
+        }
+
+        // Grouping Logic: Session-Based Grouping
+        const groups = {};
+        allOrders.forEach(o => {
+            const baseId = o.id.replace('ADDON ', '');
+            if (!groups[baseId]) {
+                groups[baseId] = {
+                    id: baseId,
+                    orders: [],
+                    status: 'ready',
+                    timestamp: o.timestamp,
+                    orderType: o.orderType,
+                    roomNumber: o.roomNumber,
+                    tableId: o.tableId
+                };
+            }
+            groups[baseId].orders.push(o);
+            // If any order in group is active, group carries that focus
+            if (o.status === 'preparing' || o.status === 'Pending' || o.status === 'Kitchen') {
+                groups[baseId].status = 'Kitchen';
+            }
+            // Use earliest timestamp for sorting
+            if (o.timestamp < groups[baseId].timestamp) groups[baseId].timestamp = o.timestamp;
+        });
+
+        const sortedGroups = Object.values(groups).sort((a, b) => b.timestamp - a.timestamp).slice(0, 12);
+        const now = new Date().getTime();
+
+        sortedGroups.forEach(group => {
+            const isGroupReady = group.status === 'Served' || group.status === 'ready';
+            const minsElapsed = Math.floor((now - group.timestamp) / 60000);
+            const isUrgent = !isGroupReady && minsElapsed >= 10;
+
+            const card = document.createElement('div');
+            card.style.position = 'relative';
+
+            let borderClass = 'kds-ticket-room';
+            let dynamicBorderColor = '';
+            if (group.orderType === 'table') borderClass = 'kds-ticket-table';
+            else if (group.orderType === 'pickup') { borderClass = 'kds-ticket-pickup'; dynamicBorderColor = '#A020F0'; }
+
+            card.className = `kds-ticket ${borderClass} ${isUrgent ? 'urgent' : ''} ${isGroupReady ? 'ready-freeze' : ''}`;
+            if (dynamicBorderColor) card.style.borderColor = dynamicBorderColor;
+
+            if (isGroupReady) {
+                card.style.opacity = '0.6';
+                card.style.filter = 'grayscale(0.5)';
+            }
+
+            const freezeOverlay = isGroupReady ? `
             <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 10; border-radius: 12px;">
                 <div style="background: var(--color-mint-400); color: black; font-weight: bold; padding: 0.5rem 1rem; border-radius: 5px; transform: rotate(-15deg); border: 2px solid black; box-shadow: 0 0 15px rgba(0,0,0,0.5);">FULL SESSION READY</div>
             </div>` : '';
 
-                let itemsHtml = '';
-                group.orders.forEach(o => {
-                    const isAddon = o.id.startsWith('ADDON');
-                    const isKitchen = o.status === 'Kitchen' || o.status === 'Pending';
-                    const isPreparing = o.status === 'preparing';
-                    const itemReady = o.status === 'ready' || o.status === 'Served';
-                    
-                    itemsHtml += `
+            let itemsHtml = '';
+            group.orders.forEach(o => {
+                const isAddon = o.id.startsWith('ADDON');
+                const isKitchen = o.status === 'Kitchen' || o.status === 'Pending';
+                const isPreparing = o.status === 'preparing';
+                const itemReady = o.status === 'ready' || o.status === 'Served';
+
+                itemsHtml += `
                 <div style="margin-bottom: 0.75rem; border-left: 2px solid ${isAddon ? '#EF4444' : 'var(--gold-primary)'}; padding-left: 0.75rem; position: relative;">
                     <div style="font-size: 0.65rem; color: ${isAddon ? '#EF4444' : 'var(--text-gray)'}; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">${o.id}</div>
                     ${o.items.map(item => {
-                        const name = typeof item === 'object' ? item.name : item;
-                        const qty = typeof item === 'object' ? item.qty : '';
-                        const variant = item.variant && item.variant !== 'Full' ? `[${item.variant}]` : '';
-                        const instructions = (item.specialInstructions || item.instructions) ? `<div class="text-xs color-primary" style="margin-left:1rem; font-style: italic;">Note: ${item.specialInstructions || item.instructions}</div>` : '';
-                        return `
+                    const name = typeof item === 'object' ? item.name : item;
+                    const qty = typeof item === 'object' ? item.qty : '';
+                    const variant = item.variant && item.variant !== 'Full' ? `[${item.variant}]` : '';
+                    const instructions = (item.specialInstructions || item.instructions) ? `<div class="text-xs color-primary" style="margin-left:1rem; font-style: italic;">Note: ${item.specialInstructions || item.instructions}</div>` : '';
+                    return `
                             <div style="padding: 2px 0; font-size: 1.1rem; color: white;">
                                 <div style="display: flex; justify-content: space-between;">
-                                    <span>• ${qty ? qty + 'x ' : ''}${name} ${variant}</span> 
+                                    <span>• ${name} x ${qty || 1} ${variant}</span> 
                                     ${itemReady ? '✅' : ''}
                                 </div>
                                 ${instructions}
                             </div>`;
-                    }).join('')}
+                }).join('')}
                     <div style="display: flex; gap: 8px; margin-top: 8px;">
                         ${isKitchen ? `
                             <button class="btn btn-primary" style="flex: 1; height: 32px; font-size: 0.7rem; font-weight: 800;" onclick="app.updateCloudOrderStatus('${o.id}', 'preparing')">PREPARING</button>
@@ -2759,9 +3104,9 @@ class PMSApp {
                     </div>
                 </div>
             `;
-                });
+            });
 
-                card.innerHTML = `
+            card.innerHTML = `
             ${freezeOverlay}
             <div class="kds-top">
                 <div class="kds-room" style="font-size: 2.2rem; font-weight: 900; color: white;">${group.id}</div>
@@ -2774,70 +3119,70 @@ class PMSApp {
                 ${itemsHtml}
             </div>
         `;
-                grid.appendChild(card);
-            });
-        }
+            grid.appendChild(card);
+        });
+    }
 
-        updateCloudOrderStatus(orderId, status) {
-            const order = this.db.kitchenOrders.find(o => o.id === orderId);
-            if (order) {
-                order.status = status;
-                if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, status);
-                this.db.persistKitchenSync();
-                
-                if (status === 'ready') {
-                    const target = order.tableId ? `Table ${order.tableId}` : (order.roomId ? `Room ${order.roomId}` : `Pickup ${order.id}`);
-                    const notifyTarget = order.tableId || order.orderType === 'pickup' ? 'desk' : 'reception';
-                    const notifyData = order.roomId ? { type: 'room', orderId: orderId, roomId: order.roomId } : null;
-                    this.db.addNotification('ready', `Order ${orderId} for ${target} is READY!`, notifyTarget, notifyData);
+    updateCloudOrderStatus(orderId, status) {
+        const order = this.db.kitchenOrders.find(o => o.id === orderId);
+        if (order) {
+            order.status = status;
+            if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, status);
+            this.db.persistKitchenSync();
+
+            if (status === 'ready') {
+                const target = order.tableId ? `Table ${order.tableId}` : (order.roomId ? `Room ${order.roomId}` : `Pickup ${order.id}`);
+                const notifyTarget = order.tableId || order.orderType === 'pickup' ? 'desk' : 'reception';
+                const notifyData = order.roomId ? { type: 'room', orderId: orderId, roomId: order.roomId } : null;
+                this.db.addNotification('ready', `Order ${orderId} for ${target} is READY!`, notifyTarget, notifyData);
+            }
+            this.syncState();
+        }
+    }
+
+
+    markOrderDelivered(orderId) {
+        const order = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
+        if (order) {
+            order.status = 'delivered';
+            if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, 'delivered');
+            this.db.persistKitchenSync();
+
+            // Target: Only mark related notifications as read if needed, or keeping them for history
+            this.syncState();
+            this.showToast(`Order ${orderId} Marked as Delivered`, "success");
+
+            // Sync via LocalStorage to trigger Guest Portal update immediately
+            localStorage.setItem('yukt_pms_sync', Date.now());
+        }
+    }
+
+    renderNotificationSidebar() {
+        const container = document.getElementById('desk-notifications-list');
+        if (!container) return;
+        container.innerHTML = '';
+
+        // Filter: ONLY show Desk or Both
+        this.db.notifications
+            .filter(n => n.target === 'desk' || n.target === 'both')
+            .slice(0, 15)
+            .forEach(n => {
+                const div = document.createElement('div');
+                const isPurple = n.data && n.data.style === 'purple';
+                div.className = `notification-card ${n.status}`;
+                if (isPurple) div.style.borderLeft = '4px solid #A020F0';
+
+                let actionHtml = '';
+                if (n.data && (n.data.type === 'dinein' || n.data.type === 'addon')) {
+                    const printedKeys = JSON.parse(localStorage.getItem('br_printed_kots') || '{}');
+                    const isPrinted = printedKeys[n.id];
+                    const btnLabel = isPrinted ? 'PRINTED' : 'PRINT 2 KOT';
+                    const btnClass = isPrinted ? 'btn-outline' : 'btn-primary';
+                    const btnStyle = isPrinted ? 'opacity: 0.6;' : 'background: #F59E0B; border: none; font-weight: bold; color: #000;';
+                    actionHtml = `<button class="btn ${btnClass} btn-block mt-2" style="font-size: 0.75rem; padding: 0.4rem; ${btnStyle}" onclick="app.printKOTAction('${n.id}', '${n.data.orderId}', '${n.data.tableId}')">${btnLabel}</button>`;
                 }
-                this.syncState();
-            }
-        }
 
-
-        markOrderDelivered(orderId) {
-            const order = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
-            if (order) {
-                order.status = 'delivered';
-                if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, 'delivered');
-                this.db.persistKitchenSync();
-
-                // Target: Only mark related notifications as read if needed, or keeping them for history
-                this.syncState();
-                this.showToast(`Order ${orderId} Marked as Delivered`, "success");
-
-                // Sync via LocalStorage to trigger Guest Portal update immediately
-                localStorage.setItem('yukt_pms_sync', Date.now());
-            }
-        }
-
-        renderNotificationSidebar() {
-            const container = document.getElementById('desk-notifications-list');
-            if (!container) return;
-            container.innerHTML = '';
-
-            // Filter: ONLY show Desk or Both
-            this.db.notifications
-                .filter(n => n.target === 'desk' || n.target === 'both')
-                .slice(0, 15)
-                .forEach(n => {
-                    const div = document.createElement('div');
-                    const isPurple = n.data && n.data.style === 'purple';
-                    div.className = `notification-card ${n.status}`;
-                    if (isPurple) div.style.borderLeft = '4px solid #A020F0';
-
-                    let actionHtml = '';
-                    if (n.data && (n.data.type === 'dinein' || n.data.type === 'addon')) {
-                        const printedKeys = JSON.parse(localStorage.getItem('br_printed_kots') || '{}');
-                        const isPrinted = printedKeys[n.id];
-                        const btnLabel = isPrinted ? 'PRINTED' : 'PRINT 2 KOT';
-                        const btnClass = isPrinted ? 'btn-outline' : 'btn-primary';
-                        const btnStyle = isPrinted ? 'opacity: 0.6;' : 'background: #F59E0B; border: none; font-weight: bold; color: #000;';
-                        actionHtml = `<button class="btn ${btnClass} btn-block mt-2" style="font-size: 0.75rem; padding: 0.4rem; ${btnStyle}" onclick="app.printKOTAction('${n.id}', '${n.data.orderId}', '${n.data.tableId}')">${btnLabel}</button>`;
-                    }
-
-                    div.innerHTML = `
+                div.innerHTML = `
                 <div class="d-flex justify-between mb-1">
                     <span class="note-type ${n.type}" style="${isPurple ? 'background: rgba(160,32,240,0.1); color: #A020F0;' : ''}">${n.type.toUpperCase()}</span>
                     <span class="note-time">${this.db.timeOnlyIST(n.timestamp)}</span>
@@ -2845,134 +3190,147 @@ class PMSApp {
                 <div class="note-msg" style="${isPurple ? 'color: #d4a0f7; font-weight: bold;' : ''}">${n.message}</div>
                 ${actionHtml}
             `;
-                    container.appendChild(div);
-                });
+                container.appendChild(div);
+            });
+    }
+
+    printKOTAction(noteId, orderId, tableId) {
+        const printedKeys = JSON.parse(localStorage.getItem('br_printed_kots') || '{}');
+        printedKeys[noteId] = true;
+        localStorage.setItem('br_printed_kots', JSON.stringify(printedKeys));
+
+        // Find order data to print
+        let orderData = null;
+        const table = this.db.restaurantTables[tableId];
+        if (table) {
+            orderData = table.orders.find(o => o.id === orderId);
         }
 
-        printKOTAction(noteId, orderId, tableId) {
-            const printedKeys = JSON.parse(localStorage.getItem('br_printed_kots') || '{}');
-            printedKeys[noteId] = true;
-            localStorage.setItem('br_printed_kots', JSON.stringify(printedKeys));
-
-            // Find order data to print
-            let orderData = null;
-            const table = this.db.restaurantTables[tableId];
-            if (table) {
-                orderData = table.orders.find(o => o.id === orderId);
-            }
-
-            if (orderData) {
-                this.generateKOT(orderData); // This prints 3 copies as per its logic, close enough to "2 KOT" requirement or I can modify generateKOT
-                // User asked for "PRINT 2 KOT". generateKOT does 3. I'll adhere to "2 KOT" if I must, or stick to existing logic if it's fine.
-                // Actually, requirement says "Include a 'PRINT 2 KOT' button".
-                console.log(`Printing 2 KOT for Order ${orderId}`);
-            }
-
-            this.renderNotificationSidebar();
+        if (orderData) {
+            this.generateKOT(orderData); // This prints 3 copies as per its logic, close enough to "2 KOT" requirement or I can modify generateKOT
+            // User asked for "PRINT 2 KOT". generateKOT does 3. I'll adhere to "2 KOT" if I must, or stick to existing logic if it's fine.
+            // Actually, requirement says "Include a 'PRINT 2 KOT' button".
+            console.log(`Printing 2 KOT for Order ${orderId}`);
         }
 
-        renderRoomOrderPanel() {
-            const container = document.getElementById('room-orders-panel');
-            const countBadge = document.getElementById('room-order-count');
-            if (!container) return;
-            container.innerHTML = '';
+        this.renderNotificationSidebar();
+    }
 
-            // Filter strictly for Room Orders (notification type 'order' and message contains Room)
-            const roomOrders = this.db.notifications
-                .filter(n => n.target === 'reception' && n.data && n.data.type === 'room')
-                .slice(0, 30);
+    renderRoomOrderPanel() {
+        const container = document.getElementById('room-orders-panel');
+        const countBadge = document.getElementById('room-order-badge-count');
+        if (!container) return;
+        container.innerHTML = '';
 
-            if (roomOrders.length === 0) {
-                container.innerHTML = '<div class="text-gray" style="text-align: center; margin-top: 2rem;">No active room orders</div>';
-                countBadge.innerText = '0';
-                return;
-            }
+        // Filter strictly for Room Orders (notification type 'order' and message contains Room)
+        const roomOrders = this.db.notifications
+            .filter(n => n.target === 'reception' && n.data && n.data.type === 'room')
+            .slice(0, 30);
 
-            countBadge.innerText = roomOrders.length;
+        if (roomOrders.length === 0) {
+            container.innerHTML = '<div class="text-gray" style="text-align: center; margin-top: 2rem;">No active room orders</div>';
+            countBadge.innerText = '0';
+            return;
+        }
 
-            roomOrders.forEach(n => {
-                const orderId = n.data.orderId;
-                const roomId = n.data.roomId;
+        countBadge.innerText = roomOrders.length;
 
-                // Find the base order and all its addons to show the Full Running List
-                const room = this.db.rooms[roomId];
-                let fullItems = [];
-                let statusText = 'Preparing';
-                let isReady = false;
-                let isDelivered = false;
+        roomOrders.forEach(n => {
+            const orderId = n.data.orderId;
+            const roomNumber = n.data.roomNumber;
 
-                if (room) {
-                    const kdsOrder = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
-                    if (kdsOrder) {
-                        fullItems = kdsOrder.items;
-                        isReady = kdsOrder.status === 'ready';
-                        isDelivered = kdsOrder.status === 'delivered';
-                        statusText = isDelivered ? 'Delivered' : (isReady ? 'Ready' : 'Preparing');
-                    }
+            // Find the base order and all its addons to show the Full Running List
+            const room = this.db.rooms[roomNumber];
+            let fullItems = [];
+            let statusText = 'Preparing';
+            let isReady = false;
+            let isDelivered = false;
+
+            if (room) {
+                // First: try to find a matching kdsOrder by orderId
+                const kdsOrder = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
+                if (kdsOrder) {
+                    fullItems = kdsOrder.items;
+                    isReady = kdsOrder.status === 'ready';
+                    isDelivered = kdsOrder.status === 'delivered';
+                    statusText = isDelivered ? 'Delivered' : (isReady ? 'Ready' : 'Preparing');
                 }
+            }
+            // Fallback: use items embedded in the notification data itself
+            if (fullItems.length === 0 && n.data && n.data.items) {
+                fullItems = n.data.items;
+            }
 
-                const div = document.createElement('div');
-                div.className = 'room-order-notification';
-                if (isDelivered) div.style.opacity = '0.7';
+            // Mission Fix: Format KOT items correctly x quantity
+            const itemStrings = fullItems.map(i => {
+                if (typeof i === 'object') {
+                    return `${i.name || 'Unknown Item'} x ${i.qty || i.quantity || 1}${i.variant && i.variant !== 'Full' ? ` (${i.variant})` : ''}`;
+                }
+                return i; // Fallback if string
+            });
 
-                div.innerHTML = `
+            const div = document.createElement('div');
+            div.className = 'room-order-notification';
+            if (isDelivered) div.style.opacity = '0.7';
+
+            div.innerHTML = `
             <div class="room-order-header">
-                <div>Room <span style="font-weight:900;">${roomId}</span></div>
+                <div>Room <span style="font-weight:900;">${roomNumber}</span></div>
                 <div class="room-order-badge">${orderId}</div>
             </div>
             <div class="room-order-guest">
-                ${this.db.rooms[roomId]?.guest?.name || 'Guest'}
+                ${this.db.rooms[roomNumber]?.salutation || ''} ${this.db.rooms[roomNumber]?.guestName || 'Occupied'}
             </div>
             <div style="font-size: 0.8rem; color: ${isReady ? 'var(--color-green-400)' : 'var(--color-gold-primary)'}; font-weight: ${isReady ? '700' : '400'};">
                 Status: ${statusText}
             </div>
             <div class="mt-2" style="max-height: 200px; overflow-y: auto;">
                 <div style="padding: 0.5rem; background: rgba(212,175,55,0.05); border-left: 2px solid var(--gold-primary); border-radius: 4px; font-size: 0.8rem;">
-                    ${fullItems.map(i => `<div style="margin-bottom:2px;">• ${i}</div>`).join('')}
+                    ${itemStrings.map(i => `<div style="margin-bottom:2px;">• ${i}</div>`).join('')}
                 </div>
             </div>
             <div class="room-order-actions">
-                <button class="btn btn-primary" style="flex:1; font-size:0.7rem; padding:0.3rem;" onclick="app.printQuickKOT('${n.id}', '${orderId}', '${roomId}')">KOT</button>
+                <button class="btn btn-primary" style="flex:1; font-size:0.7rem; padding:0.3rem;" onclick="app.printQuickKOT('${n.id}', '${orderId}', '${roomNumber}')">KOT</button>
                 ${!isDelivered ? `<button class="btn btn-success" style="flex:1.5; font-size:0.7rem; padding:0.3rem;" onclick="app.markOrderDelivered('${orderId}')">MARK DELIVERED</button>` : ''}
             </div>
         `;
-                container.appendChild(div);
-            });
-        }
+            container.appendChild(div);
+        });
+    }
 
-        renderFullNotificationTab() {
-            const container = document.getElementById('reception-sidebar-notifications');
-            if (!container) return;
-            container.innerHTML = '';
+    renderFullNotificationTab() {
+        const container = document.getElementById('reception-sidebar-notifications');
+        if (!container) return;
+        container.innerHTML = '';
 
-            // Filter: ONLY show Reception or Both
-            this.db.notifications
-                .filter(n => n.target === 'reception' || n.target === 'both')
-                .slice(0, 20)
-                .forEach(n => {
-                    const div = document.createElement('div');
-                    div.className = `notification-card ${n.status}`;
-                    div.style.marginBottom = '0.75rem';
-                    div.style.padding = '0.75rem';
-                    div.style.fontSize = '0.85rem';
+        // Filter: ONLY show Reception or Both
+        this.db.notifications
+            .filter(n => n.target === 'reception' || n.target === 'both')
+            .slice(0, 20)
+            .forEach(n => {
+                const div = document.createElement('div');
+                div.className = `notification-card ${n.status}`;
+                div.style.marginBottom = '0.75rem';
+                div.style.padding = '0.75rem';
+                div.style.fontSize = '0.85rem';
 
-                    let actionHtml = '';
-                    if (n.data && n.data.type === 'room') {
-                        const orderId = n.data.orderId;
+                let actionHtml = '';
+                if (n.data && n.data.type === 'room') {
+                    const orderId = n.data.orderId;
 
-                        // Check if already delivered
-                        const order = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
-                        const isDelivered = order && order.status === 'delivered';
+                    // Check if already delivered
+                    const order = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
+                    const isDelivered = order && order.status === 'delivered';
 
-                        actionHtml = `
+                    actionHtml = `
                     <div class="d-flex gap-2 mt-2">
                         <button class="btn btn-primary" style="flex:1; font-size:0.7rem; padding:0.3rem;" onclick="app.printQuickKOT('${n.id}', '${orderId}', '${n.data.roomId}')">KOT</button>
                         ${!isDelivered ? `<button class="btn btn-success" style="flex:1.5; font-size:0.7rem; padding:0.3rem;" onclick="app.markOrderDelivered('${orderId}')">MARK DELIVERED</button>` : `<span class="text-xs color-success" style="align-self:center;">DELIVERED ✓</span>`}
                     </div>
                 `;
-                    }
+                }
 
-                    div.innerHTML = `
+                div.innerHTML = `
                     <div class="d-flex justify-between mb-1">
                         <span class="note-type ${n.type}">${n.type.toUpperCase()}</span>
                         <span class="note-time">${this.db.timeOnlyIST(n.timestamp)}</span>
@@ -2982,123 +3340,123 @@ class PMSApp {
                     </div>
                     ${actionHtml}
                 `;
-                    container.appendChild(div);
-                });
-        }
+                container.appendChild(div);
+            });
+    }
 
-        printQuickKOT(noteId, orderId, roomId) {
-            const order = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
-            if (order) {
-                this.generateKOT(order);
+    printQuickKOT(noteId, orderId, roomId) {
+        const order = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
+        if (order) {
+            this.generateKOT(order);
+        }
+    }
+
+    toggleFullNotifications() {
+        const panel = document.querySelector('.notification-section.full-notifications');
+        if (panel) {
+            panel.classList.toggle('is-fullscreen');
+            if (panel.classList.contains('is-fullscreen')) {
+                panel.style.position = 'fixed';
+                panel.style.top = '0';
+                panel.style.left = '0';
+                panel.style.width = '100%';
+                panel.style.height = '100%';
+                panel.style.margin = '0';
+                panel.style.zIndex = '10000';
+                panel.style.borderRadius = '0';
+                panel.style.maxHeight = 'none';
+            } else {
+                panel.style.position = '';
+                panel.style.top = '';
+                panel.style.left = '';
+                panel.style.width = '';
+                panel.style.height = '';
+                panel.style.margin = '1.5rem';
+                panel.style.zIndex = '';
+                panel.style.borderRadius = '';
+                panel.style.maxHeight = '';
             }
         }
+    }
 
-        toggleFullNotifications() {
-            const panel = document.querySelector('.notification-section.full-notifications');
-            if (panel) {
-                panel.classList.toggle('is-fullscreen');
-                if (panel.classList.contains('is-fullscreen')) {
-                    panel.style.position = 'fixed';
-                    panel.style.top = '0';
-                    panel.style.left = '0';
-                    panel.style.width = '100%';
-                    panel.style.height = '100%';
-                    panel.style.margin = '0';
-                    panel.style.zIndex = '10000';
-                    panel.style.borderRadius = '0';
-                    panel.style.maxHeight = 'none';
-                } else {
-                    panel.style.position = '';
-                    panel.style.top = '';
-                    panel.style.left = '';
-                    panel.style.width = '';
-                    panel.style.height = '';
-                    panel.style.margin = '1.5rem';
-                    panel.style.zIndex = '';
-                    panel.style.borderRadius = '';
-                    panel.style.maxHeight = '';
-                }
-            }
-        }
+    // --- RESTAURANT DESK PORTAL ---
 
-        // --- RESTAURANT DESK PORTAL ---
+    renderRestDesk() {
+        const grid = document.getElementById('rest-desk-table-grid');
+        grid.innerHTML = '';
 
-        renderRestDesk() {
-            const grid = document.getElementById('rest-desk-table-grid');
-            grid.innerHTML = '';
+        let totalPax = 0;
+        let activeTables = 0;
 
-            let totalPax = 0;
-            let activeTables = 0;
+        Object.values(this.db.restaurantTables).forEach(table => {
+            if (table.status === 'occupied') {
+                activeTables++;
+                totalPax += table.pax;
 
-            Object.values(this.db.restaurantTables).forEach(table => {
-                if (table.status === 'occupied') {
-                    activeTables++;
-                    totalPax += table.pax;
+                const chars = table.chairs || [];
+                const activeBills = table.activeBills || [];
 
-                    const chars = table.chairs || [];
-                    const activeBills = table.activeBills || [];
+                // Multi-bill logic: Explicit Colors
+                const orderColors = {
+                    1: '#FF3131',   // Red
+                    2: '#39FF14',   // Green
+                    3: '#1F51FF',   // Blue
+                    4: '#FFF01F',   // Yellow
+                    5: '#A020F0'    // Purple (Linked Table)
+                };
 
-                    // Multi-bill logic: Explicit Colors
-                    const orderColors = {
-                        1: '#FF3131',   // Red
-                        2: '#39FF14',   // Green
-                        3: '#1F51FF',   // Blue
-                        4: '#FFF01F',   // Yellow
-                        5: '#A020F0'    // Purple (Linked Table)
-                    };
+                let guestDetailsDivs = '';
+                if (activeBills.length > 0) {
+                    activeBills.forEach(b => {
+                        let nameColor = orderColors[b.colorIndex] || '#D4AF37';
 
-                    let guestDetailsDivs = '';
-                    if (activeBills.length > 0) {
-                        activeBills.forEach(b => {
-                            let nameColor = orderColors[b.colorIndex] || '#D4AF37';
+                        // Calculate total for THIS specific Bill ID
+                        const billTotal = table.orders.filter(o => o.id === b.billID).reduce((sum, o) => sum + o.total, 0);
 
-                            // Calculate total for THIS specific Bill ID
-                            const billTotal = table.orders.filter(o => o.id === b.billID).reduce((sum, o) => sum + o.total, 0);
-
-                            let isLinkedObj = b.colorIndex === 5 ? `🔗 ${b.linkGroupId || 'L'}:` : '';
-                            guestDetailsDivs += `
+                        let isLinkedObj = b.colorIndex === 5 ? `🔗 ${b.linkGroupId || 'L'}:` : '';
+                        guestDetailsDivs += `
                             <div class="split-bill-row" onclick="event.stopPropagation(); app.selectDeskCheckout('${table.id}', '${b.billID}');" style="color: ${nameColor}; font-weight: bold; margin-bottom: 0.3rem; cursor: pointer; padding: 0.2rem; border-radius: 4px; border: 1px solid ${b.colorIndex === 5 ? '#A020F0' : 'transparent'};">
                                 ${isLinkedObj} ${b.billID} | ${b.guestName} <span class="color-success">₹${billTotal}</span>
                             </div>`;
-                        });
-                    } else {
-                        guestDetailsDivs = `<div class="text-white" onclick="event.stopPropagation(); app.selectDeskCheckout('${table.id}');" style="cursor: pointer;">${table.guestName || 'Occupied'}</div>`;
-                    }
+                    });
+                } else {
+                    guestDetailsDivs = `<div class="text-white" onclick="event.stopPropagation(); app.selectDeskCheckout('${table.id}');" style="cursor: pointer;">${table.guestName || 'Occupied'}</div>`;
+                }
 
-                    const cHtml = chars.map((c, i) => {
-                        let fillStyle = '';
-                        let filterStyle = '';
-                        if (c.status === 'occupied') {
-                            let glowColor = '#D4AF37'; // default
+                const cHtml = chars.map((c, i) => {
+                    let fillStyle = '';
+                    let filterStyle = '';
+                    if (c.status === 'occupied') {
+                        let glowColor = '#D4AF37'; // default
 
-                            if (activeBills.length > 0) {
-                                let accumulatedPax = 0;
-                                let selectedBill = null;
+                        if (activeBills.length > 0) {
+                            let accumulatedPax = 0;
+                            let selectedBill = null;
 
-                                for (let b of activeBills) {
-                                    accumulatedPax += (b.pax || 1);
-                                    if (i < accumulatedPax) {
-                                        selectedBill = b;
-                                        break;
-                                    }
-                                }
-
-                                if (selectedBill) {
-                                    glowColor = orderColors[selectedBill.colorIndex] || '#D4AF37';
+                            for (let b of activeBills) {
+                                accumulatedPax += (b.pax || 1);
+                                if (i < accumulatedPax) {
+                                    selectedBill = b;
+                                    break;
                                 }
                             }
-                            fillStyle = `fill: ${glowColor};`;
-                            filterStyle = `filter: drop-shadow(0 0 10px ${glowColor});`;
+
+                            if (selectedBill) {
+                                glowColor = orderColors[selectedBill.colorIndex] || '#D4AF37';
+                            }
                         }
-                        return `
+                        fillStyle = `fill: ${glowColor};`;
+                        filterStyle = `filter: drop-shadow(0 0 10px ${glowColor});`;
+                    }
+                    return `
                     <div class="chair-circle ${c.status === 'occupied' ? 'occupied' : c.status === 'split-bill' ? 'split-bill' : ''}">
                         <svg viewBox="0 0 24 24" class="person-icon" style="${fillStyle} ${filterStyle}"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                     </div>
                 `});
-                    const card = document.createElement('div');
-                    card.className = `room-card active`;
-                    card.onclick = () => this.selectDeskCheckout(table.id);
-                    card.innerHTML = `
+                const card = document.createElement('div');
+                card.className = `room-card active`;
+                card.onclick = () => this.selectDeskCheckout(table.id);
+                card.innerHTML = `
                     <div class="room-header">
                         <span class="room-number">${table.id}</span>
                         <span class="room-status status-occupied" style="border-color: #F59E0B; color: #F59E0B; background: rgba(245, 158, 11, 0.1);">Live Active</span>
@@ -3116,24 +3474,24 @@ class PMSApp {
                     <div class="text-sm mt-3 text-center text-gray">${table.pax} / 4 Seats Occupied</div>
                     <div class="text-xl font-bold mt-2 text-center color-primary">₹${table.total}</div>
                 `;
-                    // Add Glow to Card if Linked
-                    const isLinkedTable = activeBills.some(b => b.colorIndex === 5);
-                    if (isLinkedTable) {
-                        card.style.borderColor = '#A020F0';
-                        card.style.boxShadow = '0 0 15px rgba(160, 32, 240, 0.4)';
-                    }
+                // Add Glow to Card if Linked
+                const isLinkedTable = activeBills.some(b => b.colorIndex === 5);
+                if (isLinkedTable) {
+                    card.style.borderColor = '#A020F0';
+                    card.style.boxShadow = '0 0 15px rgba(160, 32, 240, 0.4)';
+                }
 
-                    grid.appendChild(card);
-                } else {
-                    const chars = table.chairs || [];
-                    const cHtml = chars.map(c => `
+                grid.appendChild(card);
+            } else {
+                const chars = table.chairs || [];
+                const cHtml = chars.map(c => `
                     <div class="chair-circle">
                         <svg viewBox="0 0 24 24" class="person-icon"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                     </div>
                 `);
-                    const card = document.createElement('div');
-                    card.className = `room-card`;
-                    card.innerHTML = `
+                const card = document.createElement('div');
+                card.className = `room-card`;
+                card.innerHTML = `
                     <div class="room-header">
                         <span class="room-number text-gray">${table.id}</span>
                         <span class="room-status status-available">Available</span>
@@ -3147,26 +3505,26 @@ class PMSApp {
                     </div>
                     <div class="text-sm mt-3 text-center text-gray">0 / 4 Seats Occupied</div>
                 `;
-                    grid.appendChild(card);
-                }
-            });
+                grid.appendChild(card);
+            }
+        });
 
-            document.getElementById('rest-desk-pax').innerText = totalPax;
-            document.getElementById('rest-desk-active-tables').innerText = activeTables;
+        document.getElementById('rest-desk-pax').innerText = totalPax;
+        document.getElementById('rest-desk-active-tables').innerText = activeTables;
 
-            // --- NEW: POPULATE DEDICATED PICKUP LIST ---
-            const pickupContainer = document.getElementById('rest-desk-pickup-list');
-            if (pickupContainer) {
-                if (this.db.activePickups.length === 0) {
-                    pickupContainer.innerHTML = `<div class="text-center text-gray" style="padding: 1rem;">No active pickups</div>`;
-                } else {
-                    pickupContainer.innerHTML = '';
-                    this.db.activePickups.forEach(p => {
-                        const row = document.createElement('div');
-                        row.className = 'pickup-list-row';
-                        const isPaid = p.paymentStatus === 'paid';
-                        row.style.cssText = `display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid ${isPaid ? '#39FF14' : '#A020F0'}; margin-bottom: 0.5rem;`;
-                        row.innerHTML = `
+        // --- NEW: POPULATE DEDICATED PICKUP LIST ---
+        const pickupContainer = document.getElementById('rest-desk-pickup-list');
+        if (pickupContainer) {
+            if (this.db.activePickups.length === 0) {
+                pickupContainer.innerHTML = `<div class="text-center text-gray" style="padding: 1rem;">No active pickups</div>`;
+            } else {
+                pickupContainer.innerHTML = '';
+                this.db.activePickups.forEach(p => {
+                    const row = document.createElement('div');
+                    row.className = 'pickup-list-row';
+                    const isPaid = p.paymentStatus === 'paid';
+                    row.style.cssText = `display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid ${isPaid ? '#39FF14' : '#A020F0'}; margin-bottom: 0.5rem;`;
+                    row.innerHTML = `
                         <div onclick="app.selectPickupCheckout('${p.id}')" style="cursor: pointer; flex: 1;">
                             <span style="font-weight: bold; color: ${isPaid ? '#39FF14' : '#A020F0'}; margin-right: 1rem;">#${p.id}</span>
                             <span style="color: white; font-weight: 500;">${p.items.length} Items ${isPaid ? '[PAID]' : ''}</span>
@@ -3178,85 +3536,85 @@ class PMSApp {
                             ${isPaid ? `<button class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;" onclick="app.markPickupDelivered('${p.id}')">DELIVERED</button>` : ''}
                         </div>
                     `;
-                        pickupContainer.appendChild(row);
-                    });
-                }
-            }
-
-            const revDisplay = document.getElementById('desk-revenue-display');
-            if (revDisplay) {
-                if (revDisplay.classList.contains('revealed')) {
-                    revDisplay.innerText = `₹ ${this.db.restaurantRevenue}`;
-                } else {
-                    revDisplay.innerText = `₹ ****`;
-                }
+                    pickupContainer.appendChild(row);
+                });
             }
         }
 
-        markPickupPaid(pickupId) {
-            const pickup = this.db.activePickups.find(p => p.id === pickupId);
-            if (pickup) {
-                pickup.paymentStatus = 'paid';
-                this.db.persistPickups();
-                this.db.addNotification('payment', `${pickupId} PAYMENT RECEIVED`, 'desk');
-                this.renderRestDesk();
-            }
-        }
-
-        markPickupDelivered(pickupId) {
-            const pickupIndex = this.db.activePickups.findIndex(p => p.id === pickupId);
-            if (pickupIndex !== -1) {
-                const pickup = this.db.activePickups[pickupIndex];
-                this.db.activePickups.splice(pickupIndex, 1);
-                this.db.persistPickups();
-                this.db.addNotification('delivery', `${pickupId} DELIVERED & ARCHIVED`, 'desk');
-                this.renderRestDesk();
-            }
-        }
-
-        toggleRestRevVisibility(btn) {
-            const display = document.getElementById('desk-revenue-display');
-            if (!display) return;
-
-            if (display.classList.contains('revealed')) {
-                display.classList.remove('revealed');
-                display.style.filter = 'blur(4px)';
-                display.innerText = '₹ ****';
-                btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
+        const revDisplay = document.getElementById('desk-revenue-display');
+        if (revDisplay) {
+            if (revDisplay.classList.contains('revealed')) {
+                revDisplay.innerText = `₹ ${this.db.restaurantRevenue}`;
             } else {
-                display.classList.add('revealed');
-                display.style.filter = 'none';
-                display.innerText = `₹ ${this.db.restaurantRevenue}`;
-                btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>`;
+                revDisplay.innerText = `₹ ****`;
             }
         }
+    }
 
-        toggleAvailability(itemId) {
-            const idx = this.db.unavailableItems.indexOf(itemId);
-            if (idx === -1) {
-                this.db.unavailableItems.push(itemId);
-            } else {
-                this.db.unavailableItems.splice(idx, 1);
-            }
-            this.db.persistUnavailable();
-            this.syncState();
-            this.renderAvailabilityTool();
+    markPickupPaid(pickupId) {
+        const pickup = this.db.activePickups.find(p => p.id === pickupId);
+        if (pickup) {
+            pickup.paymentStatus = 'paid';
+            this.db.persistPickups();
+            this.db.addNotification('payment', `${pickupId} PAYMENT RECEIVED`, 'desk');
+            this.renderRestDesk();
         }
+    }
 
-        renderAvailabilityTool() {
-            const container = document.getElementById('availability-list');
-            if (!container) return;
-            container.innerHTML = '';
+    markPickupDelivered(pickupId) {
+        const pickupIndex = this.db.activePickups.findIndex(p => p.id === pickupId);
+        if (pickupIndex !== -1) {
+            const pickup = this.db.activePickups[pickupIndex];
+            this.db.activePickups.splice(pickupIndex, 1);
+            this.db.persistPickups();
+            this.db.addNotification('delivery', `${pickupId} DELIVERED & ARCHIVED`, 'desk');
+            this.renderRestDesk();
+        }
+    }
 
-            this.db.menu.forEach(item => {
-                const isUnavailable = this.db.unavailableItems.includes(item.id);
-                const row = document.createElement('div');
-                row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--glass-border);';
-                const imgHtml = item.image 
-                    ? `<img src="${item.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\'><rect width=\\\'100%\\\' height=\\\'100%\\\' fill=\\\'%23333\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' dominant-baseline=\\\'middle\\\' text-anchor=\\\'middle\\\' fill=\\\'%23777\\\'>🍔</text></svg>'">`
-                    : `<span style="font-size:1.5rem;">${item.icon || '🍽️'}</span>`;
-                    
-                row.innerHTML = `
+    toggleRestRevVisibility(btn) {
+        const display = document.getElementById('desk-revenue-display');
+        if (!display) return;
+
+        if (display.classList.contains('revealed')) {
+            display.classList.remove('revealed');
+            display.style.filter = 'blur(4px)';
+            display.innerText = '₹ ****';
+            btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
+        } else {
+            display.classList.add('revealed');
+            display.style.filter = 'none';
+            display.innerText = `₹ ${this.db.restaurantRevenue}`;
+            btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>`;
+        }
+    }
+
+    toggleAvailability(itemId) {
+        const idx = this.db.unavailableItems.indexOf(itemId);
+        if (idx === -1) {
+            this.db.unavailableItems.push(itemId);
+        } else {
+            this.db.unavailableItems.splice(idx, 1);
+        }
+        this.db.persistUnavailable();
+        this.syncState();
+        this.renderAvailabilityTool();
+    }
+
+    renderAvailabilityTool() {
+        const container = document.getElementById('availability-list');
+        if (!container) return;
+        container.innerHTML = '';
+
+        this.db.menu.forEach(item => {
+            const isUnavailable = this.db.unavailableItems.includes(item.id);
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--glass-border);';
+            const imgHtml = item.image
+                ? `<img src="${item.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\'><rect width=\\\'100%\\\' height=\\\'100%\\\' fill=\\\'%23333\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' dominant-baseline=\\\'middle\\\' text-anchor=\\\'middle\\\' fill=\\\'%23777\\\'>🍔</text></svg>'">`
+                : `<span style="font-size:1.5rem;">${item.icon || '🍽️'}</span>`;
+
+            row.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px;">
                     ${imgHtml}
                     <div style="line-height:1.2;">
@@ -3269,59 +3627,59 @@ class PMSApp {
                     <span class="slider round"></span>
                 </label>
             `;
-                container.appendChild(row);
-            });
-        }
+            container.appendChild(row);
+        });
+    }
 
-        selectDeskCheckout(tableId, targetOrderId = null) {
-            const table = this.db.restaurantTables[tableId];
-            const content = document.getElementById('desk-checkout-content');
-            if (!content) return;
+    selectDeskCheckout(tableId, targetOrderId = null) {
+        const table = this.db.restaurantTables[tableId];
+        const content = document.getElementById('desk-checkout-content');
+        if (!content) return;
 
-            const activeBills = table.activeBills || [];
-            // Multi-guest interception
-            if (!targetOrderId && activeBills.length > 1) {
-                document.getElementById('desk-checkout-title').innerText = `Select Guest: Table ${table.id}`;
-                const orderColors = { 1: '#FF3131', 2: '#39FF14', 3: '#1F51FF', 4: '#FFF01F' };
+        const activeBills = table.activeBills || [];
+        // Multi-guest interception
+        if (!targetOrderId && activeBills.length > 1) {
+            document.getElementById('desk-checkout-title').innerText = `Select Guest: Table ${table.id}`;
+            const orderColors = { 1: '#FF3131', 2: '#39FF14', 3: '#1F51FF', 4: '#FFF01F' };
 
-                let guestButtons = activeBills.map(b => {
-                    let btnColor = orderColors[b.colorIndex] || '#D4AF37';
+            let guestButtons = activeBills.map(b => {
+                let btnColor = orderColors[b.colorIndex] || '#D4AF37';
 
-                    // Get the total from the corresponding order
-                    let targetTotal = 0;
-                    table.orders.forEach(o => {
-                        if (o.id === b.billID) targetTotal += o.total;
-                        else if (o.id && o.id.includes(b.billID)) targetTotal += o.total; // Catch addons
-                    });
+                // Get the total from the corresponding order
+                let targetTotal = 0;
+                table.orders.forEach(o => {
+                    if (o.id === b.billID) targetTotal += o.total;
+                    else if (o.id && o.id.includes(b.billID)) targetTotal += o.total; // Catch addons
+                });
 
-                    return `
+                return `
                     <button class="btn btn-block" style="background: rgba(0,0,0,0.4); border: 1px solid ${btnColor}; color: ${btnColor}; padding: 1rem; margin-bottom: 0.8rem; text-align: left; font-size: 1.1rem; display: flex; justify-content: space-between;" onclick="app.selectDeskCheckout('${table.id}', '${b.billID}')">
                         <span>${b.billID} - ${b.guestName}</span>
                         <span class="font-bold">₹${targetTotal}</span>
                     </button>
                 `;
-                }).join('');
+            }).join('');
 
-                content.innerHTML = `
+            content.innerHTML = `
                 <div class="text-sm text-gray mb-3">This table has multiple separate bills. Select a specific guest to preview their bill.</div>
                 ${guestButtons}
             `;
-                return;
-            }
+            return;
+        }
 
-            // standard flow
-            const ordersToShow = targetOrderId ? table.orders.filter(o => o.id === targetOrderId || o.id.includes(targetOrderId)) : table.orders;
-            const isSplit = targetOrderId !== null;
+        // standard flow
+        const ordersToShow = targetOrderId ? table.orders.filter(o => o.id === targetOrderId || o.id.includes(targetOrderId)) : table.orders;
+        const isSplit = targetOrderId !== null;
 
-            const targetBill = isSplit ? activeBills.find(b => b.billID === targetOrderId) : null;
+        const targetBill = isSplit ? activeBills.find(b => b.billID === targetOrderId) : null;
 
-            const displayGuest = targetBill ? targetBill.guestName : table.guestName;
-            const displayPax = targetBill ? targetBill.pax : table.pax;
-            const displayTotal = ordersToShow.reduce((sum, o) => sum + o.total, 0);
+        const displayGuest = targetBill ? targetBill.guestName : table.guestName;
+        const displayPax = targetBill ? targetBill.pax : table.pax;
+        const displayTotal = ordersToShow.reduce((sum, o) => sum + o.total, 0);
 
-            document.getElementById('desk-checkout-title').innerText = isSplit ? `Checkout: Bill ${targetOrderId}` : `Checkout: Table ${table.id}`;
+        document.getElementById('desk-checkout-title').innerText = isSplit ? `Checkout: Bill ${targetOrderId}` : `Checkout: Table ${table.id}`;
 
-            content.innerHTML = `
+        content.innerHTML = `
             <div class="glass-panel" style="padding: 1rem; margin-bottom: 1rem; background: rgba(0,0,0,0.3);">
                 <div class="d-flex justify-between mb-2"><span>Guest Name</span><span class="font-bold">${displayGuest || 'Guest'}</span></div>
                 <div class="d-flex justify-between mb-4"><span>Total Pax</span><span class="font-bold">${displayPax}</span></div>
@@ -3345,24 +3703,24 @@ class PMSApp {
                 Preview Final Bill
             </button>
         `;
-        }
+    }
 
-        previewTableCheckout(tableId, targetOrderId = null) {
-            const table = this.db.restaurantTables[tableId];
-            const modal = document.getElementById('invoice-preview-modal');
-            if (!modal) return;
-            const content = document.getElementById('invoice-preview-content');
-            if (!content) return;
+    previewTableCheckout(tableId, targetOrderId = null) {
+        const table = this.db.restaurantTables[tableId];
+        const modal = document.getElementById('invoice-preview-modal');
+        if (!modal) return;
+        const content = document.getElementById('invoice-preview-content');
+        if (!content) return;
 
-            const ordersToShow = targetOrderId ? table.orders.filter(o => o.id === targetOrderId) : table.orders;
-            const isSplit = targetOrderId !== null;
-            const displayGuest = isSplit && ordersToShow[0] ? ordersToShow[0].guestName : table.guestName;
-            const displayPax = isSplit && ordersToShow[0] ? (ordersToShow[0].pax || 1) : table.pax;
-            const displayTotal = ordersToShow.reduce((sum, o) => sum + o.total, 0);
-            const headerTarget = isSplit ? targetOrderId : table.id;
+        const ordersToShow = targetOrderId ? table.orders.filter(o => o.id === targetOrderId) : table.orders;
+        const isSplit = targetOrderId !== null;
+        const displayGuest = isSplit && ordersToShow[0] ? ordersToShow[0].guestName : table.guestName;
+        const displayPax = isSplit && ordersToShow[0] ? (ordersToShow[0].pax || 1) : table.pax;
+        const displayTotal = ordersToShow.reduce((sum, o) => sum + o.total, 0);
+        const headerTarget = isSplit ? targetOrderId : table.id;
 
-            const timestamp = new Date().getTime();
-            content.innerHTML = `
+        const timestamp = new Date().getTime();
+        content.innerHTML = `
             <div style="text-align:center; font-weight:bold; font-size: 1.5rem; border-bottom: 2px dashed #ccc; padding-bottom: 1rem; margin-bottom: 1rem;">BARAK RESIDENCY<br><span style="font-size:1rem; font-weight:normal;">RESTAURANT INVOICE</span></div>
             <strong>Target:</strong> ${headerTarget}<br>
             <strong>Guest:</strong> ${displayGuest || 'Guest'} (${displayPax} Pax)<br>
@@ -3393,139 +3751,139 @@ class PMSApp {
             <div style="text-align:center; margin-top:1.5rem; font-size: 0.9rem; color:#666;">Thank you for dining with us!</div>
         `;
 
-            const btn = document.getElementById('btn-print-final-bill');
-            btn.onclick = () => {
-                const mode = document.querySelector('input[name="payment-mode"]:checked').value;
-                this.processTableCheckout(tableId, targetOrderId, mode);
-                modal.style.display = 'none';
-            };
+        const btn = document.getElementById('btn-print-final-bill');
+        btn.onclick = () => {
+            const mode = document.querySelector('input[name="payment-mode"]:checked').value;
+            this.processTableCheckout(tableId, targetOrderId, mode);
+            modal.style.display = 'none';
+        };
 
-            modal.style.display = 'flex';
-        }
+        modal.style.display = 'flex';
+    }
 
-        switchReceptionTab(tabId) {
-            document.getElementById('reception-view-dashboard').style.display = tabId === 'dashboard' ? 'block' : 'none';
-            document.getElementById('reception-view-notifications').style.display = tabId === 'notifications' ? 'block' : 'none';
+    switchReceptionTab(tabId) {
+        document.getElementById('reception-view-dashboard').style.display = tabId === 'dashboard' ? 'block' : 'none';
+        document.getElementById('reception-view-notifications').style.display = tabId === 'notifications' ? 'block' : 'none';
 
-            document.getElementById('btn-tab-dashboard').classList.toggle('active', tabId === 'dashboard');
-            document.getElementById('btn-tab-notifications').classList.toggle('active', tabId === 'notifications');
+        document.getElementById('btn-tab-dashboard').classList.toggle('active', tabId === 'dashboard');
+        document.getElementById('btn-tab-notifications').classList.toggle('active', tabId === 'notifications');
 
-            if (tabId === 'notifications') this.renderFullNotificationTab();
-        }
+        if (tabId === 'notifications') this.renderFullNotificationTab();
+    }
 
-        // --- REVENUE CALCULATION UPDATES ---
-        processTableCheckout(tableId, targetOrderId = null, paymentMode = 'Cash') {
-            const table = this.db.restaurantTables[tableId];
-            let billTotal = 0;
-            let pTotal = 0;
+    // --- REVENUE CALCULATION UPDATES ---
+    processTableCheckout(tableId, targetOrderId = null, paymentMode = 'Cash') {
+        const table = this.db.restaurantTables[tableId];
+        let billTotal = 0;
+        let pTotal = 0;
 
-            if (targetOrderId) {
-                const bill = table.activeBills.find(b => b.billID === targetOrderId);
-                if (bill) {
-                    billTotal = table.orders.filter(o => o.id === targetOrderId || o.id.includes(targetOrderId)).reduce((sum, o) => sum + o.total, 0);
-                    pTotal = bill.pax;
-                }
-            } else {
-                billTotal = table.total;
-                pTotal = table.pax;
+        if (targetOrderId) {
+            const bill = table.activeBills.find(b => b.billID === targetOrderId);
+            if (bill) {
+                billTotal = table.orders.filter(o => o.id === targetOrderId || o.id.includes(targetOrderId)).reduce((sum, o) => sum + o.total, 0);
+                pTotal = bill.pax;
             }
+        } else {
+            billTotal = table.total;
+            pTotal = table.pax;
+        }
 
-            // Add to global revenue ONLY NOW
-            this.db.restaurantRevenue += billTotal;
-            this.db.restaurantCustomersToday += pTotal;
-            localStorage.setItem('yukt_rest_rev', this.db.restaurantRevenue);
-            localStorage.setItem('yukt_rest_pax', this.db.restaurantCustomersToday);
+        // Add to global revenue ONLY NOW
+        this.db.restaurantRevenue += billTotal;
+        this.db.restaurantCustomersToday += pTotal;
+        localStorage.setItem('yukt_rest_rev', this.db.restaurantRevenue);
+        localStorage.setItem('yukt_rest_pax', this.db.restaurantCustomersToday);
 
-            this.db.addNotification('checkout', `Payment Received: ₹${billTotal.toFixed(2)} [${paymentMode}] from ${targetOrderId || tableId} `);
+        this.db.addNotification('checkout', `Payment Received: ₹${billTotal.toFixed(2)} [${paymentMode}] from ${targetOrderId || tableId} `);
 
-            // MASS CLEAR LINKED TABLES
-            if (targetOrderId) {
-                const bIndex = table.activeBills.findIndex(b => b.billID === targetOrderId);
-                if (bIndex !== -1) {
-                    const bill = table.activeBills[bIndex];
-                    // If it's a master or just has links, clear all purple tables
-                    Object.values(this.db.restaurantTables).forEach(t => {
-                        if (t.activeBills) {
-                            const hasLink = t.activeBills.some(b => b.colorIndex === 5 && b.billID === targetOrderId);
-                            if (hasLink) {
-                                t.activeBills = t.activeBills.filter(b => b.billID !== targetOrderId);
-                                if (t.activeBills.length === 0) {
-                                    t.status = 'available';
-                                    t.guestName = null;
-                                    t.pax = 0;
-                                    t.total = 0;
-                                    t.orders = [];
-                                    if (t.chairs) t.chairs.forEach(c => c.status = 'available');
-                                } else {
-                                    // Re-calculate pax
-                                    t.pax = t.activeBills.reduce((acc, b) => acc + (b.pax || 1), 0);
-                                    let occCount = 0;
-                                    if (t.chairs) {
-                                        t.chairs.forEach(c => {
-                                            if (occCount < t.pax) {
-                                                c.status = 'occupied';
-                                                occCount++;
-                                            } else {
-                                                c.status = 'available';
-                                            }
-                                        });
-                                    }
+        // MASS CLEAR LINKED TABLES
+        if (targetOrderId) {
+            const bIndex = table.activeBills.findIndex(b => b.billID === targetOrderId);
+            if (bIndex !== -1) {
+                const bill = table.activeBills[bIndex];
+                // If it's a master or just has links, clear all purple tables
+                Object.values(this.db.restaurantTables).forEach(t => {
+                    if (t.activeBills) {
+                        const hasLink = t.activeBills.some(b => b.colorIndex === 5 && b.billID === targetOrderId);
+                        if (hasLink) {
+                            t.activeBills = t.activeBills.filter(b => b.billID !== targetOrderId);
+                            if (t.activeBills.length === 0) {
+                                t.status = 'available';
+                                t.guestName = null;
+                                t.pax = 0;
+                                t.total = 0;
+                                t.orders = [];
+                                if (t.chairs) t.chairs.forEach(c => c.status = 'available');
+                            } else {
+                                // Re-calculate pax
+                                t.pax = t.activeBills.reduce((acc, b) => acc + (b.pax || 1), 0);
+                                let occCount = 0;
+                                if (t.chairs) {
+                                    t.chairs.forEach(c => {
+                                        if (occCount < t.pax) {
+                                            c.status = 'occupied';
+                                            occCount++;
+                                        } else {
+                                            c.status = 'available';
+                                        }
+                                    });
                                 }
                             }
                         }
-                    });
+                    }
+                });
 
-                    // Clear the bill from the current table too
-                    table.activeBills.splice(bIndex, 1);
-                    if (table.activeBills.length === 0) {
-                        table.status = 'available';
-                        table.guestName = null;
-                        table.pax = 0;
-                        table.total = 0;
-                        table.orders = [];
-                        if (table.chairs) table.chairs.forEach(c => c.status = 'available');
-                    } else {
-                        table.pax = table.activeBills.reduce((acc, b) => acc + (b.pax || 1), 0);
-                        let occCount = 0;
-                        if (table.chairs) {
-                            table.chairs.forEach(c => {
-                                if (occCount < table.pax) {
-                                    c.status = 'occupied';
-                                    occCount++;
-                                } else {
-                                    c.status = 'available';
-                                }
-                            });
-                        }
+                // Clear the bill from the current table too
+                table.activeBills.splice(bIndex, 1);
+                if (table.activeBills.length === 0) {
+                    table.status = 'available';
+                    table.guestName = null;
+                    table.pax = 0;
+                    table.total = 0;
+                    table.orders = [];
+                    if (table.chairs) table.chairs.forEach(c => c.status = 'available');
+                } else {
+                    table.pax = table.activeBills.reduce((acc, b) => acc + (b.pax || 1), 0);
+                    let occCount = 0;
+                    if (table.chairs) {
+                        table.chairs.forEach(c => {
+                            if (occCount < table.pax) {
+                                c.status = 'occupied';
+                                occCount++;
+                            } else {
+                                c.status = 'available';
+                            }
+                        });
                     }
                 }
-            } else {
-                // Clear entire table
-                table.status = 'available';
-                table.guestName = null;
-                table.pax = 0;
-                table.total = 0;
-                table.orders = [];
-                table.activeBills = [];
-                if (table.chairs) table.chairs.forEach(c => c.status = 'available');
             }
-
-            this.db.persistTables();
-            this.syncState();
-
-            // Success Overlay for Checkout
-            this.triggerSuccessOverlay('rest-desk', { id: targetOrderId || tableId, tableId: tableId, items: [], total: billTotal });
+        } else {
+            // Clear entire table
+            table.status = 'available';
+            table.guestName = null;
+            table.pax = 0;
+            table.total = 0;
+            table.orders = [];
+            table.activeBills = [];
+            if (table.chairs) table.chairs.forEach(c => c.status = 'available');
         }
 
-        selectPickupCheckout(pickupId) {
-            const p = this.db.activePickups.find(x => x.id === pickupId);
-            if (!p) return;
+        this.db.persistTables();
+        this.syncState();
 
-            const title = document.getElementById('desk-checkout-title');
-            const content = document.getElementById('desk-checkout-content');
-            title.innerText = `Process Payment: ${p.id}`;
+        // Success Overlay for Checkout
+        this.triggerSuccessOverlay('rest-desk', { id: targetOrderId || tableId, tableId: tableId, items: [], total: billTotal });
+    }
 
-            content.innerHTML = `
+    selectPickupCheckout(pickupId) {
+        const p = this.db.activePickups.find(x => x.id === pickupId);
+        if (!p) return;
+
+        const title = document.getElementById('desk-checkout-title');
+        const content = document.getElementById('desk-checkout-content');
+        title.innerText = `Process Payment: ${p.id}`;
+
+        content.innerHTML = `
             <div class="checkout-summary flex-1">
                 <div class="mb-4">
                     <strong>Order Summary</strong>
@@ -3541,64 +3899,64 @@ class PMSApp {
             </div>
             <button class="btn btn-success btn-block mt-4" onclick="app.processPickupPayment('${p.id}')">RECEIVE CASH/UPI & CLOSE</button>
         `;
-        }
+    }
 
-        printPickupBill(pid) {
-            const p = this.db.activePickups.find(x => x.id === pid);
-            if (!p) return;
-            this.printBill({ id: p.id, items: p.items, total: p.total, guestName: 'Takeaway Guest', type: 'Pickup' });
-        }
+    printPickupBill(pid) {
+        const p = this.db.activePickups.find(x => x.id === pid);
+        if (!p) return;
+        this.printBill({ id: p.id, items: p.items, total: p.total, guestName: 'Takeaway Guest', type: 'Pickup' });
+    }
 
-        processPickupPayment(pickupId) {
-            const pIndex = this.db.activePickups.findIndex(x => x.id === pickupId);
-            if (pIndex === -1) return;
+    processPickupPayment(pickupId) {
+        const pIndex = this.db.activePickups.findIndex(x => x.id === pickupId);
+        if (pIndex === -1) return;
 
-            const p = this.db.activePickups[pIndex];
+        const p = this.db.activePickups[pIndex];
 
-            // Add to revenue
-            this.db.restaurantRevenue += p.total;
-            this.db.restaurantCustomersToday += 1;
-            this.db.persistRestRevenue();
+        // Add to revenue
+        this.db.restaurantRevenue += p.total;
+        this.db.restaurantCustomersToday += 1;
+        this.db.persistRestRevenue();
 
-            // Log sale to History
-            this.db.salesHistory.push({ ...p, status: 'delivered' });
-            this.db.persistSale(p);
+        // Log sale to History
+        this.db.salesHistory.push({ ...p, status: 'delivered' });
+        this.db.persistSale(p);
 
-            // ARCHIVE LOGIC: Move to unique archive key and remove from active
-            const archive = JSON.parse(localStorage.getItem('br_pickup_archive') || '[]');
-            archive.push({ ...p, status: 'delivered', archivedAt: Date.now() });
-            localStorage.setItem('br_pickup_archive', JSON.stringify(archive.slice(-100))); // Keep last 100
+        // ARCHIVE LOGIC: Move to unique archive key and remove from active
+        const archive = JSON.parse(localStorage.getItem('br_pickup_archive') || '[]');
+        archive.push({ ...p, status: 'delivered', archivedAt: Date.now() });
+        localStorage.setItem('br_pickup_archive', JSON.stringify(archive.slice(-100))); // Keep last 100
 
-            this.db.activePickups.splice(pIndex, 1);
-            this.db.persistPickups();
+        this.db.activePickups.splice(pIndex, 1);
+        this.db.persistPickups();
 
-            // Trigger Success Overlay
-            this.triggerSuccessOverlay('rest-desk', { ...p, id: `PAYMENT RECEIVED: ${p.id}` });
+        // Trigger Success Overlay
+        this.triggerSuccessOverlay('rest-desk', { ...p, id: `PAYMENT RECEIVED: ${p.id}` });
 
-            this.db.addNotification('checkout', `P1 PAYMENT RECEIVED: ${p.id}`, 'desk');
+        this.db.addNotification('checkout', `P1 PAYMENT RECEIVED: ${p.id}`, 'desk');
 
-            document.getElementById('desk-checkout-title').innerText = `Checkout`;
-            document.getElementById('desk-checkout-content').innerHTML = `<div class="text-gray">Select an order to process.</div>`;
-            this.syncState();
-        }
+        document.getElementById('desk-checkout-title').innerText = `Checkout`;
+        document.getElementById('desk-checkout-content').innerHTML = `<div class="text-gray">Select an order to process.</div>`;
+        this.syncState();
+    }
 
-        // --- ENTERPRISE MODULES ---
+    // --- ENTERPRISE MODULES ---
 
-        renderInventory() {
-            const tbody = document.getElementById('inventory-list');
-            if (!tbody) return;
-            const purchaseList = document.getElementById('purchase-list');
-            if (!purchaseList) return;
-            tbody.innerHTML = '';
-            purchaseList.innerHTML = '';
+    renderInventory() {
+        const tbody = document.getElementById('inventory-list');
+        if (!tbody) return;
+        const purchaseList = document.getElementById('purchase-list');
+        if (!purchaseList) return;
+        tbody.innerHTML = '';
+        purchaseList.innerHTML = '';
 
-            let purchaseCount = 0;
+        let purchaseCount = 0;
 
-            this.db.inventory.forEach(item => {
-                const isLow = item.stock < item.threshold;
+        this.db.inventory.forEach(item => {
+            const isLow = item.stock < item.threshold;
 
-                // Populate Main Table
-                tbody.innerHTML += `
+            // Populate Main Table
+            tbody.innerHTML += `
             < tr style = "${isLow ? 'background:rgba(239, 68, 68, 0.1);' : ''}" >
                     <td class="font-bold ${isLow ? 'color-red-500' : ''}">${item.item}</td>
                     <td>${item.category}</td>
@@ -3607,30 +3965,30 @@ class PMSApp {
                 </tr >
             `;
 
-                // Populate Alerts
-                if (isLow) {
-                    purchaseCount++;
-                    purchaseList.innerHTML += `
+            // Populate Alerts
+            if (isLow) {
+                purchaseCount++;
+                purchaseList.innerHTML += `
             < li style = "display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border:1px solid rgba(239, 68, 68, 0.4); border-radius:6px; padding:0.75rem;" >
                         <span class="font-bold" style="color:var(--color-red-500)">${item.item}</span>
                         <span class="text-sm">Req: <span class="font-bold">${item.threshold - item.stock}</span> units</span>
                     </li >
             `;
-                }
-            });
-
-            if (purchaseCount === 0) {
-                purchaseList.innerHTML = `< li class="text-gray text-sm italic" > All stocks look good.Kitchen is ready.</li > `;
             }
+        });
+
+        if (purchaseCount === 0) {
+            purchaseList.innerHTML = `< li class="text-gray text-sm italic" > All stocks look good.Kitchen is ready.</li > `;
         }
+    }
 
-        renderEmployee() {
-            const tbody = document.getElementById('employee-list');
-            tbody.innerHTML = '';
+    renderEmployee() {
+        const tbody = document.getElementById('employee-list');
+        tbody.innerHTML = '';
 
-            this.db.employees.forEach(emp => {
-                const netPayable = emp.baseSalary - emp.advances;
-                tbody.innerHTML += `
+        this.db.employees.forEach(emp => {
+            const netPayable = emp.baseSalary - emp.advances;
+            tbody.innerHTML += `
             < tr >
                     <td class="font-bold color-primary">${emp.name}</td>
                     <td><span class="status-badge" style="background:rgba(148, 163, 184, 0.1); color:var(--color-slate-200);">${emp.role}</span></td>
@@ -3639,226 +3997,226 @@ class PMSApp {
                     <td class="font-bold color-success">₹${netPayable.toLocaleString()}</td>
                 </tr >
             `;
-            });
-        }
+        });
+    }
 
-        // --- OWNER PORTAL ---
+    // --- OWNER PORTAL ---
 
-        renderDashboard() {
-            // 1. Calculate Metrics
-            let totalRoomRevenueToday = 0;
-            let occupiedCount = 0;
+    renderDashboard() {
+        // 1. Calculate Metrics
+        let totalRoomRevenueToday = 0;
+        let occupiedCount = 0;
 
-            Object.values(this.db.rooms).forEach(room => {
-                if (room.status === 'occupied') {
-                    occupiedCount++;
-                    const g = room.guest;
-                    const billedSec = this.calculateBilledDays(g.checkInTime);
-                    const roomT = g.tariff * billedSec;
-                    totalRoomRevenueToday += roomT;
-                    // Add any food billed specific to rooms
-                    totalRoomRevenueToday += g.foodTotal;
-                }
-            });
+        Object.values(this.db.rooms).forEach(room => {
+            if (room.status === 'occupied') {
+                occupiedCount++;
+                const g = room.guest;
+                const billedSec = this.calculateBilledDays(g.checkInTime);
+                const roomT = g.tariff * billedSec;
+                totalRoomRevenueToday += roomT;
+                // Add any food billed specific to rooms
+                totalRoomRevenueToday += g.foodTotal;
+            }
+        });
 
-            // Use global tracked metrics for Restaurant
-            let totalRestEarningsToday = this.db.restaurantRevenue;
-            let restCustomers = this.db.restaurantCustomersToday;
+        // Use global tracked metrics for Restaurant
+        let totalRestEarningsToday = this.db.restaurantRevenue;
+        let restCustomers = this.db.restaurantCustomersToday;
 
-            const totalIncome = totalRoomRevenueToday + totalRestEarningsToday;
-            let totalSalaries = this.db.employees.reduce((sum, emp) => sum + emp.baseSalary, 0) / 30; // Daily average
-            let foodCosts = totalRestEarningsToday * 0.4; // 40% margin cost
-            let utilities = 1500; // static estimation
+        const totalIncome = totalRoomRevenueToday + totalRestEarningsToday;
+        let totalSalaries = this.db.employees.reduce((sum, emp) => sum + emp.baseSalary, 0) / 30; // Daily average
+        let foodCosts = totalRestEarningsToday * 0.4; // 40% margin cost
+        let utilities = 1500; // static estimation
 
-            // Calculate Inventory purchase cost for missing items
-            let missingStockCost = 0;
-            this.db.inventory.forEach(item => {
-                if (item.stock < item.threshold) {
-                    missingStockCost += (item.threshold - item.stock) * 50;
-                }
-            });
+        // Calculate Inventory purchase cost for missing items
+        let missingStockCost = 0;
+        this.db.inventory.forEach(item => {
+            if (item.stock < item.threshold) {
+                missingStockCost += (item.threshold - item.stock) * 50;
+            }
+        });
 
-            // EBITDA = Revenue - (Salaries + Food Costs + Utilities + Stock Shortages)
-            let approxEbitda = totalIncome - (totalSalaries + missingStockCost + utilities);
+        // EBITDA = Revenue - (Salaries + Food Costs + Utilities + Stock Shortages)
+        let approxEbitda = totalIncome - (totalSalaries + missingStockCost + utilities);
 
-            document.getElementById('kpi-room-revenue').innerText = `₹${totalRoomRevenueToday.toLocaleString()} `;
-            document.getElementById('kpi-rest-revenue').innerText = `₹${totalRestEarningsToday.toLocaleString()} `;
-            document.getElementById('kpi-rest-pax').innerText = restCustomers;
-            document.getElementById('kpi-ebitda').innerText = `₹${Math.round(approxEbitda).toLocaleString()} `;
+        document.getElementById('kpi-room-revenue').innerText = `₹${totalRoomRevenueToday.toLocaleString()} `;
+        document.getElementById('kpi-rest-revenue').innerText = `₹${totalRestEarningsToday.toLocaleString()} `;
+        document.getElementById('kpi-rest-pax').innerText = restCustomers;
+        document.getElementById('kpi-ebitda').innerText = `₹${Math.round(approxEbitda).toLocaleString()} `;
 
-            // 2. Render Charts
-            this.renderChart(totalIncome, approxEbitda);
+        // 2. Render Charts
+        this.renderChart(totalIncome, approxEbitda);
 
-            // 3. Render Sales History Table
-            const tbody = document.getElementById('sales-history-body');
-            tbody.innerHTML = '';
+        // 3. Render Sales History Table
+        const tbody = document.getElementById('sales-history-body');
+        tbody.innerHTML = '';
 
-            const recentSales = [...this.db.salesHistory].reverse().slice(0, 10);
-            if (recentSales.length === 0) tbody.innerHTML = `< tr > <td colspan="3" class="text-gray text-center">No sales yet.</td></tr > `;
+        const recentSales = [...this.db.salesHistory].reverse().slice(0, 10);
+        if (recentSales.length === 0) tbody.innerHTML = `< tr > <td colspan="3" class="text-gray text-center">No sales yet.</td></tr > `;
 
-            recentSales.forEach(sale => {
-                const label = sale.tableId ? `Table ${sale.tableId} ` : (sale.roomId ? `Room ${sale.roomId} ` : 'Misc');
-                tbody.innerHTML += `
+        recentSales.forEach(sale => {
+            const label = sale.tableId ? `Table ${sale.tableId} ` : (sale.roomId ? `Room ${sale.roomId} ` : 'Misc');
+            tbody.innerHTML += `
             < tr >
                     <td>${this.db.timeOnlyIST(sale.timestamp)}</td>
                     <td>${label}</td>
                     <td class="font-bold color-primary">₹${sale.total}</td>
                 </tr >
             `;
+        });
+    }
+
+    renderChart(revProp, ebitdaProp) {
+        // Revenue Bar Chart
+        const ctxRev = document.getElementById('revenueChart');
+        if (ctxRev) {
+            if (this.revenueChart) this.revenueChart.destroy();
+            this.revenueChart = new Chart(ctxRev, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
+                    datasets: [{
+                        label: 'Daily Revenue (₹)',
+                        data: [25000, 32000, 28000, 41000, 39000, 48000, revProp],
+                        backgroundColor: '#6366F1',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94A3B8' } }
+                    }
+                }
             });
         }
 
-        renderChart(revProp, ebitdaProp) {
-            // Revenue Bar Chart
-            const ctxRev = document.getElementById('revenueChart');
-            if (ctxRev) {
-                if (this.revenueChart) this.revenueChart.destroy();
-                this.revenueChart = new Chart(ctxRev, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
-                        datasets: [{
-                            label: 'Daily Revenue (₹)',
-                            data: [25000, 32000, 28000, 41000, 39000, 48000, revProp],
-                            backgroundColor: '#6366F1',
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
-                            x: { grid: { display: false }, ticks: { color: '#94A3B8' } }
-                        }
+        // EBITDA Profitability Line Chart
+        const ctxPft = document.getElementById('profitabilityChart');
+        if (ctxPft) {
+            if (this.profitabilityChart) this.profitabilityChart.destroy();
+            this.profitabilityChart = new Chart(ctxPft, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
+                    datasets: [{
+                        label: 'EBITDA Margin',
+                        data: [12000, 15000, 13000, 22000, 19000, 25000, Math.round(ebitdaProp)],
+                        borderColor: '#52ffae',
+                        backgroundColor: 'rgba(82, 255, 174, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94A3B8' } }
                     }
-                });
-            }
+                }
+            });
+        }
+    }
 
-            // EBITDA Profitability Line Chart
-            const ctxPft = document.getElementById('profitabilityChart');
-            if (ctxPft) {
-                if (this.profitabilityChart) this.profitabilityChart.destroy();
-                this.profitabilityChart = new Chart(ctxPft, {
-                    type: 'line',
-                    data: {
-                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
-                        datasets: [{
-                            label: 'EBITDA Margin',
-                            data: [12000, 15000, 13000, 22000, 19000, 25000, Math.round(ebitdaProp)],
-                            borderColor: '#52ffae',
-                            backgroundColor: 'rgba(82, 255, 174, 0.1)',
-                            borderWidth: 3,
-                            tension: 0.4,
-                            fill: true
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
-                            x: { grid: { display: false }, ticks: { color: '#94A3B8' } }
-                        }
-                    }
-                });
-            }
+
+    // --- DATE ENGINES ---
+
+    startClock() {
+        const update = () => {
+            const now = new Date();
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const day = days[now.getDay()];
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mon = months[now.getMonth()];
+            const yr = now.getFullYear();
+            let h = now.getHours();
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            const timeStr = `${day}, ${dd} ${mon} ${yr} | ${h}:${mm}:${ss} ${ampm}`;
+
+            document.querySelectorAll('.portal-time, .portal-time-luxury, #live-clock').forEach(el => {
+                el.innerText = timeStr;
+            });
+        };
+        update();
+        setInterval(update, 1000);
+    }
+
+    calculateBilledDays(checkInDate) {
+        // Enforce IST boundaries for date parsing logic
+        const nowStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+        const nowIST = new Date(nowStr);
+
+        // Handle Firestore Timestamp vs Javascript Date/Number
+        let parsedDate;
+        if (checkInDate && typeof checkInDate === 'object' && checkInDate.seconds) {
+            parsedDate = new Date(checkInDate.seconds * 1000);
+        } else {
+            parsedDate = new Date(checkInDate);
         }
 
+        const ciStr = parsedDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+        const ciIST = new Date(ciStr);
 
-        // --- DATE ENGINES ---
+        let count = 1;
 
-        startClock() {
-            const update = () => {
-                const now = new Date();
-                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const day = days[now.getDay()];
-                const dd = String(now.getDate()).padStart(2, '0');
-                const mon = months[now.getMonth()];
-                const yr = now.getFullYear();
-                let h = now.getHours();
-                const ampm = h >= 12 ? 'PM' : 'AM';
-                h = h % 12 || 12;
-                const mm = String(now.getMinutes()).padStart(2, '0');
-                const ss = String(now.getSeconds()).padStart(2, '0');
-                const timeStr = `${day}, ${dd} ${mon} ${yr} | ${h}:${mm}:${ss} ${ampm}`;
+        // Iterator starts at the next 12PM relative to IST Checkin
+        let next12PM = new Date(ciIST.getFullYear(), ciIST.getMonth(), ciIST.getDate(), 12, 0, 0);
 
-                document.querySelectorAll('.portal-time, .portal-time-luxury, #live-clock').forEach(el => {
-                    el.innerText = timeStr;
-                });
-            };
-            update();
-            setInterval(update, 1000);
+        if (ciIST >= next12PM) {
+            next12PM.setDate(next12PM.getDate() + 1);
         }
 
-        calculateBilledDays(checkInDate) {
-            // Enforce IST boundaries for date parsing logic
-            const nowStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
-            const nowIST = new Date(nowStr);
-
-            // Handle Firestore Timestamp vs Javascript Date/Number
-            let parsedDate;
-            if (checkInDate && typeof checkInDate === 'object' && checkInDate.seconds) {
-                parsedDate = new Date(checkInDate.seconds * 1000);
-            } else {
-                parsedDate = new Date(checkInDate);
-            }
-
-            const ciStr = parsedDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
-            const ciIST = new Date(ciStr);
-
-            let count = 1;
-
-            // Iterator starts at the next 12PM relative to IST Checkin
-            let next12PM = new Date(ciIST.getFullYear(), ciIST.getMonth(), ciIST.getDate(), 12, 0, 0);
-
-            if (ciIST >= next12PM) {
-                next12PM.setDate(next12PM.getDate() + 1);
-            }
-
-            while (next12PM <= nowIST) {
-                count++;
-                next12PM.setDate(next12PM.getDate() + 1);
-            }
-
-            return count;
+        while (next12PM <= nowIST) {
+            count++;
+            next12PM.setDate(next12PM.getDate() + 1);
         }
 
-        check12PMLogic() {
-            if (this.currentPortal === 'reception' && this.selectedRoomId && this.db.rooms[this.selectedRoomId].status === 'occupied') {
-                this.updateCommandCenter();
-            }
+        return count;
+    }
+
+    check12PMLogic() {
+        if (this.currentPortal === 'reception' && this.selectedRoomId && this.db.rooms[this.selectedRoomId].status === 'occupied') {
+            this.updateCommandCenter();
         }
+    }
 
-        generateInvoice() {
-            if (!this.selectedRoomId) return;
-            const room = this.db.rooms[this.selectedRoomId];
-            if (room.status !== 'occupied') return;
+    generateInvoice() {
+        if (!this.selectedRoomId) return;
+        const room = this.db.rooms[this.selectedRoomId];
+        if (room.status !== 'occupied') return;
 
-            const guest = room.guest;
-            const daysBilled = this.calculateBilledDays(guest.checkInTime);
-            const roomTotal = guest.tariff * daysBilled;
-            const subtotal = roomTotal + guest.foodTotal;
-            const gst = subtotal * 0.12;
-            const grandTotal = subtotal + gst;
-            const balance = grandTotal - guest.advance;
+        const guest = room.guest;
+        const daysBilled = this.calculateBilledDays(guest.checkInTime);
+        const roomTotal = guest.tariff * daysBilled;
+        const subtotal = roomTotal + guest.foodTotal;
+        const gst = subtotal * 0.12;
+        const grandTotal = subtotal + gst;
+        const balance = grandTotal - guest.advance;
 
-            const copies = [
-                { id: 'Guest Copy', type: 'GUEST COPY' },
-                { id: 'Hotel Copy', type: 'HOTEL COPY' },
-                { id: 'Accounts Copy', type: 'ACCOUNTS COPY' }
-            ];
+        const copies = [
+            { id: 'Guest Copy', type: 'GUEST COPY' },
+            { id: 'Hotel Copy', type: 'HOTEL COPY' },
+            { id: 'Accounts Copy', type: 'ACCOUNTS COPY' }
+        ];
 
-            const printArea = document.getElementById('print-area');
-            printArea.innerHTML = '';
+        const printArea = document.getElementById('print-area');
+        printArea.innerHTML = '';
 
-            copies.forEach(copy => {
-                const pDate = this.db.formattedIST(new Date());
+        copies.forEach(copy => {
+            const pDate = this.db.formattedIST(new Date());
 
-                const copyHTML = `
+            const copyHTML = `
                 <div class="invoice-copy">
                     <div class="invoice-copy-type">${copy.type}</div>
                     <div class="invoice-header">
@@ -3924,13 +4282,13 @@ class PMSApp {
                     </table>
                 </div>
             `;
-                printArea.innerHTML += copyHTML;
-            });
+            printArea.innerHTML += copyHTML;
+        });
 
-            window.print();
-        }
+        window.print();
+    }
 
-        // Stale duplicate triggerSuccessOverlay removed — primary version at line ~2225 handles all contexts.
+    // Stale duplicate triggerSuccessOverlay removed — primary version at line ~2225 handles all contexts.
 
     saveSettings() {
         const urlObj = document.getElementById('setting-menu-url');
@@ -3941,23 +4299,23 @@ class PMSApp {
             } else {
                 localStorage.removeItem('yukt_menu_sheet_url');
             }
-            
+
             // Push to cloud instantly
             if (window.FirebaseSync) {
                 window.FirebaseSync.pushSettingsToCloud();
             }
-            
+
             // Force refresh of the menu - clear cache first
             localStorage.removeItem('br_menu');
             this.db.loadMenu().then(() => {
                 const modal = document.getElementById('settings-modal');
                 if (modal) modal.style.display = 'none';
-                
+
                 // Trigger re-renders
                 if (this.currentPortal === 'rest-desk') this.renderRestDesk();
                 if (this.currentPortal === 'rest-waiter') this.renderWaiterMenu('rest-waiter');
                 if (this.currentPortal === 'hotel-waiter') this.renderWaiterMenu('hotel-waiter');
-                
+
                 this.addNotification('system', `Menu URL updated to ${url || 'default'}. Cloud sync active.`, 'reception');
                 alert('Success! Menu URL Saved & Synced. All devices (Waiter, Reception, QR) will now update automatically.');
             }).catch(err => {
@@ -3992,6 +4350,60 @@ class PMSApp {
         };
 
         await window.FirebaseSync.pushBillingToCloud(billObj);
+    }
+
+    async resetSystemFresh() {
+        if (!confirm("⚠️ CRITICAL: This will PERMANENTLY delete ALL current guests, orders, and ledger. Start Fresh from Billing #1?")) return;
+        
+        this.showToast("Initiating Global Cloud Purge...", "info");
+        
+        try {
+            const { collection, getDocs, deleteDoc, doc, updateDoc, serverTimestamp } = window.firebaseHooks;
+            const db = window.firebaseFS;
+
+            // 1. Clear Active Guests
+            const guestSnap = await getDocs(collection(db, 'guests'));
+            for (const d of guestSnap.docs) { await deleteDoc(d.ref); }
+
+            // 2. Clear Active Orders
+            const orderSnap = await getDocs(collection(db, 'orders'));
+            for (const d of orderSnap.docs) { await deleteDoc(d.ref); }
+
+            // 3. Clear Ledger and Billing
+            const ledgerSnap = await getDocs(collection(db, 'ledger'));
+            for (const d of ledgerSnap.docs) { await deleteDoc(d.ref); }
+            
+            const billingSnap = await getDocs(collection(db, 'billing'));
+            for (const d of billingSnap.docs) { await deleteDoc(d.ref); }
+
+            // 4. Reset Rooms to Available
+            const roomSnap = await getDocs(collection(db, 'rooms'));
+            for (const d of roomSnap.docs) {
+                await updateDoc(d.ref, {
+                    status: 'available',
+                    guestName: null,
+                    guestPhone: null,
+                    currentGuestId: null,
+                    orderSerial: 0,
+                    last_updated: serverTimestamp()
+                });
+            }
+
+            // 5. Local Hard Reset (Storage + IDB)
+            localStorage.clear();
+            if (this.db.idb) {
+                const stores = ['rooms', 'kitchenOrders', 'salesHistory'];
+                const tx = this.db.idb.transaction(stores, 'readwrite');
+                stores.forEach(s => tx.objectStore(s).clear());
+            }
+            
+            this.showToast("Cloud Wipe Complete. System Restarting...", "success");
+            setTimeout(() => window.location.reload(), 2000);
+
+        } catch (err) {
+            console.error("Purge Error:", err);
+            this.showToast("Reset failed. Check console permissions.", "error");
+        }
     }
 }
 
