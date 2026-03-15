@@ -152,14 +152,17 @@ class GuestPortal {
             items.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'food-card';
-                const img = item.imageUrl || 'br.png';
+                const img = item.imageUrl || item.ImageURL || 'br.png';
+                const name = item.name || item.Name || 'Dish';
+                const price = item.price || item.PriceFull || 0;
+                const desc = item.description || item.Description || 'Barak Residency Special';
                 
                 card.innerHTML = `
                     <img src="${img}" class="food-icon" onerror="this.src='br.png'">
                     <div class="food-info">
-                        <div class="food-name">${item.name}</div>
-                        <div class="food-desc">${item.description || 'Barak Residency Special'}</div>
-                        <div class="food-price">₹${item.price}</div>
+                        <div class="food-name">${name}</div>
+                        <div class="food-desc">${desc}</div>
+                        <div class="food-price">₹${price}</div>
                     </div>
                     <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
                 `;
@@ -197,13 +200,17 @@ class GuestPortal {
         items.forEach(item => {
             const card = document.createElement('div');
             card.className = 'food-card';
-            const img = item.imageUrl || 'br.png';
+            const img = item.imageUrl || item.ImageURL || 'br.png';
+            const name = item.name || item.Name || 'Dish';
+            const price = item.price || item.PriceFull || 0;
+            const desc = item.description || item.Description || 'Special';
+
             card.innerHTML = `
                 <img src="${img}" class="food-icon" onerror="this.src='br.png'">
                 <div class="food-info">
-                    <div class="food-name">${item.name}</div>
-                    <div class="food-desc">${item.description || 'Special'}</div>
-                    <div class="food-price">₹${item.price}</div>
+                    <div class="food-name">${name}</div>
+                    <div class="food-desc">${desc}</div>
+                    <div class="food-price">₹${price}</div>
                 </div>
                 <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
             `;
@@ -304,10 +311,11 @@ class GuestPortal {
         if (existing) {
             existing.qty += qty;
         } else {
+            const name = item.name || item.Name || 'Dish';
             this.cart.push({
                 ...item,
                 id: id,
-                name: variant !== 'Regular' ? `${item.name} (${label})` : item.name,
+                name: variant !== 'Regular' ? `${name} (${label})` : name,
                 variant: label,
                 price: price,
                 qty: qty
@@ -441,8 +449,20 @@ class GuestPortal {
     }
 
     showTracker() {
-        document.getElementById('success-screen').style.display = 'none';
-        document.getElementById('tracker').classList.add('active');
+        const tracker = document.getElementById('tracker');
+        if (tracker) {
+            tracker.style.display = 'flex';
+            const roomNums = tracker.querySelectorAll('.room-num');
+            roomNums.forEach(el => el.innerText = this.roomNumber);
+        }
+    }
+
+    switchSubTab(tab) {
+        if (tab === 'wifi') {
+            document.getElementById('view-wifi').style.display = 'flex';
+        } else if (tab === 'laundry') {
+            document.getElementById('view-laundry').style.display = 'flex';
+        }
     }
 
     async sendQuickRequest(type) {
@@ -496,4 +516,7 @@ const portal = new GuestPortal();
 window.portal = portal;
 window.placeGuestOrder = () => portal.placeOrder();
 window.showTracker = () => portal.showTracker();
-window.activateReorder = () => { document.getElementById('tracker').classList.remove('active'); portal.switchView('menu'); };
+window.activateReorder = () => {
+    document.getElementById('tracker').style.display = 'none';
+    portal.switchView('menu');
+};

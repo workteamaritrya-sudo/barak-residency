@@ -920,14 +920,17 @@ class PMSApp {
 
         // Close command center nicely if switching away from reception
         if (portalId !== 'reception') {
-            const ws = document.querySelector('.workspace');
+            const ws = document.getElementById('tab-dashboard');
             if (ws) ws.classList.remove('panel-open');
 
             // Hard Isolation Unmount
             const recView = document.getElementById('view-reception');
             if (recView) recView.remove();
         } else {
-            if (this.selectedRoomId) document.querySelector('.workspace').classList.add('panel-open');
+            if (this.selectedRoomId) {
+                const tab = document.getElementById('tab-dashboard');
+                if (tab) tab.classList.add('panel-open');
+            }
         }
 
         // Trigger specific logic
@@ -1083,11 +1086,13 @@ class PMSApp {
         this.selectedRoomId = roomNumber;
         this.renderRoomGrid(); // update active class
         this.updateCommandCenter();
-        document.querySelector('.workspace').classList.add('panel-open');
+        const tab = document.getElementById('tab-dashboard');
+        if (tab) tab.classList.add('panel-open');
     }
 
     closeCommandCenter() {
-        document.querySelector('.workspace').classList.remove('panel-open');
+        const tab = document.getElementById('tab-dashboard');
+        if (tab) tab.classList.remove('panel-open');
         this.selectedRoomId = null;
         this.renderRoomGrid();
     }
@@ -2429,11 +2434,13 @@ class PMSApp {
         if (!grid) return;
         grid.innerHTML = '';
 
-        const filteredMenu = this.db.menu.filter(item =>
-            (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))) &&
-            (item.isAvailable !== false && !this.db.unavailableItems.includes(item.id))
-        );
+        const filteredMenu = this.db.menu.filter(item => {
+            const name = item.name || item.Name || '';
+            const cat = item.category || item.Category || '';
+            return (name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                cat.toLowerCase().includes(searchTerm.toLowerCase())) &&
+            (item.isAvailable !== false && !this.db.unavailableItems.includes(item.id));
+        });
 
         if (filteredMenu.length === 0) {
             grid.innerHTML = `<div style="text-align:center; padding: 2rem; color: gray; width: 100%;">No available items found</div>`;
@@ -2462,18 +2469,22 @@ class PMSApp {
                 el.style.flexDirection = 'column';
                 el.style.gap = '5px';
 
-                const imgUrl = item.imageUrl || item.image || item.photo || '';
+                const imgUrl = item.imageUrl || item.image || item.ImageURL || item.photo || '';
                 const fallbackImg = 'br.png'; 
                 const photoHtml = `<img src="${imgUrl}" style="width:100%; height:80px; object-fit:cover; border-radius:8px; margin-bottom:5px;" onerror="this.src='${fallbackImg}'">`;
+
+                const name = item.name || item.Name || 'Dish';
+                const price = item.price || item.PriceFull || 0;
+                const desc = item.description || item.Description || '';
 
                 el.innerHTML = `
                     ${photoHtml}
                     <div style="display:flex; justify-content:space-between; align-items:start;">
                         <div class="menu-icon">${item.icon || '🍽️'}</div>
-                        <div class="menu-price">₹${item.price}</div>
+                        <div class="menu-price">₹${price}</div>
                     </div>
-                    <div class="menu-name" style="font-weight:bold;">${item.name}</div>
-                    <div class="menu-desc" style="font-size:0.7rem; color:var(--color-slate-400); height:30px; overflow:hidden; line-height: 1.2;">${item.description || ''}</div>
+                    <div class="menu-name" style="font-weight:bold;">${name}</div>
+                    <div class="menu-desc" style="font-size:0.7rem; color:var(--color-slate-400); height:30px; overflow:hidden; line-height: 1.2;">${desc}</div>
                     <button class="menu-add-btn" style="margin-top:auto;" onclick="app.promptItemVariant(${JSON.stringify(item).replace(/"/g, '&quot;')}, '${portalCtx}')">Add</button>
                 `;
                 grid.appendChild(el);
@@ -2505,56 +2516,62 @@ class PMSApp {
         this.renderWaiterCart('rest-pickup');
     }
 
-    promptItemVariant(item, context) {
-        this.pendingCartItem = item;
-        this.pendingCartContext = context;
-        
-        document.getElementById('qp-item-name').innerText = item.name;
+    promptItemVariant(item, portalCtx) {
+        this.db.pendingItem = item;
+        this.db.pendingPortalCtx = portalCtx;
 
-        // Generate Dynamic Portion UI
-        const variantContainer = document.getElementById('qp-view-variant');
-        variantContainer.innerHTML = ''; // Clear prev
+        let hasVariants = false;
+        const modal = document.getElementById('variant-modal');
+        const title = document.getElementById('vm-title');
+        const container = document.getElementById('vm-options');
 
-        const type = item.portionType || 'Plate';
+        const itemName = item.name || item.Name || 'Dish';
+        const itemPrice = parseFloat(item.price || item.PriceFull || 0);
 
-        if (type === 'Plate') {
+        title.innerText = itemName;
+        container.innerHTML = '';
+
+        if (item.portionType === 'Plate') {
+            hasVariants = true;
+            const pFull = itemPrice;
+            const pHalf = item.priceHalf || item.PriceHalf ? parseFloat(item.priceHalf || item.PriceHalf) : Math.floor(pFull * 0.6);
             const options = [
-                { label: 'Full Plate', val: 'Full', price: item.price },
-                { label: 'Half Plate', val: 'Half', price: item.basePrice_Half || Math.floor(item.price * 0.6) }
+                { label: 'Full Plate', val: 'Full', price: pFull },
+                { label: 'Half Plate', val: 'Half', price: pHalf }
             ];
             options.forEach(opt => {
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-outline';
                 btn.style.cssText = 'padding: 1.5rem; font-size: 1.1rem; border-color: var(--color-primary); color: var(--color-primary);';
                 btn.innerText = `${opt.label} (₹${opt.price})`;
-                btn.onclick = () => this.qpSelectVariant(opt.val, opt.label, opt.price);
-                variantContainer.appendChild(btn);
+                btn.onclick = () => this.addVariantToCart(opt.val, opt.label, opt.price);
+                container.appendChild(btn);
             });
-        } else if (type === 'Bottle') {
-            // Dropdown Logic as requested
+        } else if (item.portionType === 'Bottle') {
+            hasVariants = true;
+            const pFull = itemPrice;
+            const sizes = [
+                { label: '1L Bottle', val: '1L', price: pFull },
+                { label: '750ml', val: '750ml', price: Math.floor(pFull * 0.8) },
+                { label: '500ml', val: '500ml', price: Math.floor(pFull * 0.6) }
+            ];
+
             const p = document.createElement('p');
             p.innerText = "Select Bottle Size:";
             p.style.color = "var(--color-slate-400)";
-            variantContainer.appendChild(p);
+            container.appendChild(p);
 
             const select = document.createElement('select');
             select.className = 'form-control';
             select.style.cssText = 'height: 60px; font-size: 1.2rem; text-align: center; border: 2px solid var(--gold-primary); background: rgba(0,0,0,0.5);';
             
-            const options = [
-                { label: '1L Bottle', val: '1L', price: item.price },
-                { label: '750ml', val: '750ml', price: Math.floor(item.price * 0.75) },
-                { label: '500ml', val: '500ml', price: Math.floor(item.price * 0.5) },
-                { label: '2L Bottle', val: '2L', price: Math.floor(item.price * 1.8) }
-            ];
-
-            options.forEach(opt => {
+            sizes.forEach(opt => {
                 const o = document.createElement('option');
                 o.value = JSON.stringify(opt);
                 o.innerText = `${opt.label} - ₹${opt.price}`;
                 select.appendChild(o);
             });
-            variantContainer.appendChild(select);
+            container.appendChild(select);
 
             const confirmBtn = document.createElement('button');
             confirmBtn.className = 'btn btn-primary';
@@ -2562,16 +2579,17 @@ class PMSApp {
             confirmBtn.innerText = 'Confirm Size';
             confirmBtn.onclick = () => {
                 const opt = JSON.parse(select.value);
-                this.qpSelectVariant(opt.val, opt.label, opt.price);
+                this.addVariantToCart(opt.val, opt.label, opt.price);
             };
-            variantContainer.appendChild(confirmBtn);
-        } else if (type === 'Cup' || type === 'Quantity') {
+            container.appendChild(confirmBtn);
+        } else if (item.portionType === 'Cup' || item.portionType === 'Quantity') {
             // Simple Counter - Skip Variant step
-            this.qpSelectVariant('Regular', 'Standard', item.price);
-            return; // Exit promptItemVariant as qpSelectVariant handles the rest
-        } else {
-            // Default Standard
-            this.qpSelectVariant('Regular', 'Standard', item.price);
+            this.addVariantToCart('Regular', 'Standard', itemPrice);
+            return; // Exit promptItemVariant as addVariantToCart handles the rest
+        }
+
+        if (!hasVariants) {
+            this.addVariantToCart('Regular', 'Standard', itemPrice);
             return;
         }
 
@@ -2579,59 +2597,38 @@ class PMSApp {
         cancelBtn.className = 'btn btn-outline';
         cancelBtn.style.cssText = 'margin-top: 1rem; border: none; text-decoration: underline;';
         cancelBtn.innerText = 'Cancel';
-        cancelBtn.onclick = () => document.getElementById('quantity-prompt-modal').style.display = 'none';
-        variantContainer.appendChild(cancelBtn);
+        cancelBtn.onclick = () => document.getElementById('variant-modal').style.display = 'none';
+        container.appendChild(cancelBtn);
 
-        // Reset Views
-        document.getElementById('qp-view-variant').style.display = 'flex';
-        document.getElementById('qp-view-quantity').style.display = 'none';
-        document.getElementById('quantity-prompt-modal').style.display = 'flex';
+        document.getElementById('variant-modal').style.display = 'flex';
     }
 
-    qpSelectVariant(variantVal, variantLabel, variantPrice) {
-        this.pendingCartVariant = variantVal;
-        this.pendingCartVariantLabel = variantLabel;
-        this.pendingCartPrice = variantPrice;
+    // This function replaces qpSelectVariant and submitItemQuantity
+    addVariantToCart(variant, label, price) {
+        document.getElementById('variant-modal').style.display = 'none';
 
-        document.getElementById('qp-selected-variant-text').innerText = `${variantLabel} (₹${variantPrice})`;
+        const item = this.db.pendingItem;
+        const context = this.db.pendingPortalCtx;
+        const qty = 1; // Default quantity for now, can be extended with a quantity prompt if needed
 
-        // Reset Qty Drawer
-        document.getElementById('qp-qty').value = 1;
+        const id = `${item.id}-${variant}`;
+        const itemName = item.name || item.Name || 'Dish';
 
-        // Slide Views
-        document.getElementById('qp-view-variant').style.display = 'none';
-        document.getElementById('qp-view-quantity').style.display = 'flex';
-    }
+        const finalItem = { ...item };
+        finalItem.id = id;
+        finalItem.name = variant !== 'Regular' ? `${itemName} (${label})` : itemName;
+        finalItem.price = parseFloat(price);
 
-    qpBackToVariant() {
-        // Slide Views Backwards
-        document.getElementById('qp-view-quantity').style.display = 'none';
-        document.getElementById('qp-view-variant').style.display = 'flex';
-    }
+        const existing = this.db.cart.find(c => c.item.id === id);
 
-    submitItemQuantity() {
-        if (!this.pendingCartItem) return;
-
-        const variant = this.pendingCartVariant;
-        const variantLabel = this.pendingCartVariantLabel;
-        const price = this.pendingCartPrice;
-        const qty = parseInt(document.getElementById('qp-qty').value) || 1;
-        document.getElementById('quantity-prompt-modal').style.display = 'none';
-
-        // Clone item to append variant tag and adjust price
-        const finalItem = { ...this.pendingCartItem };
-        finalItem.id = `${finalItem.id}-${variant}`;
-        finalItem.name = `${finalItem.name} [${variantLabel}]`;
-        finalItem.price = price;
-        finalItem.variant = variantLabel;
-
-        this.addToCart(finalItem, qty, this.pendingCartContext);
-    }
-
-    addToCart(item, qtyToAppend, context) {
-        const existing = this.db.cart.find(c => c.item.id === item.id);
-        if (existing) existing.qty += qtyToAppend;
-        else this.db.cart.push({ item: item, qty: qtyToAppend });
+        if (existing) {
+            existing.qty += qty;
+        } else {
+            this.db.cart.push({
+                item: finalItem,
+                qty: qty
+            });
+        }
 
         if (context === 'guest') this.renderGuestCart();
         else this.renderWaiterCart(context);

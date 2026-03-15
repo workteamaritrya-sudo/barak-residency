@@ -274,6 +274,18 @@
         }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .glass-panel {
+            background: rgba(10, 18, 41, 0.9);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .btn-block { width: 100%; border-radius: 12px; }
+        .mt-3 { margin-top: 0.75rem; }
+        .color-success { color: #4ade80; }
     </style>
 </head>
 <body>
@@ -316,10 +328,34 @@
                 </div>
             </div>
 
-            <div class="order-preview-card" id="active-order-preview" style="display: none;" onclick="showTracker()">
+            <div class="order-preview-card" id="active-order-preview" style="display: none;" onclick="portal.showTracker()">
                 <div class="pulse-dot"></div>
                 <div class="preview-text">Tracking Active Order...</div>
                 <div class="preview-arrow">→</div>
+            </div>
+        </div>
+
+        <!-- WiFi Modal -->
+        <div id="view-wifi" class="overlay" style="display: none;">
+            <div class="glass-panel" style="width: 85%; max-width: 400px; padding: 2rem; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📶</div>
+                <h2 style="color: var(--gold-primary); margin-bottom: 1.5rem;">Complimentary WiFi</h2>
+                <div class="glass-section" style="text-align: left; margin-bottom: 1.5rem;">
+                    <div class="mb-2"><span style="color: var(--text-gray); font-size: 0.8rem;">NETWORK</span><br><strong>Barak_Guest_5G</strong></div>
+                    <div><span style="color: var(--text-gray); font-size: 0.8rem;">PASSWORD</span><br><strong>Barak@Silchar</strong></div>
+                </div>
+                <button class="add-btn btn-block" onclick="document.getElementById('view-wifi').style.display='none'">CLOSE</button>
+            </div>
+        </div>
+
+        <!-- Laundry Modal -->
+        <div id="view-laundry" class="overlay" style="display: none;">
+            <div class="glass-panel" style="width: 85%; max-width: 400px; padding: 2rem; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🧺</div>
+                <h2 style="color: var(--gold-primary); margin-bottom: 1rem;">Laundry Service</h2>
+                <p style="color: var(--text-gray); font-size: 0.9rem; margin-bottom: 2rem;">Tap below to notify house keeping. Our staff will collect your laundry shortly.</p>
+                <button class="add-btn btn-block" onclick="portal.sendQuickRequest('Laundry Pickup')">REQUEST PICKUP</button>
+                <button class="reorder-btn mt-3" onclick="document.getElementById('view-laundry').style.display='none'">CANCEL</button>
             </div>
         </div>
 
@@ -391,57 +427,57 @@
     </div>
 
     <!-- Swiggy Tracker -->
-    <div class="tracker-container" id="tracker">
-        <div class="tracker-header">
-            <div>
-                <div style="font-size: 1.1rem; font-weight: 700; color: white;">Tracking Order</div>
-                <div class="order-id-tag" id="order-id-display">ID: #1011</div>
+    <div class="overlay" id="tracker" style="display: none; align-items: flex-end;">
+        <div class="glass-panel" style="width: 100%; border-radius: 30px 30px 0 0; padding: 2rem; animation: slideUp 0.5s ease-out;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="color: var(--gold-primary);">Track Order</h2>
+                <button style="background:none; border:none; color: white; font-size: 2rem;" onclick="document.getElementById('tracker').style.display='none'">&times;</button>
             </div>
-            <div id="status-label" style="color: var(--gold-primary); font-weight: 700; font-size: 0.8rem; text-align: right;">Preparing</div>
-        </div>
 
-        <div class="timeline">
-            <div class="timeline-progress" id="timeline-progress"></div>
-            
-            <div class="timeline-step" id="step-1">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-title">Order Placed</div>
-                    <div class="timeline-desc">We've received your request!</div>
+            <div class="tracker-box" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 20px; padding: 1.5rem; margin-bottom: 2rem;">
+                <div class="tracker-header" style="display:flex; justify-content: space-between; margin-bottom: 1.5rem;">
+                    <div>
+                        <div id="order-id-display" style="font-weight: 700; font-size: 1.1rem;">ID: #1011</div>
+                        <div style="color: var(--text-gray); font-size: 0.8rem;">Estimated Arrival: 25 mins</div>
+                    </div>
+                    <div id="status-label" style="color: var(--gold-primary); font-weight: 800;">PREPARING</div>
+                </div>
+
+                <div class="timeline" style="position: relative; padding-left: 30px;">
+                    <div class="timeline-line" style="position: absolute; left: 10px; top: 5px; bottom: 5px; width: 2px; background: rgba(255,255,255,0.1);"></div>
+                    <div id="timeline-progress" style="position: absolute; left: 10px; top: 5px; width: 2px; background: var(--gold-primary); height: 33%;"></div>
+                    
+                    <div class="timeline-step active" id="step-1" style="margin-bottom: 2rem; position: relative;">
+                        <div class="dot" style="position: absolute; left:-25px; top: 5px; width: 12px; height: 12px; border-radius:50%; background: var(--gold-primary);"></div>
+                        <div style="font-weight: 700;">Order Placed</div>
+                        <div style="color: var(--text-gray); font-size: 0.8rem;">Received by Barak Kitchen</div>
+                    </div>
+                    <div class="timeline-step" id="step-2" style="margin-bottom: 2rem; position: relative;">
+                        <div class="dot" style="position: absolute; left:-25px; top: 5px; width: 12px; height: 12px; border-radius:50%; background: #333;"></div>
+                        <div style="font-weight: 700;">Kitchen Prep</div>
+                        <div style="color: var(--text-gray); font-size: 0.8rem;">Chef is working on your meal</div>
+                    </div>
+                    <div class="timeline-step" id="step-3" style="margin-bottom: 2rem; position: relative;">
+                        <div class="dot" style="position: absolute; left:-25px; top: 5px; width: 12px; height: 12px; border-radius:50%; background: #333;"></div>
+                        <div style="font-weight: 700;">Out for Delivery</div>
+                        <div style="color: var(--text-gray); font-size: 0.8rem;">Coming to Room <span class="room-num">--</span></div>
+                    </div>
+                    <div class="timeline-step" id="step-4" style="position: relative;">
+                        <div class="dot" style="position: absolute; left:-25px; top: 5px; width: 12px; height: 12px; border-radius:50%; background: #333;"></div>
+                        <div style="font-weight: 700;">Enjoy your Meal</div>
+                        <div style="color: var(--text-gray); font-size: 0.8rem;">Delivered and ready to eat</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="timeline-step" id="step-2">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-title">Kitchen Prep</div>
-                    <div class="timeline-desc">Chef is working their magic.</div>
+            <div class="session-summary" style="margin-bottom: 2rem;">
+                <h3 style="font-size: 0.8rem; color: var(--gold-primary); text-transform: uppercase; margin-bottom: 1rem;">Session History</h3>
+                <div id="session-items-list" style="max-height: 150px; overflow-y: auto;">
+                    <div style="opacity: 0.5; font-size: 0.9rem;">No orders in this session yet.</div>
                 </div>
             </div>
 
-            <div class="timeline-step" id="step-3">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-title">On the Way</div>
-                    <div class="timeline-desc">Hot & fresh, coming to your room.</div>
-                </div>
-            </div>
-
-            <div class="timeline-step" id="step-4">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-title">Delivered</div>
-                    <div class="timeline-desc">Enjoy your Barak Residency experience!</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="session-summary">
-            <div style="font-size: 0.7rem; color: var(--text-gray); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">Session History</div>
-            <div id="session-items-list" style="font-size: 0.8rem; max-height: 100px; overflow-y: auto; color: var(--text-white);">
-                <!-- Appended items show here -->
-            </div>
-            <button class="reorder-btn" onclick="activateReorder()">+ ADD MORE ITEMS</button>
+            <button class="add-btn btn-block" style="padding: 1.25rem;" onclick="portal.switchView('menu'); document.getElementById('tracker').style.display='none'">+ ADD MORE ITEMS</button>
         </div>
     </div>
 
