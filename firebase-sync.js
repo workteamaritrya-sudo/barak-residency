@@ -178,28 +178,29 @@ class FirebaseSyncEngine {
                 const status = order.status;
                 const oid = order.order_id || change.doc.id;
                 const roomNum = order.roomNumber || order.roomId || '';
+                const app = window.app;
+                
+                // Portal Detection Logic (Check both currentPortal and currentTab)
+                const isKitchenPortal = app && (app.currentPortal === 'kitchen' || app.currentTab === 'kitchen');
+                const isReceptionPortal = app && (app.currentPortal === 'reception' || app.currentTab === 'dashboard' || app.currentTab === 'reception');
 
                 // ---------- NEW ORDER ARRIVED ----------
                 if (change.type === 'added' && (status === 'Pending' || status === 'Kitchen')) {
-                    // 1. Kitchen portal: beep + KDS refresh (handled after list rebuild)
-                    if (window.app && window.app.currentPortal === 'kitchen') {
-                        new Audio('kitchensound.mp3.mpeg').play().catch(() => {});
-                        window.app.showToast(`🔔 New Order: Room ${roomNum} — ${oid}`, 'info');
+                    // 1. Kitchen beep (Only in Kitchen tab)
+                    if (isKitchenPortal) {
+                        this.playKitchenAlert();
+                        app.showToast(`🔔 New Order: Room ${roomNum} — ${oid}`, 'info');
                     }
 
-                    // 2. Reception portal: auto-print KOT
-                    if (window.app && window.app.currentPortal === 'reception') {
-                        new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
-                        window.app.generateKOT({
-                            ...order,
-                            id: oid,
-                            items: order.items || []
-                        });
+                    // 2. Reception alert + print (Only in Reception/Dashboard)
+                    if (isReceptionPortal) {
+                        this.playReceptionAlert();
+                        app.generateKOT({ ...order, id: oid, items: order.items || [] });
                     }
 
-                    // 3. Persistent reception notification card (stays until dismissed)
-                    if (window.app && window.app.db && roomNum) {
-                        window.app.db.addNotification(
+                    // 3. Persistent notification card
+                    if (app && app.db && roomNum) {
+                        app.db.addNotification(
                             'order',
                             `🛎 New Order — Room ${roomNum} | ID: ${oid}`,
                             'reception',
@@ -210,13 +211,12 @@ class FirebaseSyncEngine {
 
                 // ---------- ORDER MARKED READY (by KDS) ----------
                 if (change.type === 'modified' && (status === 'Served' || status === 'ready')) {
-                    if (window.app && window.app.currentPortal === 'reception') {
-                        new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
-                        window.app.showToast(`✅ FOOD READY: Room ${roomNum} — ${oid}`, 'success');
+                    if (isReceptionPortal) {
+                        this.playReceptionAlert();
+                        app.showToast(`✅ FOOD READY: Room ${roomNum} — ${oid}`, 'success');
                     }
-                    // Persistent "READY" card in reception panel
-                    if (window.app && window.app.db && roomNum) {
-                        window.app.db.addNotification(
+                    if (app && app.db && roomNum) {
+                        app.db.addNotification(
                             'ready',
                             `✅ READY for Pickup — Room ${roomNum} | ${oid}`,
                             'reception',
@@ -227,8 +227,8 @@ class FirebaseSyncEngine {
 
                 // ---------- ORDER ON THE WAY ----------
                 if (change.type === 'modified' && status === 'On the Way') {
-                    if (window.app && window.app.db && roomNum) {
-                        window.app.db.addNotification(
+                    if (app && app.db && roomNum) {
+                        app.db.addNotification(
                             'info',
                             `🛵 On the Way — Room ${roomNum} | ${oid}`,
                             'reception',
@@ -239,9 +239,9 @@ class FirebaseSyncEngine {
 
                 // ---------- ORDER DELIVERED ----------
                 if (change.type === 'modified' && status === 'Delivered') {
-                    if (window.app && window.app.currentPortal === 'reception') {
-                        new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
-                        window.app.showToast(`✔ Delivered — Room ${roomNum} | Bill Updated`, 'success');
+                    if (isReceptionPortal) {
+                        this.playReceptionAlert();
+                        app.showToast(`✔ Delivered — Room ${roomNum} | Bill Updated`, 'success');
                     }
                 }
             });
@@ -272,23 +272,25 @@ class FirebaseSyncEngine {
 
     // --- ALERTS & SOUNDS ---
     playKitchenAlert() {
-        if (window.app && window.app.currentPortal === 'kitchen') {
+        const app = window.app;
+        if (app && (app.currentPortal === 'kitchen' || app.currentTab === 'kitchen')) {
             new Audio('kitchensound.mp3.mpeg').play().catch(() => {});
         }
     }
 
     playWaiterAlert() {
-        if (window.app && (window.app.currentPortal === 'rest-waiter' || window.app.currentPortal === 'hotel-waiter')) {
+        const app = window.app;
+        if (app && (app.currentPortal === 'rest-waiter' || app.currentPortal === 'hotel-waiter' || app.currentTab === 'rest-waiter')) {
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
             new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
-            window.app.showToast("ORDER READY FOR SERVICE!", "success");
+            app.showToast("ORDER READY FOR SERVICE!", "success");
         }
     }
 
     playReceptionAlert() {
-        if (window.app && window.app.currentPortal === 'reception') {
+        const app = window.app;
+        if (app && (app.currentPortal === 'reception' || app.currentTab === 'dashboard' || app.currentTab === 'reception')) {
             new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
-            window.app.showToast("New Order Received!", "info");
         }
     }
 

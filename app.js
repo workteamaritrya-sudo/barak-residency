@@ -645,6 +645,13 @@ class PMSApp {
 
     switchTab(tabId) {
         this.currentTab = tabId;
+        
+        // Mission Sync: Ensure currentPortal matches for sound/logic triggers
+        if (tabId === 'dashboard' || tabId === 'reception') this.currentPortal = 'reception';
+        if (tabId === 'kitchen') this.currentPortal = 'kitchen';
+        if (tabId === 'inventory') this.currentPortal = 'owner';
+        if (tabId === 'financials') this.currentPortal = 'owner';
+
         document.querySelectorAll('.side-item').forEach(el => el.classList.remove('active'));
         const activeItem = document.getElementById(`side-${tabId}`);
         if (activeItem) activeItem.classList.add('active');
@@ -3579,27 +3586,23 @@ class PMSApp {
             if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, status);
             this.db.persistKitchenSync();
 
-            // Play kitchen sound for PREPARING status
-            if (status === 'preparing' || status === 'Kitchen') {
+            // Play kitchen sound ONLY in kitchen portal
+            if ((status === 'preparing' || status === 'Kitchen') && (this.currentPortal === 'kitchen')) {
                 new Audio('kitchensound.mp3.mpeg').play().catch(() => {});
             }
 
             if (status === 'ready') {
-                // Room label from roomNumber (not legacy roomId)
                 const roomNum = order.roomNumber || order.roomId;
-                const target = order.tableId
-                    ? `Table ${order.tableId}`
-                    : (roomNum ? `Room ${roomNum}` : `Order ${orderId}`);
+                const target = order.tableId ? `Table ${order.tableId}` : (roomNum ? `Room ${roomNum}` : `Order ${orderId}`);
                 const notifyTarget = (order.tableId || order.orderType === 'pickup') ? 'desk' : 'reception';
 
-                // Persistent notification to reception panel
                 this.db.addNotification('ready',
                     `✅ FOOD READY: ${target} — Order ${orderId}`,
                     notifyTarget,
                     { type: 'room', orderId, roomNumber: roomNum, items: order.items || [] }
                 );
 
-                // Alert sound at reception
+                // Alert sound ONLY at reception
                 if (this.currentPortal === 'reception') {
                     new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
                     this.showToast(`✅ Kitchen says READY: ${target}`, 'success');
@@ -3729,6 +3732,17 @@ class PMSApp {
             .filter(o => o.orderType === 'Room' || o.roomNumber)
             .sort((a, b) => {
                 const getTime = (t) => t && typeof t === 'object' && t.seconds ? t.seconds * 1000 : (t || 0);
+                const statusOrder = (s) => {
+                    const lowCase = (s || '').toLowerCase();
+                    if (lowCase === 'delivered' || lowCase === 'completed') return 2; // Bottom
+                    if (lowCase === 'cancelled') return 3; // Absolute Bottom
+                    return 1; // Pending/Kitchen/Ready/OnWay go to TOP
+                };
+                
+                const sA = statusOrder(a.status);
+                const sB = statusOrder(b.status);
+                
+                if (sA !== sB) return sA - sB;
                 return getTime(b.timestamp) - getTime(a.timestamp);
             })
             .slice(0, 25);
