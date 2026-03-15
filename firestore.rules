@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper: is the user authenticated?
+    function i() {
+      return request.auth != null;
+    }
+    
+    // Helper: get the current user's role
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.token.email)).data.role;
+    }
+
+    // 1. Users Collection
+    // - Everyone authenticated can read their OWN profile.
+    // - Only Admin can read ALL profiles.
+    // - Only Admin can write/create.
+    match /users/{email} {
+      allow read: if i() && (request.auth.token.email == email || getRole() == 'Admin');
+      allow write: if i() && getRole() == 'Admin';
+    }
+
+    // 2. Menu Items
+    // - Read: Public (guests need this to see the menu).
+    // - Write: Only Admin.
+    match /menuItems/{itemId} {
+      allow read: if true;
+      allow write: if i() && getRole() == 'Admin';
+    }
+
+    // 3. Orders & Service Requests
+    // - Read/Write: Authenticated users (Staff/Kitchen).
+    // - Guests can create (write) and read THEIR OWN orders if we implement session-based rules, 
+    //   but for now, we allow creation for simplicity.
+    match /orders/{orderId} {
+      allow read, write: if true; 
+    }
+    
+    match /serviceRequests/{reqId} {
+      allow read, write: if true;
+    }
+
+    // 4. Rooms (Reception Logic)
+    // - Only logged in staff can manage rooms.
+    match /rooms/{roomNum} {
+      allow read, write: if i();
+    }
+    
+    // 5. Billing & Sales (Sensitive)
+    // - Only Admin can read/write.
+    match /ledger/{docId} {
+      allow read, write: if i() && getRole() == 'Admin';
+    }
+    match /salesHistory/{docId} {
+      allow read, write: if i() && getRole() == 'Admin';
+    }
+  }
+}

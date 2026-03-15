@@ -2,7 +2,7 @@ import { firebaseConfig } from "./firebase-config.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
 import { getDatabase, ref, set, onValue, get, push } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, getDocs, or, enableIndexedDbPersistence, deleteDoc, Timestamp, runTransaction, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, getDocs, or, enableIndexedDbPersistence, deleteDoc, Timestamp, runTransaction, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
@@ -23,10 +23,15 @@ enableIndexedDbPersistence(firestore).catch((err) => {
 });
 
 // Make available globally for app.js and order.js
-window.firebaseFS = firestore;
-window.firebaseST = storage;
-window.firebaseAuth = auth;
-window.firebaseHooks = { doc, collection, query, where, updateDoc, addDoc, serverTimestamp, onSnapshot, getDocs, setDoc, sRef, uploadBytes, getDownloadURL, or, deleteDoc, Timestamp, runTransaction, increment, arrayUnion, signInWithEmailAndPassword, onAuthStateChanged, signOut };
+export const firebaseFS = firestore;
+export const firebaseST = storage;
+export const firebaseAuth = auth;
+export const firebaseHooks = { doc, getDoc, collection, query, where, updateDoc, addDoc, serverTimestamp, onSnapshot, getDocs, setDoc, sRef, uploadBytes, getDownloadURL, or, deleteDoc, Timestamp, runTransaction, increment, arrayUnion, signInWithEmailAndPassword, onAuthStateChanged, signOut };
+
+window.firebaseFS = firebaseFS;
+window.firebaseST = firebaseST;
+window.firebaseAuth = firebaseAuth;
+window.firebaseHooks = firebaseHooks;
 
 class FirebaseSyncEngine {
     constructor() {
@@ -420,6 +425,24 @@ class FirebaseSyncEngine {
             console.error("Failed to get next serial", e);
             return `${id}${Date.now().toString().slice(-4)}`;
         }
+    }
+
+    async getUserProfile(email) {
+        if (!email) return null;
+        try {
+            // 1. Try direct document lookup (efficient)
+            const docRef = doc(window.firebaseFS, 'users', email);
+            const docSnap = await firebaseHooks.getDoc(docRef);
+            if (docSnap.exists()) return docSnap.data();
+
+            // 2. Fallback to query by assignedEmail
+            const usersRef = collection(window.firebaseFS, 'users');
+            const q = query(usersRef, where('assignedEmail', '==', email));
+            const snap = await getDocs(q);
+            if (!snap.empty) return snap.docs[0].data();
+            
+            return null;
+        } catch(e) { console.error("Profile fetch failed", e); return null; }
     }
 
     async uploadIdFile(file, guestPhone) {

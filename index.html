@@ -384,210 +384,241 @@
                             <div class="kpi-value" id="rest-desk-active-tables" style="font-size: 1.5rem;">0</div>
                         </div>
                     </div>
-
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; flex: 1;">
-                        <div class="desk-tables glass-panel" style="padding: 1.5rem; overflow-y: auto;">
-                            <h3 class="mb-3">Live Table Grid</h3>
-                            <div class="table-grid" id="rest-desk-table-grid"
-                                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;">
-                                <!-- Populated dynamically -->
-                            </div>
-                            <div class="desk-grid-header mt-4">
-                                <h3>🥡 Active Pick-Up Orders</h3>
-                            </div>
-                            <div id="rest-desk-pickup-list" class="glass-panel"
-                                style="padding: 1rem; min-height: 100px; border-radius: 12px; display: flex; flex-direction: column; gap: 0.5rem; background: rgba(0,0,0,0.2);">
-                                <div class="text-center text-gray" style="padding: 1rem;">No active pickups</div>
-                            </div>
-                        </div>
-
-                        <div class="desk-checkout glass-panel"
-                            style="padding: 1.5rem; display: flex; flex-direction: column;">
-                            <h3 class="mb-3" id="desk-checkout-title">Checkout</h3>
-                            <div id="desk-checkout-content" style="flex: 1; display: flex; flex-direction: column;">
-                                <div class="text-gray">Select an occupied table to generate final bill.</div>
-                            </div>
-                        </div>
+    <div id="root-isolated">
+        <!-- Unified Management Hub (Professional Sidebar Layout) -->
+        <div class="management-hub" id="app-container" style="display: none;">
+            <aside class="sidebar">
+                <div class="sidebar-logo">
+                    <img src="br.png" alt="Barak Residency">
+                    <div style="display:flex; flex-direction:column;">
+                        <span class="golden-brand" style="font-size: 0.9rem;">BARAK</span>
+                        <span class="golden-brand" style="font-size: 0.6rem; letter-spacing: 4px; opacity:0.7;">SILCHAR</span>
                     </div>
                 </div>
 
-                <!-- Notification Panel (1/3) -->
-                <div class="desk-notifications-panel glass-panel">
-                    <h3 class="mb-4 d-flex justify-between align-center">
-                        <span>Notifications</span>
-                        <span class="badge">ACTIVE</span>
-                    </h3>
-                    <div id="desk-notifications-list" style="flex: 1; overflow-y: auto; padding-right: 0.5rem;">
-                        <!-- Populated dynamically -->
-                        <div class="text-center text-gray mt-5">No recent updates.</div>
+                <div class="sidebar-nav">
+                    <div class="side-item active" id="side-dashboard" onclick="app.switchTab('dashboard')">
+                        <span>🏨</span> Live Dashboard
+                    </div>
+                    <div class="side-item" id="side-kitchen" onclick="app.switchTab('kitchen')">
+                        <span>🍳</span> Kitchen (KDS)
+                    </div>
+                    <div class="side-item" id="side-inventory" onclick="app.switchTab('inventory')">
+                        <span>📦</span> Menu & Inventory
+                    </div>
+                    <div class="side-item" id="side-financials" onclick="app.switchTab('financials')">
+                        <span>📊</span> Financial Analytics
+                    </div>
+                </div>
+
+                <div class="sidebar-footer">
+                    <div class="user-profile">
+                        <div class="user-avatar" id="user-avatar">??</div>
+                        <div class="user-info">
+                            <span class="user-name" id="user-display-name">Loading...</span>
+                            <span class="user-role" id="user-display-role">---</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline btn-block text-sm" onclick="app.handleLogout()">
+                        🚪 LOGOUT
+                    </button>
+                </div>
+            </aside>
+
+            <main class="main-content" id="portal-view">
+                <!-- 1. DASHBOARD TAB (RECEPTION) -->
+                <section id="tab-dashboard" class="portal-content active">
+                    <div class="luxury-portal-header">
+                        <div class="luxury-identity golden-brand">EXECUTIVE ROOM DASHBOARD</div>
+                        <div class="portal-time-luxury" id="live-clock">--:-- --</div>
+                    </div>
+                    
+                    <div class="reception-split-container">
+                        <div class="reception-rooms-area">
+                            <section class="room-section">
+                                <div class="floor">
+                                    <h2>First Floor</h2>
+                                    <div class="room-grid" id="floor-1"></div>
+                                </div>
+                                <div class="floor mt-4">
+                                    <h2>Second Floor</h2>
+                                    <div class="room-grid" id="floor-2"></div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <div class="reception-orders-sidebar glass-panel" style="gap: 1.5rem;">
+                            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                                <h3 style="color: var(--gold-primary); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1rem;">
+                                    ROOM ORDERS 
+                                    <span id="room-order-badge-count" class="badge">0</span>
+                                </h3>
+                                <div id="room-orders-panel" style="flex: 1; overflow-y: auto;">
+                                    <div class="text-gray" style="text-align: center; margin-top: 1rem;">No active orders</div>
+                                </div>
+                            </div>
+                            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 0.5rem;">
+                                <h3 style="color: #f43f5e; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1rem;">
+                                    LIVE SERVICE
+                                    <span id="service-req-count" class="badge">0</span>
+                                </h3>
+                                <div id="service-requests-panel" style="flex: 1; overflow-y: auto;">
+                                    <div class="text-gray" style="text-align: center; margin-top: 1rem;">No pending requests</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- NEW: MENU & AVAILABILITY TOOLS -->
-                    <div class="desk-tools-section mt-4 pt-4" style="border-top:1px solid var(--glass-border);">
-                        <h4 class="mb-3 color-primary" style="color:var(--gold-primary);">Desk Utilities</h4>
-                        <div style="display:flex; flex-direction:column; gap:0.75rem;">
-                            <button class="btn btn-outline btn-block" style="text-align:left; padding:12px;" onclick="openAvailabilityModal()">
-                                🚫 Make Food Unavailable
+                    <!-- Command Center Side Panel -->
+                    <aside class="command-center" id="command-center">
+                        <div class="glass-panel cc-inner">
+                            <button class="close-btn" onclick="app.closeCommandCenter()">&times;</button>
+                            <h2 class="cc-title" id="cc-room-title">Room --</h2>
+                            <div id="cc-content-empty">
+                                <p>Room is available.</p>
+                                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                                    <button class="btn btn-primary flex-1" onclick="app.showCheckInForm()">Check In</button>
+                                </div>
+                            </div>
+                            <div id="cc-content-occupied" style="display: none;">
+                                <div class="cc-section">
+                                    <h3><span class="icon">👤</span> Guest Metadata</h3>
+                                    <div class="metadata-grid">
+                                        <div class="meta-item"><span class="meta-label">Name</span><span class="meta-value" id="cc-guest-name">--</span></div>
+                                        <div class="meta-item"><span class="meta-label">ID Sync</span><span class="meta-value" id="cc-guest-id-status">Verified</span></div>
+                                    </div>
+                                </div>
+                                <div class="cc-section">
+                                    <h3><span class="icon">💰</span> Ledger Sync</h3>
+                                    <div class="ledger-pill">
+                                        <span>Current Bill</span>
+                                        <span id="cc-total-bill">₹ 0.00</span>
+                                    </div>
+                                    <button class="btn btn-primary btn-block mt-3" onclick="app.generateInvoice()">Final Checkout</button>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+                </section>
+
+                <!-- 2. KITCHEN TAB (KDS) -->
+                <section id="tab-kitchen" class="portal-content">
+                    <div class="luxury-portal-header">
+                        <div class="luxury-identity golden-brand">KITCHEN DISPLAY SYSTEM (KDS)</div>
+                    </div>
+                    <div class="kds-grid" id="kds-grid-container">
+                        <!-- Populated by JS -->
+                    </div>
+                </section>
+
+                <!-- 3. INVENTORY & MENU TAB -->
+                <section id="tab-inventory" class="portal-content">
+                    <div class="luxury-portal-header">
+                        <div class="luxury-identity golden-brand">MENU & INVENTORY CONTROL</div>
+                    </div>
+                    
+                    <div class="glass-panel" style="padding: 2rem;">
+                        <div class="d-flex justify-between align-center mb-6">
+                            <div>
+                                <h2 class="mb-1">Menu Management</h2>
+                                <p class="text-gray text-sm">Sync your CSV menu or manage item availability.</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="const url = prompt('Enter CSV Menu URL:'); if(url) app.db.syncMenuFromCSV(url);">
+                                🔄 SYNC FRESH CSV
                             </button>
-                            <button class="btn btn-outline btn-block" style="text-align:left; padding:12px;" onclick="const url = prompt('Enter CSV Menu URL:'); if(url) app.db.syncMenuFromCSV(url);">
-                                🔄 Sync Menu (CSV/Excel)
-                            </button>
+                        </div>
+
+                        <div id="menu-management-container">
+                            <div id="menu-loading-msg" class="text-center p-5 opacity-50">Fetching Menu Data...</div>
+                            <!-- Menu items or empty state will be rendered here -->
+                             <div id="menu-items-table-wrapper" style="display:none;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Item Name</th>
+                                            <th>Category</th>
+                                            <th>Price (F/H)</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="management-menu-list"></tbody>
+                                </table>
+                             </div>
+                        </div>
+
+                        <div id="menu-empty-state" class="empty-menu-state" style="display: none;">
+                            <i>🍽️</i>
+                            <h3>No Items Found</h3>
+                            <p class="text-gray">Your menu is currently empty. Please use the "Sync Fresh CSV" button to upload your menu.</p>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
 
-    <!-- RESTAURANT PICKUP PORTAL -->
-    <div id="view-rest-pickup" class="portal-content" style="display: none;">
-        <div class="luxury-portal-header">
-            <div class="luxury-identity golden-brand">BARAK RESIDENCY, SILCHAR</div>
-            <div class="portal-time-luxury">--:-- --</div>
-        </div>
-        <div class="portal-top-bar"
-            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-            <h2 id="pickup-pos-title">New Pickup Order</h2>
-            <button class="btn btn-outline" onclick="app.switchPortal('rest-desk')">Back to Desk</button>
-        </div>
-        <div class="pos-layout" id="rest-pickup-pos-area">
-            <div class="menu-column">
-                <div class="search-bar-wrapper mb-4">
-                    <input type="text" id="rest-pickup-menu-search" class="search-input" placeholder="Search menu..."
-                        oninput="app.filterWaiterMenu('rest-pickup')">
-                </div>
-                <div class="menu-grid" id="rest-pickup-menu-grid"></div>
-            </div>
-            <div class="cart-column glass-panel">
-                <h3>Order Cart</h3>
-                <div id="rest-pickup-cart-items" style="flex:1; overflow-y:auto; margin: 1rem 0;"></div>
-                <div class="cart-footer">
-                    <div class="d-flex justify-between mb-3"><span>Total</span><span class="font-bold">₹<span
-                                id="rest-pickup-cart-total">0</span></span></div>
-                    <button class="btn btn-success btn-block" id="btn-rest-pickup-order" disabled
-                        onclick="app.placeOrder('rest-pickup', 'pickup')">PLACE ORDER</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 4. OWNER DASHBOARD VIEW (All-in-One) -->
-    <div id="view-owner" class="portal-content" style="display: none;">
-        <div class="luxury-portal-header">
-            <div class="luxury-identity golden-brand">BARAK RESIDENCY, SILCHAR</div>
-            <div class="portal-time-luxury">--:-- --</div>
-        </div>
-        <div class="portal-top-bar" style="display: flex; justify-content: flex-end; margin-bottom: 1rem; gap: 1rem;">
-            <button class="btn btn-outline" onclick="document.getElementById('settings-modal').style.display='flex'">⚙️ Settings</button>
-            <button class="btn btn-outline btn-logout" onclick="app.exitIsolatedMode()">Logout</button>
-        </div>
-        <div class="owner-dashboard">
-            <div class="d-flex justify-between mb-3">
-                <h2 class="mb-3">Executive Dashboard</h2>
-                <div id="conn-status" class="status-badge"
-                    style="background: rgba(74, 222, 128, 0.1); color: var(--color-green-400); font-weight:bold; font-size: 0.85rem;">
-                    <span
-                        style="display:inline-block; width:8px; height:8px; border-radius:50%; background:currentColor; margin-right:4px;"></span>
-                    Cloud Synced
-                </div>
-            </div>
-            <div class="kpi-grid">
-                <div class="kpi-card glass-panel">
-                    <div class="kpi-title">Room Revenue Today</div>
-                    <div class="kpi-value" id="kpi-room-revenue">0</div>
-                </div>
-                <div class="kpi-card glass-panel">
-                    <div class="kpi-title">Total Rest. Earnings</div>
-                    <div class="kpi-value" id="kpi-rest-revenue">0</div>
-                </div>
-                <div class="kpi-card glass-panel">
-                    <div class="kpi-title">Rest. Customers Today</div>
-                    <div class="kpi-value" id="kpi-rest-pax">0</div>
-                </div>
-                <div class="kpi-card glass-panel" style="border-color: rgba(99, 102, 241, 0.5); grid-column: span 3;">
-                    <div class="kpi-title" style="color: var(--color-indigo-400)">Approx. EBITDA</div>
-                    <div class="kpi-value" id="kpi-ebitda">0</div>
-                    <div class="text-sm mt-2 text-gray" style="font-size:0.75rem;">(Room Rev + Rest
-                        Earnings) - (Salaries + Food Costs + Utilities + Stock Shortages)</div>
-                </div>
-            </div>
-
-            <div class="charts-row mt-4">
-                <div class="chart-container glass-panel">
-                    <canvas id="revenueChart"></canvas>
-                </div>
-                <div class="chart-container glass-panel">
-                    <canvas id="profitabilityChart"></canvas>
-                </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
-                <div class="sales-history glass-panel">
-                    <h3>Recent Kitchen Sales</h3>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Time (IST)</th>
-                                <th>Target</th>
-                                <th>Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sales-history-body"></tbody>
-                    </table>
-                </div>
-
-                <!-- EMPLOYEE PORTAL MOVED HERE -->
-                <div class="employee-layout glass-panel" style="padding:1.5rem; max-height: 400px; overflow-y: auto;">
-                    <div class="d-flex justify-between mb-4">
-                        <h3>Staff Directory</h3>
-                        <button class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;"
-                            onclick="alert('Add Employee Modal placeholder')">+ Add</button>
+                    <div class="mt-4 glass-panel" style="padding:2rem;">
+                        <h2>Kitchen Inventory</h2>
+                        <div id="inventory-list-container" class="mt-4">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Material</th>
+                                        <th>Category</th>
+                                        <th>Current Stock</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventory-list"></tbody>
+                            </table>
+                        </div>
                     </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Role</th>
-                                <th>Net Payable</th>
-                            </tr>
-                        </thead>
-                        <tbody id="employee-list"></tbody>
-                    </table>
-                </div>
-            </div>
+                </section>
 
-            <!-- INVENTORY PORTAL MOVED HERE -->
-            <div class="mt-4 glass-panel" style="padding: 1.5rem;">
-                <h2 class="mb-3">Inventory & Procurement</h2>
-                <div class="inventory-layout" style="display:flex; gap:1.5rem;">
-                    <div
-                        style="flex:2; background:rgba(0,0,0,0.2); border-radius:12px; padding:1.5rem; border:1px solid var(--glass-border);">
-                        <h3 class="mb-3">Current Stock</h3>
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Category</th>
-                                    <th>Stock</th>
-                                    <th>Threshold</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inventory-list"></tbody>
-                        </table>
+                <!-- 4. FINANCIALS TAB -->
+                <section id="tab-financials" class="portal-content">
+                    <div class="luxury-portal-header">
+                        <div class="luxury-identity golden-brand">FINANCIAL INTELLIGENCE HUB</div>
                     </div>
-                    <div
-                        style="flex:1; background:rgba(239, 68, 68, 0.1); border-radius:12px; padding:1.5rem; border:1px solid rgba(239, 68, 68, 0.3);">
-                        <h3 class="mb-3 color-primary" style="color:var(--color-red-500)">Purchase
-                            Requirements</h3>
-                        <ul id="purchase-list"
-                            style="list-style:none; padding:0; display:flex; flex-direction:column; gap:0.5rem;">
-                            <li class="text-gray text-sm">All stocks look good.</li>
-                        </ul>
+                    
+                    <div class="kpi-grid">
+                        <div class="kpi-card glass-panel">
+                            <div class="kpi-title">Room Revenue Today</div>
+                            <div class="kpi-value" id="kpi-room-revenue">₹ 0</div>
+                        </div>
+                        <div class="kpi-card glass-panel">
+                            <div class="kpi-title">Rest. Earnings Today</div>
+                            <div class="kpi-value" id="kpi-rest-revenue">₹ 0</div>
+                        </div>
+                        <div class="kpi-card glass-panel" style="grid-column: span 1;">
+                            <div class="kpi-title">Daily Profit (EBITDA)</div>
+                            <div class="kpi-value" id="kpi-ebitda" style="color: var(--color-green-400);">₹ 0</div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
+                    <div class="charts-row mt-4">
+                        <div class="chart-container glass-panel">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                        <div class="chart-container glass-panel">
+                            <canvas id="profitabilityChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 glass-panel">
+                        <h3>Recent Transactions</h3>
+                        <div id="sales-history-container" class="mt-4">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Reference</th>
+                                        <th>Entity</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-history-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </main>
         </div>
     </div>
 

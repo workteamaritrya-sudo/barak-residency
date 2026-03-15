@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Database Initialization | Barak Residency</title>
+    <script type="module" src="firebase-sync.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #050B1A; color: white; padding: 2rem; }
+        .card { background: #0A1229; border: 1px solid #D4AF37; padding: 2rem; border-radius: 12px; max-width: 600px; margin: 0 auto; }
+        h1 { color: #D4AF37; }
+        .btn { background: #D4AF37; color: black; border: none; padding: 1rem 2rem; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        #status { margin-top: 1rem; color: #94A3B8; }
+        pre { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>System Initialization</h1>
+        <p>This tool will set up the initial <b>users</b> collection in Firestore and provide credentials for trial.</p>
+        
+        <div id="setup-controls">
+            <button class="btn" id="init-db">INITIALIZE DATABASE USERS</button>
+        </div>
+
+        <div id="status"></div>
+
+        <div id="credentials" style="display:none; margin-top: 2rem;">
+            <h3>New Login Credentials:</h3>
+            <pre>
+Admin:
+- User ID: BR-ADM-001
+- Password: password123
+
+Reception:
+- User ID: BR-RCP-001
+- Password: password123
+
+Kitchen:
+- User ID: BR-KIT-001
+- Password: password123
+            </pre>
+            <p><i>Note: You must still manually add the emails (e.g. admin@barak.com) and passwords in the <b>Firebase Console -> Authentication</b> tab. This tool only maps the IDs.</i></p>
+            <a href="login.html" style="color:#D4AF37;">Go to Login Page</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { firebaseHooks, firebaseFS } from './firebase-sync.js';
+
+        document.getElementById('init-db').onclick = async () => {
+            const status = document.getElementById('status');
+            status.innerHTML = "<b>Initializing Luxury Profiles...</b><br>";
+
+            try {
+                const users = [
+                    { empId: 'BR-ADM-001', assignedEmail: 'admin@barak.com', name: 'Barak Admin', role: 'Admin' },
+                    { empId: 'BR-RCP-001', assignedEmail: 'reception@barak.com', name: 'Reception Staff', role: 'Reception' },
+                    { empId: 'BR-KIT-001', assignedEmail: 'kitchen@barak.com', name: 'Executive Chef', role: 'Kitchen' }
+                ];
+
+                for (const user of users) {
+                    const docRef = firebaseHooks.doc(firebaseFS, 'users', user.assignedEmail);
+                    await firebaseHooks.setDoc(docRef, user);
+                    status.innerHTML += `✅ Created profile for <b>${user.empId}</b> (${user.role})<br>`;
+                }
+
+                status.innerHTML += "<br><b>✨ Optimization Complete!</b>";
+                document.getElementById('credentials').style.display = 'block';
+                document.getElementById('init-db').style.display = 'none';
+
+            } catch (err) {
+                console.error(err);
+                status.innerText += `\n❌ Error: ${err.message}`;
+            }
+        };
+    </script>
+</body>
+</html>

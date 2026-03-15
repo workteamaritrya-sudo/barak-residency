@@ -381,35 +381,31 @@ class CentralDatabase {
 
                 const item = {};
                 headers.forEach((h, idx) => {
-                    let val = values[idx] || '';
+                    let val = (values[idx] || '').trim();
                     if (val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length - 1);
                     
-                    // Unified Mapping for the Advanced Menu Spec
                     const key = h.toLowerCase().replace(/[^a-z0-9]/g, '');
                     
+                    // Explicit Mapping for Specification
                     if (key === 'name') item.name = val;
                     if (key === 'category') item.category = val;
-                    if (key === 'price' || key === 'pricefull') {
-                        item.price = parseFloat(val) || 0;
-                        item.basePrice_Full = item.price;
-                    }
-                    if (key === 'pricehalf') item.basePrice_Half = parseFloat(val) || 0;
+                    if (key === 'pricefull' || key === 'price') item.price = parseFloat(val) || 0;
+                    if (key === 'pricehalf') item.priceHalf = parseFloat(val) || 0;
                     if (key === 'description' || key === 'desc') item.description = val;
-                    if (key === 'imageurl' || key === 'photo') item.imageUrl = val;
+                    if (key === 'imageurl' || key === 'img') item.imageUrl = val;
                     if (key === 'portiontype' || key === 'type') item.portionType = val;
-                    
-                    if (key === 'isavailable') item.isAvailable = val.toLowerCase() === 'true';
                 });
 
-                // Pricing logic for portions
-                if (item.basePrice_Full && (!item.price || item.price === 0)) item.price = item.basePrice_Full;
+                // Image Fallback (Cloche / Logo)
+                if (!item.imageUrl || item.imageUrl.trim() === '') {
+                    item.imageUrl = 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'; // Cloche Placeholder
+                }
 
+                // Default ID logic
                 if (!item.id) item.id = `m-${i}-${Date.now().toString().slice(-4)}`;
-                item.isAvailable = item.isAvailable !== undefined ? item.isAvailable : true;
-                
-                if(item.name) item.name = item.name.trim();
+                item.isAvailable = true;
 
-                newMenu.push(item);
+                if (item.name) newMenu.push(item);
             }
 
             if (newMenu.length > 0) {
@@ -488,81 +484,156 @@ class CentralDatabase {
 
 
 class PMSApp {
-    constructor(isolatedView = null) {
-        this.isolatedView = isolatedView;
+    constructor() {
         this.db = new CentralDatabase();
-        this.db.kitchenOrders = [];
-        this.db.serviceRequests = [];
-        this.selectedRoomId = null; // Used for Reception Command Center focus
-        this.currentPortal = isolatedView || 'reception';
+        this.userProfile = null;
+        this.currentTab = 'dashboard';
         this.revenueChart = null;
-        this.profitabilityChart = null; // EBITDA Trends
-        this.audioUnlocked = false;
-        this.html5QrCode = null;
-        this.capturedIdFile = null;
-        this.currentRoom = null;
+        this.profitabilityChart = null;
+        this.selectedRoomId = null;
 
-        // Setup Network Listener for PWA Auto-Sync
+        // Offline Support
         this.isOnline = navigator.onLine;
         window.addEventListener('online', () => this.handleNetworkChange(true));
         window.addEventListener('offline', () => this.handleNetworkChange(false));
 
-        // Cross-Tab Sync via localStorage event
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'kds_sync' && e.newValue) {
-                // Immediate wake-up for KDS
-                try {
-                    const newOrder = JSON.parse(e.newValue);
-                    const existingIdx = this.db.kitchenOrders.findIndex(o => o.id === newOrder.id);
-                    if (existingIdx !== -1) {
-                        this.db.kitchenOrders[existingIdx] = newOrder;
-                    } else {
-                        this.db.kitchenOrders.push(newOrder);
-                    }
-                    if (this.currentPortal === 'kitchen') {
-                        this.renderKDS();
-                        this.checkKDSAlerts();
-                        const kdsBell = document.getElementById('success-chime');
-                        if (kdsBell) kdsBell.play().catch(err => console.log('KDS Audio play err', err));
-                    }
-                } catch (err) { console.error('KDS sync error', err); }
-            } else if (e.key && e.key === 'yukt_pms_sync') {
-                // Keep local state in sync BEFORE resetting DB so syncState renders correctly
-                const savedTables = localStorage.getItem('yukt_rest_tables');
-                if (savedTables) this.db.restaurantTables = JSON.parse(savedTables);
-                this.db.restaurantRevenue = parseFloat(localStorage.getItem('yukt_rest_rev')) || 0;
-                this.db.restaurantCustomersToday = parseInt(localStorage.getItem('yukt_rest_pax')) || 0;
+        // Redirect Guest URL early if needed (for isolated guest mode check)
+        this.checkGuestURL();
+        if (this.isGuestMode) return;
 
-                // CRITICAL SYNC: Unavailable Items & Ledger
-                this.db.unavailableItems = JSON.parse(localStorage.getItem('br_unavailable_items')) || [];
-                this.db.roomLedger = JSON.parse(localStorage.getItem('br_room_ledger')) || {};
-                this.db.menu = JSON.parse(localStorage.getItem('br_menu')) || this.db.menu;
+        // Start Firebase Auth Watcher
+        this.watchAuthState();
 
-                // Full reload to ensure KDS and Sales are in sync
-                this.db.initDB().then(() => {
-                    this.syncState();
-                    if (this.currentPortal === 'kitchen') this.checkKDSAlerts();
-                    if (this.currentPortal === 'hotel-waiter') this.renderHotelWaiterSidebar();
-                    if (this.currentPortal === 'rest-waiter') this.renderRestWaiterSidebar();
-                });
-            } else if (e.key === 'yukt_notification_sync' && e.newValue) {
-                try {
-                    const note = JSON.parse(e.newValue);
-                    if (!this.db.notifications.some(n => n.id === note.id)) {
-                        this.db.notifications.unshift(note);
-                        if (this.db.notifications.length > 30) this.db.notifications.pop();
-                        this.syncState();
-                    }
-                } catch (err) { console.error('Notification sync error', err); }
+        // Cross-Tab Sync
+        window.addEventListener('storage', (e) => this.handleStorageSync(e));
+    }
+
+    watchAuthState() {
+        const { onAuthStateChanged } = window.firebaseHooks;
+        onAuthStateChanged(window.firebaseAuth, async (user) => {
+            if (!user) {
+                if (!window.location.href.includes('order.html')) {
+                    window.location.href = 'login.html';
+                }
+                return;
+            }
+
+            try {
+                this.userProfile = await window.FirebaseSync.getUserProfile(user.email);
+                document.getElementById('app-container').style.display = 'flex';
+                this.initManagementHub();
+            } catch (err) {
+                console.error("Auth init failed", err);
             }
         });
+    }
 
-        // Init App after DB Loads
-        this.db.initDB().then(() => {
-            this.checkGuestURL();
-            if (!this.isGuestMode) {
-                this.initAdminEcosystem();
+    async initManagementHub() {
+        if (this.userProfile) {
+            document.getElementById('user-display-name').innerText = this.userProfile.name || "Staff";
+            document.getElementById('user-display-role').innerText = this.userProfile.role || "Reception";
+            document.getElementById('user-avatar').innerText = (this.userProfile.name || "?").charAt(0).toUpperCase();
+
+            if (this.userProfile.role !== 'Admin') {
+                const inv = document.getElementById('side-inventory');
+                const fin = document.getElementById('side-financials');
+                if (inv) inv.style.display = 'none';
+                if (fin) fin.style.display = 'none';
             }
+        }
+
+        await this.db.initDB();
+        this.startLiveClock();
+        this.syncState();
+        this.observeMenuRealtime();
+        
+        // Auto-refresh KDS if in kitchen tab
+        setInterval(() => {
+            if (this.currentTab === 'kitchen') this.renderKDS();
+            this.check12PMLogic();
+        }, 30000);
+    }
+
+    switchTab(tabId) {
+        this.currentTab = tabId;
+        document.querySelectorAll('.side-item').forEach(el => el.classList.remove('active'));
+        const activeItem = document.getElementById(`side-${tabId}`);
+        if (activeItem) activeItem.classList.add('active');
+
+        document.querySelectorAll('.portal-content').forEach(el => el.classList.remove('active'));
+        const activeTab = document.getElementById(`tab-${tabId}`);
+        if (activeTab) activeTab.classList.add('active');
+
+        if (tabId === 'kitchen') this.renderKDS();
+        if (tabId === 'financials') this.renderFinancials();
+        if (tabId === 'inventory') this.renderInventoryManagement();
+    }
+
+    observeMenuRealtime() {
+        const { collection, onSnapshot } = window.firebaseHooks;
+        const menuCol = collection(window.firebaseFS, 'menuItems');
+        onSnapshot(menuCol, (snapshot) => {
+            const items = [];
+            snapshot.forEach(doc => items.push(doc.data()));
+            this.db.menu = items;
+            
+            const emptyState = document.getElementById('menu-empty-state');
+            const tableWrapper = document.getElementById('menu-items-table-wrapper');
+            const loadingMsg = document.getElementById('menu-loading-msg');
+            
+            if (loadingMsg) loadingMsg.style.display = 'none';
+            if (items.length === 0) {
+                if (emptyState) emptyState.style.display = 'block';
+                if (tableWrapper) tableWrapper.style.display = 'none';
+            } else {
+                if (emptyState) emptyState.style.display = 'none';
+                if (tableWrapper) tableWrapper.style.display = 'block';
+                if (this.currentTab === 'inventory') this.renderInventoryManagement();
+            }
+        });
+    }
+
+    startLiveClock() {
+        const clockEl = document.getElementById('live-clock');
+        const update = () => {
+            if (clockEl) clockEl.innerText = new Date().toLocaleTimeString();
+        };
+        update();
+        setInterval(update, 1000);
+    }
+
+    async handleLogout() {
+        const { signOut } = window.firebaseHooks;
+        await signOut(window.firebaseAuth);
+        window.location.href = 'login.html';
+    }
+
+    handleStorageSync(e) {
+        if (e.key === 'kds_sync' && e.newValue) {
+            if (this.currentTab === 'kitchen') this.renderKDS();
+        } else if (e.key === 'yukt_pms_sync') {
+            this.syncState();
+        }
+    }
+
+    renderInventoryManagement() {
+        const list = document.getElementById('management-menu-list');
+        if (!list) return;
+        list.innerHTML = '';
+        this.db.menu.forEach(item => {
+            const isAvail = !this.db.unavailableItems.includes(item.id);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.name}</td>
+                <td>${item.category}</td>
+                <td>₹${item.price}</td>
+                <td>
+                    <span class="status-badge" style="background:${isAvail ? '#4ade8020' : '#ef444420'}; color:${isAvail ? '#4ade80' : '#ef4444'}">
+                        ${isAvail ? 'Live' : 'Hidden'}
+                    </span>
+                </td>
+            `;
+            list.appendChild(tr);
         });
     }
 
@@ -615,12 +686,7 @@ class PMSApp {
         const roomParam = urlParams.get('room');
 
         if (roomParam) {
-            this.isGuestMode = true;
-            document.getElementById('app-container').style.display = 'none';
-            document.getElementById('guest-portal').style.display = 'flex';
-            this.initGuestPortal(roomParam);
-        } else {
-            this.isGuestMode = false;
+            window.location.href = `order.html?room=${roomParam}`;
         }
     }
 
@@ -3230,7 +3296,7 @@ class PMSApp {
     generateInvoice() { this.generateFinalBill(); }
 
     renderKDS() {
-        const grid = document.getElementById('kds-grid');
+        const grid = document.getElementById('kds-grid-container') || document.getElementById('kds-grid');
         if (!grid) return;
         grid.innerHTML = '';
 
@@ -4284,10 +4350,15 @@ class PMSApp {
         // EBITDA = Revenue - (Salaries + Food Costs + Utilities + Stock Shortages)
         let approxEbitda = totalIncome - (totalSalaries + missingStockCost + utilities);
 
-        document.getElementById('kpi-room-revenue').innerText = `₹${totalRoomRevenueToday.toLocaleString()} `;
-        document.getElementById('kpi-rest-revenue').innerText = `₹${totalRestEarningsToday.toLocaleString()} `;
-        document.getElementById('kpi-rest-pax').innerText = restCustomers;
-        document.getElementById('kpi-ebitda').innerText = `₹${Math.round(approxEbitda).toLocaleString()} `;
+        const roomRevEl = document.getElementById('kpi-room-revenue');
+        const restRevEl = document.getElementById('kpi-rest-revenue');
+        const restPaxEl = document.getElementById('kpi-rest-pax');
+        const ebitdaEl = document.getElementById('kpi-ebitda');
+
+        if (roomRevEl) roomRevEl.innerText = `₹${totalRoomRevenueToday.toLocaleString()}`;
+        if (restRevEl) restRevEl.innerText = `₹${totalRestEarningsToday.toLocaleString()}`;
+        if (restPaxEl) restPaxEl.innerText = restCustomers;
+        if (ebitdaEl) ebitdaEl.innerText = `₹${Math.round(approxEbitda).toLocaleString()}`;
 
         // 2. Render Charts
         this.renderChart(totalIncome, approxEbitda);
@@ -4662,91 +4733,12 @@ class PMSApp {
     }
 }
 
-// Bootstrap & DOM Hard-Reset Wipe
+// Bootstrap Unified Management Hub
 document.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const targetView = urlParams.get('view');
-    let isolatedView = null;
-
-    if (targetView && ['rest-waiter', 'hotel-waiter', 'kitchen', 'owner', 'rest-desk'].includes(targetView)) {
-        isolatedView = targetView;
-
-        // 1. HARD ISOLATION: PRESERVE ONLY NECESSARY DOM NODES
-        const viewTarget = document.getElementById(`view-${isolatedView}`);
-        const securityModal = document.getElementById('security-modal');
-        const printArea = document.getElementById('print-area');
-        const invoiceModal = document.getElementById('invoice-preview-modal');
-        const alertModal = document.getElementById('alert-modal');
-        const confirmModal = document.getElementById('confirm-modal');
-        const checkinModal = document.getElementById('waiter-modal-overlay');
-        const pickupView = document.getElementById('view-rest-pickup');
-        const successOverlay = document.getElementById('success-overlay-pms');
-        const successChime = document.getElementById('success-chime');
-        const kdsChime = document.getElementById('kds-chime');
-        const reenterBtn = document.getElementById('reenter-fs-btn');
-        const audioUnlockOverlay = document.getElementById('audio-unlock-overlay');
-
-        // MODALS & AUDIO
-        const orderConfirmModal = document.getElementById('order-confirm-modal');
-        const linkModal = document.getElementById('link-table-modal');
-        const qtyModal = document.getElementById('quantity-prompt-modal');
-        const successSound = document.getElementById('success-sound');
-
-        const root = document.getElementById('root-isolated'); // Assuming a root-isolated div exists in the HTML
-        if (root) {
-            root.innerHTML = ''; // Nuclear reset logic
-
-            // Bind settings
-            const settingsUrl = document.getElementById('setting-menu-url');
-            if (settingsUrl) settingsUrl.value = localStorage.getItem('yukt_menu_sheet_url') || '';
-            // Re-attach in specific stacking order
-            if (viewTarget) {
-                viewTarget.classList.add('isolated-mode');
-                viewTarget.style.display = 'block';
-                root.appendChild(viewTarget);
-            }
-            if (securityModal) root.appendChild(securityModal);
-            if (printArea) root.appendChild(printArea);
-            if (invoiceModal) root.appendChild(invoiceModal);
-            if (alertModal) root.appendChild(alertModal);
-            if (confirmModal) root.appendChild(confirmModal);
-            if (checkinModal) root.appendChild(checkinModal);
-            if (pickupView) root.appendChild(pickupView);
-            if (successOverlay) root.appendChild(successOverlay);
-            if (successChime) root.appendChild(successChime);
-            if (kdsChime) root.appendChild(kdsChime);
-            if (reenterBtn) root.appendChild(reenterBtn);
-            if (audioUnlockOverlay) root.appendChild(audioUnlockOverlay);
-            if (orderConfirmModal) root.appendChild(orderConfirmModal);
-            if (linkModal) root.appendChild(linkModal);
-            if (qtyModal) root.appendChild(qtyModal);
-            if (successSound) root.appendChild(successSound);
-        }
-
-        if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(e => console.log('Fullscreen blocked:', e));
-        }
-    }
-
-
-
-    // Initialize App Globally
-    const app = new PMSApp(isolatedView);
-    window.app = app;
-
-    // Full-Screen Re-entry listener
-    document.addEventListener('fullscreenchange', () => {
-        const btn = document.getElementById('reenter-fs-btn');
-        if (!btn) return;
-        if (!document.fullscreenElement && isolatedView) {
-            btn.style.display = 'block';
-        } else {
-            btn.style.display = 'none';
-        }
-    });
-
-    // Auto-show audio unlock if needed for the department
-    if (isolatedView && !app.audioUnlocked) {
-        app.showAudioUnlockOverlay();
+    try {
+        const app = new PMSApp();
+        window.app = app;
+    } catch (err) {
+        console.error("PMS Bootstrap Error:", err);
     }
 });
