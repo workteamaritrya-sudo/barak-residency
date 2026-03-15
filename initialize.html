@@ -59,8 +59,11 @@ Staff (Reception / Kitchen / Waiter / Rest Desk):
 
                 for (const user of users) {
                     const docRef = firebaseHooks.doc(firebaseFS, 'users', user.assignedEmail);
-                    await firebaseHooks.setDoc(docRef, user);
-                    status.innerHTML += `✅ Created profile for <b>${user.empId}</b> (${user.role})<br>`;
+                    await firebaseHooks.setDoc(docRef, {
+                        ...user,
+                        last_initialized: firebaseHooks.serverTimestamp()
+                    });
+                    status.innerHTML += `✅ Syncing <b>${user.empId}</b> (${user.name})...<br>`;
                 }
 
                 status.innerHTML += "<br><b>✨ Optimization Complete!</b>";

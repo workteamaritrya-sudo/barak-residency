@@ -1097,6 +1097,10 @@ class PMSApp {
 
         if (!this.selectedRoomId) return;
         const room = this.db.rooms[this.selectedRoomId];
+        if (!room) {
+            console.warn("Room data not found for ID:", this.selectedRoomId);
+            return;
+        }
         document.getElementById('cc-room-title').innerText = `Room ${room.number}`;
 
         const emptyView = document.getElementById('cc-content-empty');
@@ -1294,7 +1298,7 @@ class PMSApp {
 
         if (step === 4) {
             document.getElementById('summary-name').innerText = document.getElementById('sci-name').value;
-            document.getElementById('summary-phone').innerText = document.getElementById('sci-phone').value;
+            document.getElementById('summary-room-view').innerText = this.currentRoom || '--';
             document.getElementById('summary-tariff').innerText = document.getElementById('sci-tariff').value;
             document.getElementById('summary-advance').innerText = document.getElementById('sci-advance').value;
         }
@@ -1571,18 +1575,18 @@ class PMSApp {
         );
         const foodTotal = sessionOrders.reduce((sum, o) => sum + (Number(o.total_price) || Number(o.total) || 0), 0);
         
-        document.getElementById('cc-food-total').innerText = `₹${foodTotal}`;
+        document.getElementById('cc-food-total').innerText = `₹${foodTotal.toLocaleString()}`;
 
-        const advance = Number(guest.advance) || 0;
-        document.getElementById('cc-advance').innerText = advance;
+        const advance = Number(guest.advance) || Number(room.advancePaid) || 0;
+        const advanceEl = document.getElementById('cc-advance-amt');
+        if (advanceEl) advanceEl.innerText = advance.toLocaleString();
 
         const balance = roomTotal + foodTotal - advance;
-        const balanceEl = document.getElementById('cc-balance');
-        balanceEl.innerText = `₹${balance}`;
-
-        balanceEl.className = 'balance-value';
-        if (balance > 0) balanceEl.classList.add('positive');
-        else if (balance < 0) balanceEl.className = 'balance-value color-success';
+        const balanceEl = document.getElementById('cc-total-bill');
+        if (balanceEl) {
+            balanceEl.innerText = `₹${balance.toLocaleString()}`;
+            balanceEl.style.color = balance > 0 ? '#f43f5e' : '#4ade80'; // Red if money owed, Green if settled/excess
+        }
 
         // Render Itemized Food Orders
         const itemsContainer = document.getElementById('cc-food-items-list');
