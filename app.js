@@ -2356,21 +2356,19 @@ class PMSApp {
 
             // Feedback & UI Update
             this.playConfirmationSound();
-            this.db.cart = [];
+            const successPayload = {
+                id: orderIdStr,
+                total: total,
+                items: itemsList,
+                roomId: isRoomOrder ? targetId : null,
+                tableId: !isRoomOrder ? targetId : null,
+                status: orderObj.status
+            };
+            this.triggerSuccessOverlay(context, successPayload, isUpdatingExisting);
             
-            if (context === 'rest-waiter' || context === 'hotel-waiter') {
-                this.renderWaiterCart(context);
-                this.renderWaiterActiveOrders(context, targetId);
-                this.showToast(isUpdatingExisting ? "Add-on Successful!" : "New Order Pushed to Kitchen!", "success");
-            }
-
-            if (context === 'guest' && this.renderGuestCart) {
-                this.renderGuestCart();
-                const successTitle = document.getElementById('guest-success-title');
-                if (successTitle) successTitle.innerText = isUpdatingExisting ? 'ADD-ON PLACED!' : 'ORDER PLACED!';
-                document.getElementById('guest-success-id').innerText = `ID: ${orderIdStr}`;
-                document.getElementById('guest-success').style.display = 'flex';
-            }
+            this.db.cart = [];
+            this.db.editingOrderId = null;
+            this.syncState();
 
             this.db.editingOrderId = null;
             this.syncState();
@@ -2390,14 +2388,14 @@ class PMSApp {
 
                     this.db.addNotification('order', `${successText}: ${target}`);
 
-                    let textColor = '#F59E0B'; // Default gold
+                    let textColor = '#10B981'; // Premium Emerald Green (Success)
                     if (orderDetails.tableId) {
                         const table = this.db.restaurantTables[orderDetails.tableId];
                         if (table && table.activeBills) {
                             const targetBill = table.activeBills.find(b => b.billID === orderDetails.id && (orderDetails.linked ? b.colorIndex === 5 : true));
                             if (targetBill) {
                                 const orderColors = { 1: '#FF3131', 2: '#39FF14', 3: '#1F51FF', 4: '#FFF01F', 5: '#A020F0' };
-                                textColor = orderColors[targetBill.colorIndex] || '#F59E0B';
+                                textColor = orderColors[targetBill.colorIndex] || '#10B981';
                             }
                         }
                     }
@@ -2533,6 +2531,94 @@ class PMSApp {
             }
         }
 
+        generateInvoice() {
+            const roomNum = this.selectedRoomId;
+            const room = this.db.rooms[roomNum];
+            if (!room || !room.guest) {
+                this.showToast("No active guest to bill.", "warning");
+                return;
+            }
+
+            const guest = room.guest;
+            const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : guest.checkInTime);
+            const days = this.calculateBilledDays(checkInTimeValue);
+            const tariff = Number(guest.tariff) || 0;
+            const roomTotal = days * tariff;
+            const foodTotal = Number(guest.foodTotal) || 0;
+            const totalBill = roomTotal + foodTotal;
+            const advance = Number(guest.advance) || 0;
+            const balance = totalBill - advance;
+
+            const printArea = document.getElementById('print-area');
+            printArea.innerHTML = `
+                <div class="printable-invoice" style="padding: 40px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; background: white; max-width: 800px; margin: auto;">
+                    <div style="text-align: center; border-bottom: 2px solid #D4AF37; padding-bottom: 20px; margin-bottom: 30px;">
+                        <h1 style="margin: 0; color: #1a237e; font-size: 2.5rem; letter-spacing: 2px;">BARAK RESIDENCY</h1>
+                        <p style="margin: 5px 0; color: #666;">Luxury Apartment & Hotel • Silchar, Assam</p>
+                        <p style="margin: 0; font-weight: bold;">INVOICE</p>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+                        <div>
+                            <h4 style="margin: 0 0 10px 0; color: #D4AF37;">GUEST DETAILS</h4>
+                            <p style="margin: 2px 0;"><strong>Name:</strong> ${guest.name}</p>
+                            <p style="margin: 2px 0;"><strong>Phone:</strong> ${guest.phone}</p>
+                            <p style="margin: 2px 0;"><strong>Room No:</strong> ${roomNum}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <h4 style="margin: 0 0 10px 0; color: #D4AF37;">STAY DETAILS</h4>
+                            <p style="margin: 2px 0;"><strong>Check-in:</strong> ${this.db.formattedIST(checkInTimeValue)}</p>
+                            <p style="margin: 2px 0;"><strong>Days:</strong> ${days}</p>
+                            <p style="margin: 2px 0;"><strong>Tariff:</strong> ₹${tariff}/day</p>
+                        </div>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                        <thead>
+                            <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                                <th style="padding: 12px; text-align: left;">Description</th>
+                                <th style="padding: 12px; text-align: right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 12px;">Room Charges (${days} Days x ₹${tariff})</td>
+                                <td style="padding: 12px; text-align: right;">₹${roomTotal.toFixed(2)}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 12px;">Itemized Food Bill</td>
+                                <td style="padding: 12px; text-align: right;">₹${foodTotal.toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div style="display: flex; justify-content: flex-end;">
+                        <div style="width: 300px;">
+                            <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                                <span>Subtotal:</span>
+                                <span>₹${totalBill.toFixed(2)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #2e7d32;">
+                                <span>Advance Paid:</span>
+                                <span>- ₹${advance.toFixed(2)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #D4AF37; font-size: 1.2rem; font-weight: bold; margin-top: 10px;">
+                                <span>Balance Payable:</span>
+                                <span style="color: #c62828;">₹${balance.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 50px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+                        <p style="color: #888; font-size: 0.9rem;">Thank you for staying with Barak Residency!</p>
+                        <p style="margin-top: 40px; font-size: 0.8rem; opacity: 0.5;">Authorized Signature</p>
+                    </div>
+                </div>
+            `;
+
+            window.print();
+        }
+
         renderKDS() {
             const grid = document.getElementById('kds-grid');
             if (!grid) return;
@@ -2603,14 +2689,35 @@ class PMSApp {
                 let itemsHtml = '';
                 group.orders.forEach(o => {
                     const isAddon = o.id.startsWith('ADDON');
+                    const isKitchen = o.status === 'Kitchen' || o.status === 'Pending';
+                    const isPreparing = o.status === 'preparing';
                     const itemReady = o.status === 'ready' || o.status === 'Served';
+                    
                     itemsHtml += `
                 <div style="margin-bottom: 0.75rem; border-left: 2px solid ${isAddon ? '#EF4444' : 'var(--gold-primary)'}; padding-left: 0.75rem; position: relative;">
                     <div style="font-size: 0.65rem; color: ${isAddon ? '#EF4444' : 'var(--text-gray)'}; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">${o.id}</div>
-                    ${o.items.map(item => `<div style="padding: 2px 0; font-size: 1.1rem; color: white; display: flex; justify-content: space-between;"><span>• ${item}</span> ${itemReady ? '✅' : ''}</div>`).join('')}
-                    ${!itemReady ? `
-                        <button class="btn btn-success" style="width: 100%; height: 32px; font-size: 0.7rem; margin-top: 8px; font-weight: 800;" onclick="app.markOrderReady('${o.id}')">MARK ${isAddon ? 'ADDON' : 'BASE'} READY</button>
-                    ` : ''}
+                    ${o.items.map(item => {
+                        const name = typeof item === 'object' ? item.name : item;
+                        const qty = typeof item === 'object' ? item.qty : '';
+                        const variant = item.variant && item.variant !== 'Full' ? `[${item.variant}]` : '';
+                        const instructions = (item.specialInstructions || item.instructions) ? `<div class="text-xs color-primary" style="margin-left:1rem; font-style: italic;">Note: ${item.specialInstructions || item.instructions}</div>` : '';
+                        return `
+                            <div style="padding: 2px 0; font-size: 1.1rem; color: white;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>• ${qty ? qty + 'x ' : ''}${name} ${variant}</span> 
+                                    ${itemReady ? '✅' : ''}
+                                </div>
+                                ${instructions}
+                            </div>`;
+                    }).join('')}
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        ${isKitchen ? `
+                            <button class="btn btn-primary" style="flex: 1; height: 32px; font-size: 0.7rem; font-weight: 800;" onclick="app.updateCloudOrderStatus('${o.id}', 'preparing')">PREPARING</button>
+                        ` : ''}
+                        ${!itemReady ? `
+                            <button class="btn btn-success" style="flex: 1; height: 32px; font-size: 0.7rem; font-weight: 800;" onclick="app.updateCloudOrderStatus('${o.id}', 'ready')">READY</button>
+                        ` : ''}
+                    </div>
                 </div>
             `;
                 });
@@ -2632,19 +2739,19 @@ class PMSApp {
             });
         }
 
-        markOrderReady(orderId) {
-            const order = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
+        updateCloudOrderStatus(orderId, status) {
+            const order = this.db.kitchenOrders.find(o => o.id === orderId);
             if (order) {
-                order.status = 'Served';
-                if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, 'Served');
+                order.status = status;
+                if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, status);
                 this.db.persistKitchenSync();
-                const target = order.tableId ? `Table ${order.tableId}` : (order.roomId ? `Room ${order.roomId}` : `Pickup ${order.id}`);
-                const notifyTarget = order.tableId || order.orderType === 'pickup' ? 'desk' : 'reception';
-
-                // Include data payload for Room Sidebar filtering
-                const notifyData = order.roomId ? { type: 'room', orderId: orderId, roomId: order.roomId } : null;
-
-                this.db.addNotification('ready', `Order ${orderId} for ${target} is READY!`, notifyTarget, notifyData);
+                
+                if (status === 'ready') {
+                    const target = order.tableId ? `Table ${order.tableId}` : (order.roomId ? `Room ${order.roomId}` : `Pickup ${order.id}`);
+                    const notifyTarget = order.tableId || order.orderType === 'pickup' ? 'desk' : 'reception';
+                    const notifyData = order.roomId ? { type: 'room', orderId: orderId, roomId: order.roomId } : null;
+                    this.db.addNotification('ready', `Order ${orderId} for ${target} is READY!`, notifyTarget, notifyData);
+                }
                 this.syncState();
             }
         }

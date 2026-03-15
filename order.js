@@ -106,7 +106,7 @@ class GuestPortal {
             return;
         }
         
-        const { collection, onSnapshot, doc, query, where } = window.firebaseHooks;
+        const { collection, onSnapshot, doc, query, where, or } = window.firebaseHooks;
 
         // 1. Real-time Menu Listener (onSnapshot) - Mission 4
         const menuCol = collection(window.firebaseFS, 'menuItems');
@@ -124,54 +124,64 @@ class GuestPortal {
             }
         });
 
-        // 3. Real-time Room/Guest Listener (Room Status Sync)
-        const roomRef = doc(window.firebaseFS, 'rooms', this.roomNumber);
-        onSnapshot(roomRef, async (snapshot) => {
-            if (snapshot.exists()) {
-                const room = snapshot.data();
-                if (room.status === 'occupied') {
-                    const guestId = room.currentGuestId || (room.guest ? (room.guest.cloudId || room.guest.id) : null);
-                    
-                    if (guestId) {
-                        try {
-                            const { getDoc, doc: fsDoc } = window.firebaseHooks;
-                            const guestSnap = await getDoc(fsDoc(window.firebaseFS, 'guests', guestId));
-                            if (guestSnap.exists()) {
-                                const guestData = guestSnap.data();
-                                this.guestName = guestData.fullName || guestData.name || "Guest";
-                            } else {
-                                this.guestName = room.guest ? room.guest.name : "Guest";
-                            }
-                        } catch(e) { 
-                            console.warn("Could not fetch remote guest name, using room fallback", e);
-                            this.guestName = room.guest ? room.guest.name : "Guest";
-                        }
-                    } else {
-                        this.guestName = room.guest ? room.guest.name : "Guest";
-                    }
-                    
-                    this.currentGuestId = guestId;
-                    document.getElementById('room-display').innerText = `Room ${this.roomNumber} • ${this.guestName}`;
-                    this.setupGreeting();
-                } else {
-                    this.guestName = "Guest";
-                    this.currentGuestId = null;
-                    document.getElementById('room-display').innerText = `Room ${this.roomNumber}`;
-                    this.setupGreeting();
+        // 3. Targeted Active Guest Listener (Mission Fix)
+        const guestsCol = collection(window.firebaseFS, 'guests');
+        const activeGuestQuery = query(
+            guestsCol, 
+            or(
+                where('roomNumber', '==', this.roomNumber),
+                where('roomNumber', '==', Number(this.roomNumber) || this.roomNumber)
+            ),
+            where('status', '==', 'active')
+        );
+
+        let activeOrderListener = null;
+
+        onSnapshot(activeGuestQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                const guestDoc = snapshot.docs[0];
+                const guestData = guestDoc.data();
+                
+                this.guestName = guestData.fullName || guestData.name || "Guest";
+                this.currentGuestId = guestDoc.id;
+                
+                document.getElementById('room-display').innerText = `Room ${this.roomNumber} • ${this.guestName}`;
+                this.setupGreeting();
+
+                // Fallback: If we were showing an error, force refresh to clear it
+                if (document.body.innerHTML.includes("Session Expired")) {
+                    console.log("[Guest Portal] Active guest found but showing expired. Refreshing...");
+                    window.location.reload();
+                    return;
                 }
+
+                // 4. Mission: Re-bind Order History listener to new Guest ID
+                if (activeOrderListener) activeOrderListener(); // Unsubscribe old
+                
+                const ordersCol = collection(window.firebaseFS, 'orders');
+                const sessionQuery = query(ordersCol, where('guestId', '==', this.currentGuestId), where('roomId', '==', this.roomNumber));
+                
+                activeOrderListener = onSnapshot(sessionQuery, (orderSnap) => {
+                    const cloudHistory = [];
+                    orderSnap.forEach(d => {
+                        const order = d.data();
+                        cloudHistory.push(order);
+                        if (order.id === this.activeOrderId) {
+                            this.updateTrackingUI(order.status);
+                        }
+                    });
+                    this.sessionHistory = cloudHistory;
+                    this.renderHistory();
+                });
+
+            } else {
+                // No active guest found for this room
+                this.guestName = "Guest";
+                this.currentGuestId = null;
+                document.getElementById('room-display').innerText = `Room ${this.roomNumber}`;
+                this.setupGreeting();
             }
         });
-
-        // Global Order Status Listener for Tracking
-        if (this.activeOrderId) {
-            const orderQuery = query(collection(window.firebaseFS, 'orders'), where('order_id', '==', this.activeOrderId));
-            onSnapshot(orderQuery, (snapshot) => {
-                snapshot.docChanges().forEach(change => {
-                    const order = change.doc.data();
-                    this.updateTrackingUI(order.status);
-                });
-            });
-        }
     }
 
     setupGreeting() {
@@ -261,10 +271,11 @@ class GuestPortal {
         }
 
         const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
-
-        // Update local session history
-        this.sessionHistory.push(...this.cart);
-        localStorage.setItem(`br_history_${this.roomNumber}`, JSON.stringify(this.sessionHistory));
+        
+        // Mission Sync: Clear cart immediately and let cloud handle history
+        this.cart = [];
+        this.updateCartBar();
+        this.renderHistory();
 
         const orderObj = {
             id: orderIdStr,
@@ -294,12 +305,7 @@ class GuestPortal {
         
         await this.updateRoomLedger(orderObj);
 
-        // Reset Cart
-        this.cart = [];
-        this.updateCartBar();
-        this.renderHistory();
-
-        // Show Success Overlay
+        // Reset UI triggers
         const successScreen = document.getElementById('success-screen');
         if (successScreen) successScreen.style.display = 'flex';
         this.updateTrackingUI('pending');
@@ -316,16 +322,25 @@ class GuestPortal {
         }
 
         const summary = {};
-        this.sessionHistory.forEach(item => {
-            summary[item.name] = (summary[item.name] || 0) + item.qty;
+        this.sessionHistory.forEach(order => {
+            order.items.forEach(item => {
+                const key = item.name + (item.variant !== 'Full' ? ` (${item.variant})` : '');
+                summary[key] = (summary[key] || 0) + item.qty;
+            });
         });
 
         Object.entries(summary).forEach(([name, qty]) => {
             const div = document.createElement('div');
-            div.style.cssText = 'display:flex; justify-content:space-between; margin-bottom: 4px;';
-            div.innerHTML = `<span>${name}</span><span style="color:var(--gold-primary)">x${qty}</span>`;
+            div.style.cssText = 'display:flex; justify-content:space-between; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05);';
+            div.innerHTML = `<span>${name}</span><span style="color:var(--gold-primary); font-weight:bold;">x${qty}</span>`;
             list.appendChild(div);
         });
+        
+        const totalAmount = this.sessionHistory.reduce((sum, order) => sum + (Number(order.total_price) || 0), 0);
+        const totalDiv = document.createElement('div');
+        totalDiv.style.cssText = 'margin-top: 1rem; text-align: right; color: var(--gold-primary); font-weight: bold; font-size: 1.1rem;';
+        totalDiv.innerHTML = `Total Bill: ₹${totalAmount}`;
+        list.appendChild(totalDiv);
     }
 
     saveOrderToDB(order) {
@@ -339,24 +354,22 @@ class GuestPortal {
     }
 
     async updateRoomLedger(order) {
-        if (this.db) {
-            await new Promise((resolve) => {
-                const tx = this.db.transaction(['rooms'], 'readwrite');
-                const store = tx.objectStore('rooms');
-                const req = store.get(this.roomNumber);
-                req.onsuccess = () => {
-                    const room = req.result;
-                    if (room && room.guest) {
-                        room.guest.foodTotal = (room.guest.foodTotal || 0) + order.total;
-                        if (!room.guest.foodOrders) room.guest.foodOrders = [];
-                        room.guest.foodOrders.push(order);
-                        store.put(room);
-                    }
-                    resolve();
-                };
-            });
+        // Update the current_bill on the guest record in cloud
+        if (this.currentGuestId && window.firebaseFS) {
+            try {
+                const { doc, getDoc, updateDoc } = window.firebaseHooks;
+                const guestRef = doc(window.firebaseFS, 'guests', this.currentGuestId);
+                const guestSnap = await getDoc(guestRef);
+                if (guestSnap.exists()) {
+                    const currentFoodTotal = Number(guestSnap.data().foodTotal || 0);
+                    await updateDoc(guestRef, {
+                        foodTotal: currentFoodTotal + order.total
+                    });
+                }
+            } catch(e) { console.warn("Failed to update guest bill in cloud", e); }
         }
-        
+
+        // Mirror to room record if needed
         if (window.FirebaseSync) {
             await window.FirebaseSync.pushLedgerEntry({
                 roomId: order.roomId,
@@ -424,6 +437,10 @@ class GuestPortal {
             document.getElementById('step-3')?.classList.add('done');
             document.getElementById('step-4')?.classList.add('active');
             if (statusLabel) statusLabel.innerText = "Order Delivered. Enjoy!";
+            
+            // Mission 2: Allow New Order after delivery
+            this.activeOrderId = null;
+            localStorage.removeItem(`br_active_order_${this.roomNumber}`);
         } else {
             if (progressBar) progressBar.style.height = '0%';
             document.getElementById('step-1')?.classList.add('active');

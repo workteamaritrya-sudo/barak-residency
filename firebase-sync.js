@@ -61,7 +61,7 @@ class FirebaseSyncEngine {
                     if (window.app.currentPortal === 'reception') window.app.renderRoomGrid();
                 }
                 
-                // Guest Portal Redirect/Expiry Logic
+                /* Guest Portal Redirect/Expiry Logic - DISABLED per Mission Fix
                 if (window.portal && window.portal.roomNumber) {
                     const roomInfo = roomsData[window.portal.roomNumber];
                     if (roomInfo && roomInfo.status === 'available') {
@@ -69,7 +69,7 @@ class FirebaseSyncEngine {
                         localStorage.removeItem(`br_active_order_${window.portal.roomNumber}`);
                         window.portal.showError("Session Expired", "You have been checked out. Thank you!");
                     }
-                }
+                } */
             }
         });
 
@@ -126,6 +126,15 @@ class FirebaseSyncEngine {
                     this.playWaiterAlert();
                 } else if (change.type === "added" && order.status === 'Pending') {
                     this.playKitchenAlert();
+                    this.playReceptionAlert();
+                    // Mission: Auto-notify Reception Dashboard for Badge Update
+                    if (window.app && window.app.db && order.roomId) {
+                        window.app.db.addNotification('order', `New Order: Room ${order.roomId}`, 'reception', { 
+                            type: 'room', 
+                            orderId: order.order_id || order.id, 
+                            roomId: order.roomId 
+                        });
+                    }
                 }
             });
             
@@ -158,6 +167,13 @@ class FirebaseSyncEngine {
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
             new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
             window.app.showToast("ORDER READY FOR SERVICE!", "success");
+        }
+    }
+
+    playReceptionAlert() {
+        if (window.app && window.app.currentPortal === 'reception') {
+            new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
+            window.app.showToast("New Order Received!", "info");
         }
     }
 
