@@ -538,11 +538,31 @@ class PMSApp {
             document.getElementById('user-display-role').innerText = this.userProfile.role || "Reception";
             document.getElementById('user-avatar').innerText = (this.userProfile.name || "?").charAt(0).toUpperCase();
 
-            if (this.userProfile.role !== 'Admin') {
-                const inv = document.getElementById('side-inventory');
-                const fin = document.getElementById('side-financials');
-                if (inv) inv.style.display = 'none';
-                if (fin) fin.style.display = 'none';
+            const sidebar = document.querySelector('.sidebar');
+            const hub = document.querySelector('.management-hub');
+            const role = this.userProfile.role || "Reception";
+
+            // Role-based Navigation mapping
+            const roleTabs = {
+                'Admin': 'dashboard',
+                'Reception': 'dashboard',
+                'Kitchen': 'kitchen',
+                'HotelWaiter': 'dashboard', // or hotel-waiter tab if exists
+                'RestWaiter': 'kitchen',    // or rest-waiter
+                'RestDesk': 'financials'
+            };
+
+            if (role !== 'Admin') {
+                if (hub) hub.classList.add('no-sidebar');
+                if (sidebar) sidebar.style.display = 'none';
+
+                // Force visibility of the user's relevant tab
+                if (roleTabs[role]) {
+                    this.switchTab(roleTabs[role]);
+                }
+            } else {
+                if (hub) hub.classList.remove('no-sidebar');
+                if (sidebar) sidebar.style.display = 'flex';
             }
         }
 
@@ -1080,26 +1100,26 @@ class PMSApp {
         const checkinView = document.getElementById('cc-content-checkin');
         const reservedView = document.getElementById('cc-content-reserved');
         const occupiedView = document.getElementById('cc-content-occupied');
+        const ccActions = document.querySelector('.cc-actions');
 
-        if (!emptyView || !checkinView || !reservedView || !occupiedView) return;
+        if (!emptyView || !reservedView || !occupiedView) return;
 
-        [emptyView, checkinView, reservedView, occupiedView].forEach(v => v.style.display = 'none');
+        [emptyView, checkinView, reservedView, occupiedView].filter(v => v).forEach(v => v.style.display = 'none');
+        if (ccActions) ccActions.style.display = 'none';
 
         if (room.status === 'available') {
             emptyView.style.display = 'block';
             this.currentRoom = room.number;
-            document.querySelector('.cc-actions').style.display = 'none';
         } else if (room.status === 'reserved') {
             reservedView.style.display = 'block';
             this.currentRoom = room.number;
-            document.querySelector('.cc-actions').style.display = 'none';
 
             document.getElementById('cc-res-name').innerText = (room.salutation ? room.salutation + ' ' : '') + (room.guestName || '---');
             document.getElementById('cc-res-phone').innerText = room.guestPhone || '---';
             document.getElementById('cc-res-arrival').innerText = room.arrivalDate ? this.db.formattedIST(room.arrivalDate) : '---';
         } else {
             occupiedView.style.display = 'block';
-            document.querySelector('.cc-actions').style.display = 'block';
+            if (ccActions) ccActions.style.display = 'block';
             this.populateOccupiedView(room);
         }
     }

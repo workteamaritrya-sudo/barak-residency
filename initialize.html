@@ -31,12 +31,8 @@ Admin:
 - User ID: BR-ADM-001
 - Password: password123
 
-Reception:
-- User ID: BR-RCP-001
-- Password: password123
-
-Kitchen:
-- User ID: BR-KIT-001
+Staff (Reception / Kitchen / Waiter / Rest Desk):
+- User ID: BR-RCP-001 / BR-KIT-001 / BR-HW-001 / BR-RW-001 / BR-RD-001
 - Password: password123
             </pre>
             <p><i>Note: You must still manually add the emails (e.g. admin@barak.com) and passwords in the <b>Firebase Console -> Authentication</b> tab. This tool only maps the IDs.</i></p>
@@ -55,7 +51,10 @@ Kitchen:
                 const users = [
                     { empId: 'BR-ADM-001', assignedEmail: 'admin@barak.com', name: 'Barak Admin', role: 'Admin' },
                     { empId: 'BR-RCP-001', assignedEmail: 'reception@barak.com', name: 'Reception Staff', role: 'Reception' },
-                    { empId: 'BR-KIT-001', assignedEmail: 'kitchen@barak.com', name: 'Executive Chef', role: 'Kitchen' }
+                    { empId: 'BR-KIT-001', assignedEmail: 'kitchen@barak.com', name: 'Executive Chef', role: 'Kitchen' },
+                    { empId: 'BR-HW-001', assignedEmail: 'waiter@barak.com', name: 'Hotel Waiter', role: 'HotelWaiter' },
+                    { empId: 'BR-RW-001', assignedEmail: 'restwaiter@barak.com', name: 'Rest Waiter', role: 'RestWaiter' },
+                    { empId: 'BR-RD-001', assignedEmail: 'restdesk@barak.com', name: 'Rest Desk', role: 'RestDesk' }
                 ];
 
                 for (const user of users) {

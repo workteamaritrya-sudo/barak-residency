@@ -114,22 +114,53 @@
 
                         <div id="cc-content-occupied" style="display: none;">
                             <div class="cc-section">
-                                <h3>👤 Guest Info</h3>
+                                <h3>👤 Guest Profile</h3>
                                 <div class="metadata-grid">
                                     <div class="meta-item"><span class="meta-label">Name</span><span class="meta-value" id="cc-guest-name">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">Age</span><span class="meta-value" id="cc-guest-age">--</span></div>
                                     <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-value" id="cc-guest-phone">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">ID Status</span><span class="meta-value" id="cc-guest-id">--</span></div>
                                 </div>
                             </div>
                             <div class="cc-section">
-                                <h3>💰 Ledger</h3>
-                                <div class="ledger-pill">
-                                    <span>Current Total</span>
+                                <h3>🕙 Stay Details</h3>
+                                <div class="metadata-grid">
+                                    <div class="meta-item"><span class="meta-label">Check-in</span><span class="meta-value" id="cc-checkin-datetime">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">Billed Days</span><span class="meta-value" id="cc-stay-days">0</span></div>
+                                </div>
+                            </div>
+                            <div class="cc-section">
+                                <h3>💰 Financial Ledger</h3>
+                                <div class="ledger-pill mb-3">
+                                    <span>Base Tariff</span>
+                                    <span id="cc-tariff">₹ 0</span>
+                                </div>
+                                <div class="metadata-grid mb-4">
+                                    <div class="meta-item"><span class="meta-label">Room (x<span id="cc-ledger-days">0</span>)</span><span class="meta-value" id="cc-room-total">₹ 0</span></div>
+                                    <div class="meta-item"><span class="meta-label">Food/Other</span><span class="meta-value" id="cc-food-total">₹ 0</span></div>
+                                    <div class="meta-item"><span class="meta-label">Advance</span><span class="meta-value" style="color: #4ade80;" id="cc-advance-amt">- ₹ 0</span></div>
+                                </div>
+                                <div class="ledger-pill luxury-glow">
+                                    <span>Net Payable</span>
                                     <span id="cc-total-bill">₹ 0</span>
                                 </div>
-                                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                                    <button class="btn btn-outline flex-1" onclick="app.toggleOrderHistory()">History</button>
-                                    <button class="btn btn-primary flex-1" onclick="app.generateInvoice()">Checkout</button>
+                            </div>
+                            <div class="cc-actions mt-4" style="display: none; border-top: 1px solid var(--glass-border); padding-top: 1.5rem; display: flex; gap: 1rem;">
+                                <button class="btn btn-outline flex-1" onclick="app.toggleOrderHistory()">History</button>
+                                <button class="btn btn-primary flex-1" onclick="app.generateInvoice()">Checkout</button>
+                            </div>
+                        </div>
+
+                        <!-- Missing Reserved View -->
+                        <div id="cc-content-reserved" style="display: none;">
+                            <div class="cc-section">
+                                <h3 style="color: #a855f7;">📅 Reservation Info</h3>
+                                <div class="metadata-grid">
+                                    <div class="meta-item"><span class="meta-label">Guest</span><span class="meta-value" id="cc-res-name">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-value" id="cc-res-phone">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">Arrival</span><span class="meta-value" id="cc-res-arrival">--</span></div>
                                 </div>
+                                <button class="btn btn-primary btn-block mt-6" onclick="app.convertResToCheckin()">CHECK-IN GUEST</button>
                             </div>
                         </div>
                     </div>
