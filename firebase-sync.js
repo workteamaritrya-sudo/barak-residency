@@ -131,7 +131,7 @@ class FirebaseSyncEngine {
             }
         });
 
-        // --- 5. GLOBAL SETTINGS SYNC ---
+        // --- 5. GLOBAL SETTINGS & AVAILABILITY SYNC ---
         const settingsDoc = doc(window.firebaseFS, 'settings', 'global');
         onSnapshot(settingsDoc, (snapshot) => {
             if (snapshot.exists()) {
@@ -141,6 +141,25 @@ class FirebaseSyncEngine {
                     if (currentUrl !== data.menuUrl) {
                         localStorage.setItem('yukt_menu_sheet_url', data.menuUrl);
                         if (window.app) window.app.db.loadMenu();
+                    }
+                }
+            }
+        });
+
+        const availabilityDoc = doc(window.firebaseFS, 'settings', 'availability');
+        onSnapshot(availabilityDoc, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                if (data.unavailableItems) {
+                    localStorage.setItem('br_unavailable_items', JSON.stringify(data.unavailableItems));
+                    if (window.app && window.app.db) {
+                        window.app.db.unavailableItems = data.unavailableItems;
+                        window.app.syncState();
+                        if (window.app.currentPortal === 'kitchen') window.app.renderAvailabilityTool();
+                    }
+                    // For Guest Portal (order.js)
+                    if (window.portal) {
+                        window.portal.renderMenu();
                     }
                 }
             }

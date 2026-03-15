@@ -355,7 +355,17 @@ class CentralDatabase {
 
             triggerToast("Fetching and parsing fresh Menu Data...", "sync");
             let csvText = csvTextOrUrl;
-            if (csvTextOrUrl.includes('http')) {
+            if (!csvTextOrUrl) {
+                // Try reading local menu.csv if no input provided
+                try {
+                    const res = await fetch('menu.csv');
+                    if (res.ok) csvText = await res.text();
+                    else throw new Error("Local menu.csv not found");
+                } catch (err) {
+                    console.warn("No CSV input and local menu.csv fetch failed.", err);
+                    return false;
+                }
+            } else if (csvTextOrUrl.includes('http')) {
                 const res = await fetch(csvTextOrUrl);
                 csvText = await res.text();
             }
@@ -374,17 +384,21 @@ class CentralDatabase {
                     let val = values[idx] || '';
                     if (val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length - 1);
                     
-                    if (h.includes('price')) val = parseFloat(val) || 0;
-                    if (h === 'isavailable') val = val.toLowerCase() === 'true';
+                    // Unified Mapping for the Advanced Menu Spec
+                    const key = h.toLowerCase().replace(/[^a-z0-9]/g, '');
                     
-                    // Standardized mapping for UI consistency
-                    if (h === 'imageurl' || h === 'photo' || h === 'image') h = 'imageUrl';
-                    if (h === 'portiontype' || h === 'type') h = 'portionType';
-                    if (h === 'baseprice_full') h = 'basePrice_Full';
-                    if (h === 'baseprice_half') h = 'basePrice_Half';
-                    if (h === 'description' || h === 'desc') h = 'description';
+                    if (key === 'name') item.name = val;
+                    if (key === 'category') item.category = val;
+                    if (key === 'price' || key === 'pricefull') {
+                        item.price = parseFloat(val) || 0;
+                        item.basePrice_Full = item.price;
+                    }
+                    if (key === 'pricehalf') item.basePrice_Half = parseFloat(val) || 0;
+                    if (key === 'description' || key === 'desc') item.description = val;
+                    if (key === 'imageurl' || key === 'photo') item.imageUrl = val;
+                    if (key === 'portiontype' || key === 'type') item.portionType = val;
                     
-                    item[h] = val;
+                    if (key === 'isavailable') item.isAvailable = val.toLowerCase() === 'true';
                 });
 
                 // Pricing logic for portions
@@ -436,9 +450,21 @@ class CentralDatabase {
         this.triggerSyncEvent();
     }
 
-    persistUnavailable() {
+    async persistUnavailable() {
         localStorage.setItem('br_unavailable_items', JSON.stringify(this.unavailableItems));
         this.triggerSyncEvent();
+        
+        // Push to Firestore for real-time sync across portals
+        if (window.firebaseFS) {
+            try {
+                const { doc, setDoc } = window.firebaseHooks;
+                const ref = doc(window.firebaseFS, 'settings', 'availability');
+                await setDoc(ref, { 
+                    unavailableItems: this.db.unavailableItems,
+                    lastUpdated: Date.now() 
+                });
+            } catch (e) { console.error("Availability sync failed", e); }
+        }
     }
 
     // Helper to format time in IST (Force GMT+5:30)
@@ -2340,7 +2366,8 @@ class PMSApp {
                 el.style.gap = '5px';
 
                 const imgUrl = item.imageUrl || item.image || item.photo || '';
-                const photoHtml = imgUrl ? `<img src="${imgUrl}" style="width:100%; height:80px; object-fit:cover; border-radius:8px; margin-bottom:5px;" onerror="this.style.display='none'">` : '';
+                const fallbackImg = 'br.png'; 
+                const photoHtml = `<img src="${imgUrl}" style="width:100%; height:80px; object-fit:cover; border-radius:8px; margin-bottom:5px;" onerror="this.src='${fallbackImg}'">`;
 
                 el.innerHTML = `
                     ${photoHtml}
@@ -2384,45 +2411,72 @@ class PMSApp {
     promptItemVariant(item, context) {
         this.pendingCartItem = item;
         this.pendingCartContext = context;
-
+        
         document.getElementById('qp-item-name').innerText = item.name;
 
-        // Generate Dynamic Portion Buttons
+        // Generate Dynamic Portion UI
         const variantContainer = document.getElementById('qp-view-variant');
         variantContainer.innerHTML = ''; // Clear prev
 
-        let options = [];
         const type = item.portionType || 'Plate';
 
-        if (type === 'Plate' || type === 'Plate (Half/Full)') {
-            options = [
+        if (type === 'Plate') {
+            const options = [
                 { label: 'Full Plate', val: 'Full', price: item.price },
                 { label: 'Half Plate', val: 'Half', price: item.basePrice_Half || Math.floor(item.price * 0.6) }
             ];
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline';
+                btn.style.cssText = 'padding: 1.5rem; font-size: 1.1rem; border-color: var(--color-primary); color: var(--color-primary);';
+                btn.innerText = `${opt.label} (₹${opt.price})`;
+                btn.onclick = () => this.qpSelectVariant(opt.val, opt.label, opt.price);
+                variantContainer.appendChild(btn);
+            });
         } else if (type === 'Bottle') {
-            options = [
+            // Dropdown Logic as requested
+            const p = document.createElement('p');
+            p.innerText = "Select Bottle Size:";
+            p.style.color = "var(--color-slate-400)";
+            variantContainer.appendChild(p);
+
+            const select = document.createElement('select');
+            select.className = 'form-control';
+            select.style.cssText = 'height: 60px; font-size: 1.2rem; text-align: center; border: 2px solid var(--gold-primary); background: rgba(0,0,0,0.5);';
+            
+            const options = [
                 { label: '1L Bottle', val: '1L', price: item.price },
                 { label: '750ml', val: '750ml', price: Math.floor(item.price * 0.75) },
+                { label: '500ml', val: '500ml', price: Math.floor(item.price * 0.5) },
                 { label: '2L Bottle', val: '2L', price: Math.floor(item.price * 1.8) }
             ];
-        } else if (type === 'Cup') {
-            options = [
-                { label: 'Standard Cup', val: 'Regular', price: item.price },
-                { label: 'Large/Pot', val: 'Large', price: Math.floor(item.price * 1.5) }
-            ];
-        } else {
-            // Default to Single Portion
-            options = [{ label: 'Standard Portion', val: 'Regular', price: item.price }];
-        }
 
-        options.forEach(opt => {
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-outline';
-            btn.style.cssText = 'padding: 1.5rem; font-size: 1.1rem; border-color: var(--color-primary); color: var(--color-primary);';
-            btn.innerText = `${opt.label} (₹${opt.price})`;
-            btn.onclick = () => this.qpSelectVariant(opt.val, opt.label, opt.price);
-            variantContainer.appendChild(btn);
-        });
+            options.forEach(opt => {
+                const o = document.createElement('option');
+                o.value = JSON.stringify(opt);
+                o.innerText = `${opt.label} - ₹${opt.price}`;
+                select.appendChild(o);
+            });
+            variantContainer.appendChild(select);
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.className = 'btn btn-primary';
+            confirmBtn.style.marginTop = '1rem';
+            confirmBtn.innerText = 'Confirm Size';
+            confirmBtn.onclick = () => {
+                const opt = JSON.parse(select.value);
+                this.qpSelectVariant(opt.val, opt.label, opt.price);
+            };
+            variantContainer.appendChild(confirmBtn);
+        } else if (type === 'Cup' || type === 'Quantity') {
+            // Simple Counter - Skip Variant step
+            this.qpSelectVariant('Regular', 'Standard', item.price);
+            return; // Exit promptItemVariant as qpSelectVariant handles the rest
+        } else {
+            // Default Standard
+            this.qpSelectVariant('Regular', 'Standard', item.price);
+            return;
+        }
 
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'btn btn-outline';
@@ -3447,7 +3501,12 @@ class PMSApp {
 
             const div = document.createElement('div');
             div.className = 'room-order-notification';
-            if (isDelivered) div.style.opacity = '0.7';
+            if (isDelivered) {
+                div.style.background = '#000';
+                div.style.border = '1px solid #222';
+                div.style.opacity = '0.5';
+                div.style.filter = 'grayscale(100%)';
+            }
 
             div.innerHTML = `
             <div class="room-order-header">
@@ -3486,6 +3545,16 @@ class PMSApp {
             .forEach(n => {
                 const div = document.createElement('div');
                 div.className = `notification-card ${n.status}`;
+                
+                // Blacken if delivered (Room orders)
+                if (n.data && n.data.type === 'room') {
+                    const order = this.db.kitchenOrders.find(o => o.id === n.data.orderId || o.id === `ADDON ${n.data.orderId}`);
+                    if (order && order.status === 'delivered') {
+                        div.style.background = '#000';
+                        div.style.opacity = '0.5';
+                        div.style.filter = 'grayscale(100%)';
+                    }
+                }
                 div.style.marginBottom = '0.75rem';
                 div.style.padding = '0.75rem';
                 div.style.fontSize = '0.85rem';
