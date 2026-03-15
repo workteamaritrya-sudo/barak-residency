@@ -1,0 +1,410 @@
+﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+import { getDatabase, ref, set, onValue, get, push } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, serverTimestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo",
+    authDomain: "barak-residency-59405.firebaseapp.com",
+    projectId: "barak-residency-59405",
+    databaseURL: "https://barak-residency-59405-default-rtdb.firebaseio.com",
+    storageBucket: "barak-residency-59405.firebasestorage.app",
+    messagingSenderId: "3871550492",
+    appId: "1:3871550492:web:2cf49bc0a963b4888f43d9",
+    measurementId: "G-B15QTKNNPL"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const database = getDatabase(app);
+const firestore = getFirestore(app);
+
+window.firebaseDB = database; // Make available globally
+window.firebaseFS = firestore; // Firestore available globally
+window.firebaseRefs = {
+    rooms: ref(database, 'rooms'),
+    kitchenOrders: ref(database, 'kitchenOrders'),
+    notifications: ref(database, 'notifications'),
+    restaurantTables: ref(database, 'restaurantTables'),
+    roomLedger: ref(database, 'roomLedger'),
+    settings: ref(database, 'settings')
+};
+
+class FirebaseSyncEngine {
+    constructor() {
+        this.lastSyncTime = 0;
+        this.isSyncing = false;
+        this.isReady = false;
+        console.log("[Firebase] Sync Engine Initialized");
+    }
+
+    startListener() {
+        this.isReady = true;
+        // Listen to LocalStorage mutations (triggered by persistence methods)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'yukt_pms_sync') {
+                this.pushAllToCloud();
+            }
+        });
+
+        // Listen to Cloud Changes to sync back down (preventing echo loops)
+        onValue(window.firebaseRefs.kitchenOrders, (snapshot) => {
+            if (this.isSyncing) return;
+            const data = snapshot.val();
+            if (data && window.app && window.app.db) {
+                this.syncArrayToIDB('kitchenOrders', Object.values(data));
+            }
+        });
+
+        onValue(window.firebaseRefs.rooms, (snapshot) => {
+            if (this.isSyncing) return;
+            const data = snapshot.val();
+            if (data) {
+                const arr = Object.values(data);
+                this.syncArrayToIDB('rooms', arr);
+                
+                // Main App Update
+                if (window.app && window.app.db) {
+                    window.app.db.rooms = data; // Sync live memory
+                    if (window.app.currentPortal === 'reception') window.app.renderRoomGrid();
+                }
+                
+                // Guest Portal Update (order.html)
+                if (window.portal && window.portal.roomNumber) {
+                    const roomInfo = data[window.portal.roomNumber];
+                    if (roomInfo && roomInfo.status === 'available') {
+                        // Room was checked out! Block guest.
+                        localStorage.removeItem('br_guest_session');
+                        localStorage.removeItem(`br_active_order_${window.portal.roomNumber}`);
+                        window.portal.showError("Session Expired", "You have been checked out. Thank you for staying with us!");
+                    } else if (roomInfo && roomInfo.guest && roomInfo.guest.name !== window.portal.guestName) {
+                        // Different guest checked in
+                        window.location.reload();
+                    }
+                }
+            }
+        });
+
+        onValue(window.firebaseRefs.notifications, (snapshot) => {
+            if (this.isSyncing) return;
+            const data = snapshot.val();
+            if (data && window.app && window.app.db) {
+                const notices = Object.values(data);
+                // Sort by timestamp desc
+                notices.sort((a,b) => b.timestamp - a.timestamp);
+                window.app.db.notifications = notices;
+                localStorage.setItem('yukt_notifications', JSON.stringify(notices));
+                if (window.app.currentPortal === 'reception') window.app.renderFullNotificationTab();
+                window.app.renderNotificationSidebar();
+                window.app.renderRoomOrderPanel();
+            }
+        });
+        
+        onValue(window.firebaseRefs.roomLedger, (snapshot) => {
+            if (this.isSyncing) return;
+             const data = snapshot.val();
+             if (data) {
+                 localStorage.setItem('br_room_ledger', JSON.stringify(data));
+                 if (window.app && window.app.db) window.app.db.roomLedger = data;
+             }
+        });
+        
+        onValue(window.firebaseRefs.restaurantTables, (snapshot) => {
+             if (this.isSyncing) return;
+             const data = snapshot.val();
+             if (data) {
+                 localStorage.setItem('yukt_rest_tables', JSON.stringify(data));
+                 if (window.app && window.app.db) window.app.db.restaurantTables = data;
+                 if (window.app && window.app.currentPortal === 'rest-desk') window.app.renderRestDesk();
+                 if (window.app && window.app.currentPortal === 'rest-waiter') window.app.renderRestWaiterSidebar();
+             }
+         });
+         
+         // Global Settings Sync (Menu CSV)
+         onValue(window.firebaseRefs.settings, (snapshot) => {
+             if (this.isSyncing) return;
+             const data = snapshot.val();
+             if (data && typeof data.menuUrl === 'string') {
+                 const currentUrl = localStorage.getItem('yukt_menu_sheet_url');
+                 if (currentUrl !== data.menuUrl) {
+                     localStorage.setItem('yukt_menu_sheet_url', data.menuUrl);
+                     localStorage.removeItem('br_menu'); // Clear local cache forcefully
+                     
+                     // Trigger Reloads dynamically
+                     if (window.app) window.app.loadMenuFromCSV();
+                     if (window.portal) window.portal.fetchGuestData(true).then(() => window.portal.renderMenu());
+                 }
+             }
+         });
+         
+         // Live Firestore Menu Sync
+         const menuCol = collection(window.firebaseFS, 'menu');
+         onSnapshot(menuCol, (snapshot) => {
+             const newMenu = [];
+             snapshot.forEach((doc) => {
+                 newMenu.push(doc.data());
+             });
+             
+             if (newMenu.length > 0) {
+                 this.syncMenuState(newMenu);
+             }
+         });
+
+         // --- NEW: Firestore Kitchen Orders Sync & Alert ---
+         const kdsCol = collection(window.firebaseFS, 'kitchen_orders');
+         const q = query(kdsCol, orderBy('timestamp', 'desc'), limit(50));
+         onSnapshot(q, (snapshot) => {
+             const cloudOrders = [];
+             let hasNewOrder = false;
+             
+             snapshot.docChanges().forEach((change) => {
+                 if (change.type === "added") {
+                     const order = change.doc.data();
+                     // Only ring for recent orders (last 30 seconds) to avoid reload noise
+                     if (order.timestamp && (Date.now() - order.timestamp < 30000)) {
+                         hasNewOrder = true;
+                     }
+                 }
+             });
+
+             snapshot.forEach((doc) => {
+                 cloudOrders.push({ ...doc.data(), fsId: doc.id });
+             });
+
+             if (cloudOrders.length > 0 && window.app && window.app.db) {
+                 // Merge Firestore orders into local DB
+                 this.syncArrayToIDB('kitchenOrders', cloudOrders);
+                 if (hasNewOrder) {
+                     this.playKitchenAlert();
+                 }
+             }
+         });
+
+         // --- NEW: Firestore Ledger Sync ---
+         const ledgerCol = collection(window.firebaseFS, 'ledger');
+         onSnapshot(ledgerCol, (snapshot) => {
+             const entries = {};
+             snapshot.forEach((doc) => {
+                 const data = doc.data();
+                 if (!entries[data.roomId]) entries[data.roomId] = { total: 0, history: [] };
+                 entries[data.roomId].total += data.amount || 0;
+                 entries[data.roomId].history.push(data);
+             });
+             if (Object.keys(entries).length > 0) {
+                 localStorage.setItem('br_room_ledger', JSON.stringify(entries));
+                 if (window.app && window.app.db) window.app.db.roomLedger = entries;
+             }
+         });
+    }
+
+    playKitchenAlert() {
+        if (window.app && window.app.currentPortal === 'kitchen') {
+            const audio = new Audio('kitchensound.mp3.mpeg');
+            audio.play().catch(e => {
+                console.warn("[Firebase] Audio blocked by browser. Interaction required.", e);
+                if (window.app) window.app.showToast("NEW ORDER! (Audio Blocked)", "warning");
+            });
+        }
+    }
+
+    playWaiterAlert() {
+        // 4. Waiter Alerts: Vibrate and Ring when Kitchen marks as 'Ready'
+        if (window.app && (window.app.currentPortal === 'rest-waiter' || window.app.currentPortal === 'hotel-waiter')) {
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            const chime = new Audio('receptionnotificationalert.mp3.mpeg');
+            chime.play().catch(e => console.log("Waiter audio blocked"));
+            if (window.app) window.app.showToast("ORDER READY FOR SERVICE!", "success");
+        }
+    }
+
+    syncMenuState(newMenu) {
+        localStorage.setItem('br_menu', JSON.stringify(newMenu));
+        if (window.app && window.app.db) {
+            window.app.db.menu = newMenu;
+            window.app.syncState();
+        }
+        if (window.portal) {
+            window.portal.menu = newMenu;
+            window.portal.renderMenu();
+        }
+    }
+
+    async pushSettingsToCloud() {
+        // Wait if not ready (e.g. immediately after boot)
+        if (!this.isReady) {
+            let attempts = 0;
+            while (!this.isReady && attempts < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                attempts++;
+            }
+        }
+        if (!this.isReady) {
+             console.error("[Firebase] Sync engine failed to initialize");
+             return;
+        }
+
+        const url = localStorage.getItem('yukt_menu_sheet_url') || '';
+        this.isSyncing = true;
+        try {
+            await set(window.firebaseRefs.settings, {
+                menuUrl: url,
+                lastUpdated: Date.now()
+            });
+            console.log("[Firebase] Pushed Settings:", url);
+        } catch(e) { console.error("[Firebase] Settings sync failed", e); }
+        this.isSyncing = false;
+    }
+
+    async pushAllToCloud() {
+        this.isSyncing = true;
+        try {
+            if (!window.app || !window.app.db || !window.app.db.idb) {
+                this.isSyncing = false;
+                return;
+            }
+
+            // Sync IDB Arrays to objects for Firebase
+            const tx = window.app.db.idb.transaction(['rooms', 'kitchenOrders'], 'readonly');
+            
+            const roomsData = await new Promise(r => {
+                const req = tx.objectStore('rooms').getAll();
+                req.onsuccess = () => r(req.result);
+            });
+            const roomsObj = {};
+            roomsData.forEach(r => roomsObj[r.number] = r);
+
+            const kdsData = await new Promise(r => {
+                const req = tx.objectStore('kitchenOrders').getAll();
+                req.onsuccess = () => r(req.result);
+            });
+            const kdsObj = {};
+            kdsData.forEach(k => kdsObj[k.id] = k);
+
+            // Push ALL simultaneously
+            await Promise.all([
+                set(window.firebaseRefs.rooms, roomsObj),
+                set(window.firebaseRefs.kitchenOrders, kdsObj),
+                set(window.firebaseRefs.notifications, window.app.db.notifications.reduce((acc, n) => { acc[n.id] = n; return acc; }, {})),
+                set(window.firebaseRefs.roomLedger, window.app.db.roomLedger),
+                set(window.firebaseRefs.restaurantTables, window.app.db.restaurantTables)
+            ]);
+
+            console.log("[Firebase] Synced UP");
+        } catch(e) {
+            console.error("[Firebase] Sync Failed", e);
+        }
+        this.isSyncing = false;
+    }
+
+    async pushRoomToCloud(roomObj) {
+        if (!this.isReady) return;
+        try {
+            await set(ref(window.firebaseDB, 'rooms/' + roomObj.number), roomObj);
+            console.log("[Firebase] Room synced:", roomObj.number);
+        } catch(e) { console.error("Room sync failed", e); }
+    }
+
+    async pushTableToCloud(tableObj) {
+        if (!this.isReady) return;
+        try {
+            await set(ref(window.firebaseDB, 'restaurantTables/' + tableObj.id), tableObj);
+            console.log("[Firebase] Table synced:", tableObj.id);
+        } catch(e) { console.error("Table sync failed", e); }
+    }
+
+    syncArrayToIDB(storeName, arrayData) {
+        if (!window.app || !window.app.db || !window.app.db.idb) return;
+        
+        try {
+            const tx = window.app.db.idb.transaction(storeName, 'readwrite');
+            const store = tx.objectStore(storeName);
+            
+            if (storeName === 'kitchenOrders') window.app.db.kitchenOrders = arrayData;
+
+            // Optional: Clear existing and put all to avoid stranded deleted objects
+            // store.clear(); // We'll just overwrite/add for now to prevent race conditions blowing up DB during read
+            arrayData.forEach(item => store.put(item));
+            
+            tx.oncomplete = () => {
+                // If it's kitchenOrders and we are looking at KDS, re-render
+                if (storeName === 'kitchenOrders' && window.app.currentPortal === 'kitchen') {
+                    window.app.renderKDS();
+                    window.app.checkKDSAlerts();
+                }
+            };
+        } catch(e) {
+            console.warn("IDB Sync back failed", e);
+        }
+    }
+    
+    // Unified Cloud Push for Orders (Mission 2)
+    async pushOrderToCloud(orderObj) {
+        try {
+            const ordersRef = collection(window.firebaseFS, 'orders');
+            await addDoc(ordersRef, {
+                ...orderObj,
+                order_id: orderObj.id,
+                order_type: orderObj.orderType || 'Walk-in',
+                total_price: orderObj.total,
+                status: 'pending', // INITIAL MISSION STATUS
+                timestamp: serverTimestamp()
+            });
+
+            console.log("[Firebase] Unified Order synced successfully");
+        } catch(e) {
+            console.error("Cloud Push failed", e);
+        }
+    }
+
+    async pushGuestToCloud(guestObj) {
+        try {
+            const guestRef = collection(window.firebaseFS, 'guests');
+            await addDoc(guestRef, {
+                ...guestObj,
+                server_timestamp: serverTimestamp()
+            });
+            console.log("[Firebase] Guest synced to cloud");
+        } catch(e) { console.error("Guest cloud sync failed", e); }
+    }
+
+    async pushBillingToCloud(billObj) {
+        try {
+            const billingRef = collection(window.firebaseFS, 'billing');
+            const ledgerRef = collection(window.firebaseFS, 'ledger');
+            
+            const payload = {
+                ...billObj,
+                timestamp: serverTimestamp()
+            };
+
+            // Push to both Billing (active checkouts) and Ledger (accounting)
+            await Promise.all([
+                addDoc(billingRef, payload),
+                addDoc(ledgerRef, payload)
+            ]);
+            
+            console.log("[Firebase] Billing & Ledger generated successfully");
+        } catch(e) { console.error("Billing sync failed", e); }
+    }
+
+    async pushLedgerEntry(entry) {
+        try {
+            const ledgerRef = collection(window.firebaseFS, 'ledger');
+            await addDoc(ledgerRef, {
+                ...entry,
+                timestamp: Date.now()
+            });
+            console.log("[Firebase] Ledger entry recorded");
+        } catch(e) { console.error("Ledger sync failed", e); }
+    }
+
+    // Guest Portal Specific Sync (order.js)
+    async pushGuestOrderToCloud(orderObj) {
+        await this.pushOrderToCloud(orderObj);
+    }
+}
+
+window.FirebaseSync = new FirebaseSyncEngine();
+// Delay start to let main app boot
+setTimeout(() => window.FirebaseSync.startListener(), 1000);
+

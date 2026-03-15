@@ -1,0 +1,30 @@
+﻿         // --- NEW: Firestore Kitchen Orders Sync & Alert ---
+         const kdsCol = collection(window.firebaseFS, 'kitchen_orders');
+         const q = query(kdsCol, orderBy('timestamp', 'desc'), limit(50));
+         onSnapshot(q, (snapshot) => {
+             const cloudOrders = [];
+             let hasNewOrder = false;
+             
+             snapshot.docChanges().forEach((change) => {
+                 if (change.type === "added") {
+                     const order = change.doc.data();
+                     // Only ring for recent orders (last 30 seconds) to avoid reload noise
+                     if (order.timestamp && (Date.now() - order.timestamp < 30000)) {
+                         hasNewOrder = true;
+                     }
+                 }
+             });
+
+             snapshot.forEach((doc) => {
+                 cloudOrders.push({ ...doc.data(), fsId: doc.id });
+             });
+
+             if (cloudOrders.length > 0 && window.app && window.app.db) {
+                 // Merge Firestore orders into local DB
+                 this.syncArrayToIDB('kitchenOrders', cloudOrders);
+                 if (hasNewOrder) {
+                     this.playKitchenAlert();
+                 }
+             }
+         });
+
