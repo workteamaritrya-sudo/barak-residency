@@ -2,7 +2,7 @@ import { firebaseConfig } from "./firebase-config.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
 import { getDatabase, ref, set, onValue, get, push } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, getDocs, or, enableIndexedDbPersistence, deleteDoc, Timestamp, runTransaction } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, getDocs, or, enableIndexedDbPersistence, deleteDoc, Timestamp, runTransaction, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
 // Initialize Firebase with Public Configuration
@@ -23,7 +23,7 @@ enableIndexedDbPersistence(firestore).catch((err) => {
 // Make available globally for app.js and order.js
 window.firebaseFS = firestore;
 window.firebaseST = storage;
-window.firebaseHooks = { doc, collection, query, where, updateDoc, addDoc, serverTimestamp, onSnapshot, getDocs, setDoc, sRef, uploadBytes, getDownloadURL, or, deleteDoc, Timestamp, runTransaction };
+window.firebaseHooks = { doc, collection, query, where, updateDoc, addDoc, serverTimestamp, onSnapshot, getDocs, setDoc, sRef, uploadBytes, getDownloadURL, or, deleteDoc, Timestamp, runTransaction, increment, arrayUnion };
 
 class FirebaseSyncEngine {
     constructor() {
@@ -361,8 +361,13 @@ class FirebaseSyncEngine {
             const ordersRef = collection(window.firebaseFS, 'orders');
             const q = query(ordersRef, where('order_id', '==', orderId));
             const snap = await getDocs(q);
+            
+            // Mission Fix: Ensure exact 'Ready' database state
+            let cloudStatus = status;
+            if (status === 'ready' || status === 'Ready') cloudStatus = 'Ready';
+
             snap.forEach(async (d) => {
-                await updateDoc(d.ref, { status: status });
+                await updateDoc(d.ref, { status: cloudStatus });
             });
         } catch(e) { console.error("Cloud Status Update Failed", e); }
     }

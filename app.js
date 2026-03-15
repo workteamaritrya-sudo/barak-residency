@@ -1325,7 +1325,14 @@ class PMSApp {
         const roomTotal = tariff * daysBilled;
         document.getElementById('cc-room-total').innerText = `₹${roomTotal}`;
 
-        const foodTotal = Number(guest.foodTotal) || 0;
+        // Mission: Instant Reception Sync (Live Query from Orders Collection)
+        const sessionOrders = this.db.kitchenOrders.filter(o => 
+            o.roomNumber == room.number && 
+            o.timestamp >= checkInTimeValue && 
+            o.status !== 'Cancelled'
+        );
+        const foodTotal = sessionOrders.reduce((sum, o) => sum + (Number(o.total_price) || Number(o.total) || 0), 0);
+        
         document.getElementById('cc-food-total').innerText = `₹${foodTotal}`;
 
         const advance = Number(guest.advance) || 0;
@@ -3084,7 +3091,7 @@ class PMSApp {
                     const name = typeof item === 'object' ? item.name : item;
                     const qty = typeof item === 'object' ? item.qty : '';
                     const variant = item.variant && item.variant !== 'Full' ? `[${item.variant}]` : '';
-                    const instructions = (item.specialInstructions || item.instructions) ? `<div class="text-xs color-primary" style="margin-left:1rem; font-style: italic;">Note: ${item.specialInstructions || item.instructions}</div>` : '';
+                    const instructions = (item.specialInstructions || item.instructions) ? `<div style="margin-left:1rem; color: #EF4444; font-weight: 900; font-size: 0.85rem; text-transform: uppercase;">⚠️ ${item.specialInstructions || item.instructions}</div>` : '';
                     return `
                             <div style="padding: 2px 0; font-size: 1.1rem; color: white;">
                                 <div style="display: flex; justify-content: space-between;">
@@ -3261,10 +3268,14 @@ class PMSApp {
                 fullItems = n.data.items;
             }
 
-            // Mission Fix: Format KOT items correctly x quantity
+            // Mission Fix: Format KOT items correctly x quantity + Bold Red Addons
             const itemStrings = fullItems.map(i => {
                 if (typeof i === 'object') {
-                    return `${i.name || 'Unknown Item'} x ${i.qty || i.quantity || 1}${i.variant && i.variant !== 'Full' ? ` (${i.variant})` : ''}`;
+                    let str = `${i.name || 'Unknown Item'} x ${i.qty || i.quantity || 1}${i.variant && i.variant !== 'Full' ? ` (${i.variant})` : ''}`;
+                    if (i.specialInstructions || i.instructions) {
+                        str += ` <span style="color:#EF4444; font-weight:900; text-transform:uppercase;">[${i.specialInstructions || i.instructions}]</span>`;
+                    }
+                    return str;
                 }
                 return i; // Fallback if string
             });

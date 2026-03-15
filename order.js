@@ -379,18 +379,27 @@ class GuestPortal {
     }
 
     async updateRoomLedger(order) {
-        // Update the current_bill on the guest record in cloud
+        // Update the current_bill and itemized list on the guest record in cloud
         if (this.currentGuestId && window.firebaseFS) {
             try {
-                const { doc, getDoc, updateDoc } = window.firebaseHooks;
+                const { doc, updateDoc, increment, arrayUnion } = window.firebaseHooks;
                 const guestRef = doc(window.firebaseFS, 'guests', this.currentGuestId);
-                const guestSnap = await getDoc(guestRef);
-                if (guestSnap.exists()) {
-                    const currentFoodTotal = Number(guestSnap.data().foodTotal || 0);
-                    await updateDoc(guestRef, {
-                        foodTotal: currentFoodTotal + order.total
-                    });
-                }
+                
+                // Mission: Ledger Detail Injection
+                const detailedItems = order.items.map(i => ({
+                    name: i.name,
+                    qty: i.qty,
+                    price: Number(i.price),
+                    total: Number(i.price) * i.qty,
+                    variant: i.variant || 'Full',
+                    timestamp: Date.now()
+                }));
+
+                await updateDoc(guestRef, {
+                    foodTotal: increment(order.total),
+                    current_bill: increment(order.total),
+                    billItems: arrayUnion(...detailedItems)
+                });
             } catch(e) { console.warn("Failed to update guest bill in cloud", e); }
         }
 
