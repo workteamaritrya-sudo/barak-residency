@@ -71,7 +71,6 @@
                 <div class="luxury-portal-header">
                     <div class="luxury-identity golden-brand">EXECUTIVE ROOM DASHBOARD</div>
                     <div style="display: flex; align-items: center; gap: 2rem;">
-                        <button class="btn btn-outline btn-sm" onclick="app.systemReset()" style="border-color: #f43f5e; color: #f43f5e; font-size: 0.7rem; padding: 0.5rem 1rem;">SYSTEM RESET</button>
                         <div class="portal-time-luxury" id="live-clock">--:-- --</div>
                         <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" id="header-logout" style="display: none; border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
                     </div>
@@ -227,7 +226,10 @@
             <section id="tab-financials" class="portal-content">
                 <div class="luxury-portal-header">
                     <div class="luxury-identity golden-brand">FINANCIAL ANALYTICS</div>
-                    <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" style="border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <button class="btn btn-outline btn-sm" onclick="app.systemReset()" style="border-color: #f43f5e; color: #f43f5e; font-size: 0.7rem; padding: 0.5rem 1rem;">SYSTEM RESET</button>
+                        <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" style="border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
+                    </div>
                 </div>
                 <div class="kpi-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: 1.5rem;">
                     <div class="kpi-card glass-panel luxury-glow">
@@ -348,6 +350,7 @@
         </div>
     </div>
 
+    <div id="print-area"></div>
     <script src="app.js"></script>
 </body>
 </html>

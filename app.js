@@ -708,7 +708,7 @@ class PMSApp {
         if (!confirm("🚨 CRITICAL: This will PERMANENTLY delete all active orders, guests, and service requests to fix 'object Object' bugs. Proceed?")) return;
         
         try {
-            const { collection, getDocs, deleteDoc, updateDoc } = window.firebaseHooks;
+            const { collection, getDocs, deleteDoc, updateDoc, serverTimestamp } = window.firebaseHooks;
             const db = window.firebaseFS;
             
             this.showToast("Initiating System Reset...", "info");
@@ -720,7 +720,7 @@ class PMSApp {
                 await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
             }
             
-            // 2. Reset Rooms using direct collection access to ensure all rooms are covered
+            // 2. Reset Rooms using direct collection access 
             const roomsSnap = await getDocs(collection(db, 'rooms'));
             await Promise.all(roomsSnap.docs.map(d => updateDoc(d.ref, {
                 status: 'available',
@@ -730,7 +730,7 @@ class PMSApp {
                 guestPhone: null,
                 orderSerial: 0,
                 billGenerated: false,
-                last_updated: new Date()
+                last_updated: serverTimestamp() || new Date()
             })));
             
             this.showToast("System Reset Successful. refreshing...", "success");
@@ -1725,6 +1725,8 @@ class PMSApp {
         const salutation = room.salutation || guest.salutation || '';
         const name = room.guestName || guest.guestName || guest.name || 'No Name Found';
 
+        console.log(`[Recep] Populating Room ${room.number}`, { room, guest });
+
         document.getElementById('cc-guest-name').innerText = salutation ? `${salutation} ${name}` : name;
         document.getElementById('cc-guest-age').innerText = guest.age || '---';
         document.getElementById('cc-guest-phone').innerText = room.guestPhone || guest.guestPhone || guest.phone || '---';
@@ -1742,13 +1744,13 @@ class PMSApp {
             idEl.style.background = 'rgba(239, 68, 68, 0.1)';
         }
 
-        const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : guest.checkInTime);
+        const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : (guest.checkInTime || guest.check_in_date));
         document.getElementById('cc-checkin-datetime').innerText = this.db.formattedIST(checkInTimeValue);
 
         const daysBilled = this.calculateBilledDays(checkInTimeValue);
         document.getElementById('cc-stay-days').innerText = daysBilled;
 
-        const tariff = Number(guest.tariff) || 0;
+        const tariff = Number(guest.tariff) || Number(room.tariff) || 0;
         document.getElementById('cc-tariff').innerText = `₹${tariff}`;
         document.getElementById('cc-ledger-days').innerText = daysBilled;
 
@@ -1758,24 +1760,25 @@ class PMSApp {
         // Mission: Instant Reception Sync (Live Query from Orders Collection)
         const sessionOrders = this.db.kitchenOrders.filter(o => {
             const oTime = o.timestamp && typeof o.timestamp === 'object' && o.timestamp.seconds ? o.timestamp.seconds * 1000 : (Number(o.timestamp) || 0);
-            return o.roomNumber == room.number && 
+            return (o.roomNumber == room.number || o.roomId == room.number) && 
                    oTime >= checkInTimeValue && 
                    o.status !== 'Cancelled' &&
                    o.status !== 'cancelled';
         });
 
-        // Sum total amount (ensure numeric values are grabbed properly from various property structures)
+        // Sum total amount
         const foodTotal = sessionOrders.reduce((sum, o) => {
              return sum + (Number(o.total_price) || Number(o.total) || Number(o.total_amount) || 0);
         }, 0);
         
         document.getElementById('cc-food-total').innerText = `₹${foodTotal.toLocaleString()}`;
 
-        const advance = Number(guest.advance) || Number(room.advancePaid) || 0;
+        // Robust Advance Lookup (Firestore stores as advancePaid usually)
+        const advance = Number(guest.advance) || Number(guest.advancePaid) || Number(room.advancePaid) || 0;
         const advanceEl = document.getElementById('cc-advance-amt');
         if (advanceEl) advanceEl.innerText = advance.toLocaleString();
 
-        const balance = (Number(tariff)*Number(daysBilled) || 0) + (Number(foodTotal) || 0) - (Number(advance) || 0);
+        const balance = (Number(roomTotal) || 0) + (Number(foodTotal) || 0) - (Number(advance) || 0);
         const balanceEl = document.getElementById('cc-total-bill');
         if (balanceEl) {
             balanceEl.innerText = `₹${balance.toLocaleString()}`;
@@ -1785,7 +1788,7 @@ class PMSApp {
         // Toggle Finalize button opacity based on billGenerated flag
         const finalizeBtn = document.getElementById('cc-finalize-btn');
         if (finalizeBtn) {
-            const isBillGen = room.billGenerated || false;
+            const isBillGen = room.billGenerated === true || room.billGenerated === "true";
             finalizeBtn.style.opacity = isBillGen ? "1" : "0.5";
             finalizeBtn.style.cursor = isBillGen ? "pointer" : "not-allowed";
         }
@@ -1794,8 +1797,6 @@ class PMSApp {
         const itemsContainer = document.getElementById('cc-food-items-list');
         if (itemsContainer) {
             itemsContainer.innerHTML = '';
-            
-            // Prioritize live sessionOrders instead of cached guest.foodOrders
             const ordersToDisplay = sessionOrders.length > 0 ? sessionOrders : (guest.foodOrders || []);
             
             if (ordersToDisplay.length > 0) {
@@ -1814,10 +1815,11 @@ class PMSApp {
         }
     }
 
-    processCheckin(e) {
+    async processCheckin(e) {
         e.preventDefault();
-        const room = this.db.rooms[this.selectedRoomId];
-        room.status = 'occupied';
+        const roomNum = this.selectedRoomId;
+        const room = this.db.rooms[roomNum];
+        
         const guestData = {
             name: document.getElementById('ci-name').value,
             age: document.getElementById('ci-age').value,
@@ -1827,31 +1829,44 @@ class PMSApp {
             advance: parseFloat(document.getElementById('ci-advance').value) || 0,
             checkInTime: new Date().getTime(),
             foodTotal: 0,
-            roomNumber: this.selectedRoomId, // Per requirement
+            roomNumber: roomNum,
             foodOrders: []
         };
-        room.guest = guestData;
-        e.target.reset();
-        this.db.persistRoom(this.selectedRoomId);
 
-        // 1 & 3 Mission: Guest & Room Status Sync (updateDoc) - Mission 3
-        if (window.FirebaseSync) {
-            window.FirebaseSync.updateRoomStatus(this.selectedRoomId, 'occupied', {
-                name: guestData.name,
-                phone: guestData.phone,
-                roomNumber: guestData.roomNumber,
-                checkInTime: guestData.checkInTime
-            });
+        this.showToast("Checking in guest...", "info");
 
-            window.FirebaseSync.pushGuestToCloud({
-                name: guestData.name,
-                phone: guestData.phone,
-                room_number: guestData.roomNumber,
-                check_in_date: guestData.checkInTime
-            });
+        try {
+            // 1. Sync to Cloud first to get the Guest ID
+            if (window.FirebaseSync) {
+                const cloudId = await window.FirebaseSync.pushGuestToCloud(guestData);
+                room.currentGuestId = cloudId;
+                guestData.cloudId = cloudId;
+
+                // 2. Sync room status to Cloud
+                await window.FirebaseSync.updateRoomStatus(roomNum, 'occupied', guestData);
+            }
+
+            // 3. Update local state
+            room.status = 'occupied';
+            room.guest = guestData;
+            room.guestName = guestData.name;
+            room.guestPhone = guestData.phone;
+            
+            this.db.persistRoom(roomNum);
+            e.target.reset();
+            this.syncState();
+            this.showToast("Guest Checked In Successfully", "success");
+            
+        } catch (err) {
+            console.error("Check-in Error:", err);
+            this.showToast("Cloud sync failed. Guest saved locally.", "error");
+            
+            // Fallback: Local save anyway
+            room.status = 'occupied';
+            room.guest = guestData;
+            this.db.persistRoom(roomNum);
+            this.syncState();
         }
-
-        this.syncState();
     }
 
     async checkoutRoom() {
@@ -3404,11 +3419,24 @@ class PMSApp {
             };
             return inWords(Math.floor(num)) + 'Rupees Only';
         };
-
-        // 4. Printable Invoice UI
+        // 4. Printable Invoice UI (3 Copies: Guest, Hotel, Accounts)
         const printArea = document.getElementById('print-area');
-        printArea.innerHTML = `
-                <div class="printable-invoice" style="padding: 40px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a1a; background: white; max-width: 900px; margin: auto; border: 1px solid #eee;">
+        if (!printArea) {
+            console.error("Print area missing from DOM");
+            this.showToast("Print error: div#print-area not found.", "error");
+            return;
+        }
+
+        const invoiceCopyTypes = ['Guest Copy', 'Hotel Copy', 'Accounts Copy'];
+        printArea.innerHTML = ''; // Clear previous
+
+        const checkInDateStr = this.db.formattedIST(checkInTimeValue);
+        const checkOutDateStr = new Date().toLocaleString();
+
+        invoiceCopyTypes.forEach(copyType => {
+            const copyHTML = `
+                <div class="printable-invoice" style="padding: 40px; font-family: 'Segoe UI', sans-serif; color: #1a1a1a; background: white; width: 100%; border-bottom: 2px dashed #ccc; margin-bottom: 50px; page-break-after: always;">
+                    <div style="text-align: right; font-weight: bold; color: #888; font-size: 0.8rem; margin-bottom: 10px;">${copyType}</div>
                     <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #D4AF37; padding-bottom: 20px; margin-bottom: 30px;">
                         <div>
                             <h1 style="margin: 0; color: #1a237e; font-size: 2.2rem; letter-spacing: 1px;">BARAK RESIDENCY</h1>
@@ -3416,7 +3444,7 @@ class PMSApp {
                             <p style="margin: 2px 0; font-size: 0.8rem; color: #888;">GSTIN: 18AABCB1234F1Z5</p>
                         </div>
                         <div style="text-align: right;">
-                            <h2 style="margin: 0; color: #D4AF37; font-size: 1.5rem;">FINAL TAX INVOICE</h2>
+                            <h2 style="margin: 0; color: #D4AF37; font-size: 1.5rem;">TAX INVOICE</h2>
                             <p style="margin: 5px 0; font-size: 0.9rem;">Invoice No: BR/${roomNum}/${Date.now().toString().substr(-6)}</p>
                             <p style="margin: 0; font-size: 0.9rem;">Date: ${new Date().toLocaleDateString()}</p>
                         </div>
@@ -3425,15 +3453,15 @@ class PMSApp {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 35px; background: #fcfcfc; padding: 20px; border-radius: 8px;">
                         <div>
                             <h4 style="margin: 0 0 10px 0; color: #D4AF37; border-bottom: 1px solid #eee; padding-bottom: 5px;">GUEST INFORMATION</h4>
-                            <p style="margin: 4px 0;"><strong>Name:</strong> ${guest.guestName || guest.name}</p>
-                            <p style="margin: 4px 0;"><strong>Phone:</strong> ${guest.guestPhone || guest.phone}</p>
-                            <p style="margin: 4px 0;"><strong>ID Ref:</strong> ${guestId.substr(0, 8).toUpperCase()}</p>
+                            <p style="margin: 4px 0;"><strong>Name:</strong> ${guest.guestName || guest.name || 'Walk-in Guest'}</p>
+                            <p style="margin: 4px 0;"><strong>Phone:</strong> ${guest.guestPhone || guest.phone || '---'}</p>
+                            <p style="margin: 4px 0;"><strong>ID Ref:</strong> ${(guestId || 'PENDING').toString().substr(0, 8).toUpperCase()}</p>
                         </div>
                         <div>
                             <h4 style="margin: 0 0 10px 0; color: #D4AF37; border-bottom: 1px solid #eee; padding-bottom: 5px;">STAY LOGISTICS</h4>
                             <p style="margin: 4px 0;"><strong>Room No:</strong> ${roomNum}</p>
-                            <p style="margin: 4px 0;"><strong>Check-in:</strong> ${this.db.formattedIST(checkInTimeValue)}</p>
-                            <p style="margin: 4px 0;"><strong>Check-out:</strong> ${new Date().toLocaleString()}</p>
+                            <p style="margin: 4px 0;"><strong>Check-in:</strong> ${checkInDateStr}</p>
+                            <p style="margin: 4px 0;"><strong>Check-out:</strong> ${checkOutDateStr}</p>
                         </div>
                     </div>
 
@@ -3457,35 +3485,27 @@ class PMSApp {
                             </tr>
                             ${orders.length > 0 ? `
                             <tr style="background:#fffbf0;">
-                                <td colspan="5" style="padding: 8px 12px; border: 1px solid #eee; font-weight:900; color:#D4AF37;">FOOD & BEVERAGE — ITEMIZED (${orders.length} Order${orders.length>1?'s':''})</td>
+                                <td colspan="5" style="padding: 8px 12px; border: 1px solid #eee; font-weight:900; color:#D4AF37; font-size: 0.8rem;">FOOD & BEVERAGE — ITEMIZATION</td>
                             </tr>
                             ${orders.map((o, idx) => {
                                 const oTotal = Number(o.total_price || o.total_amount || o.total) || 0;
-                                const oTime = o.timestamp ? new Date(o.timestamp.seconds ? o.timestamp.seconds*1000 : o.timestamp).toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '—';
                                 const itemsDetail = (o.items || []).map(i => {
                                     const name = typeof i === 'object' ? i.name : i;
-                                    const qty = typeof i === 'object' ? (i.qty||1) : 1;
-                                    const v = i.variant && i.variant !== 'Full' && i.variant !== 'Standard' ? ` (${i.variant})` : '';
-                                    return `<span style='margin-right:8px;'>${name}${v} ×${qty}</span>`;
-                                }).join('');
-                                return `<tr style="background:${idx%2===0?'#fff':'#fffef8'}">
-                                    <td style="padding:8px 12px; border:1px solid #eee; font-size:0.85rem;">
-                                        <div style='font-weight:600;'>Order #${idx+1}: ${oTime}</div>
-                                        <div style='color:#555; font-size:0.8rem; margin-top:2px;'>${itemsDetail}</div>
+                                    const qty = typeof i === 'object' ? (i.qty || 1) : 1;
+                                    return `${name} x${qty}`;
+                                }).join(', ');
+                                return `<tr>
+                                    <td style="padding:6px 12px; border:1px solid #eee; font-size:0.75rem;">
+                                        Order #${o.order_id || o.id || (idx+1)}<br>
+                                        <small style="color:#666;">${itemsDetail}</small>
                                     </td>
-                                    <td style="padding:8px 12px; text-align:center; border:1px solid #eee;">1</td>
-                                    <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${oTotal.toFixed(2)}</td>
-                                    <td style="padding:8px 12px; text-align:center; border:1px solid #eee;">5%</td>
-                                    <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${(oTotal*1.05).toFixed(2)}</td>
+                                    <td style="padding:6px 12px; text-align:center; border:1px solid #eee;">1</td>
+                                    <td style="padding:6px 12px; text-align:right; border:1px solid #eee;">₹${oTotal.toFixed(2)}</td>
+                                    <td style="padding:6px 12px; text-align:center; border:1px solid #eee;">5%</td>
+                                    <td style="padding:6px 12px; text-align:right; border:1px solid #eee;">₹${(oTotal * 1.05).toFixed(2)}</td>
                                 </tr>`;
                             }).join('')}
-                            ` : `<tr>
-                                <td style="padding: 12px; border: 1px solid #eee;">Food & Beverage Services</td>
-                                <td style="padding: 12px; text-align: center; border: 1px solid #eee;">—</td>
-                                <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹0.00</td>
-                                <td style="padding: 12px; text-align: center; border: 1px solid #eee;">5%</td>
-                                <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹0.00</td>
-                            </tr>`}
+                            ` : ''}
                         </tbody>
                         <tfoot>
                             <tr style="background: #f9f9f9; font-weight: bold;">
@@ -3503,27 +3523,25 @@ class PMSApp {
                         </tfoot>
                     </table>
 
-                    <div style="margin-bottom: 40px; padding: 15px; background: #fdfdfd; border: 1px dashed #ddd; border-radius: 4px;">
-                        <p style="margin: 0; font-size: 0.9rem; font-style: italic; color: #444;"><strong>Amount in Words:</strong> ${numberToWords(balancePayable)}</p>
+                    <div style="margin-bottom: 20px; padding: 10px; background: #fdfdfd; border: 1px dashed #ddd; border-radius: 4px;">
+                        <p style="margin: 0; font-size: 0.8rem; font-style: italic; color: #444;"><strong>Amount in Words:</strong> ${numberToWords(balancePayable)}</p>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; margin-top: 60px;">
+                    <div style="display: flex; justify-content: space-between; margin-top: 40px;">
                         <div style="text-align: center; width: 200px;">
-                            <div style="border-top: 1px solid #333; padding-top: 5px; font-size: 0.8rem;">Guest Signature</div>
+                            <div style="height: 40px;"></div>
+                            <div style="border-top: 1px solid #333; padding-top: 5px; font-size: 0.7rem;">Guest Signature</div>
                         </div>
                         <div style="text-align: center; width: 200px;">
-                            <p style="margin: 0; font-weight: bold; font-size: 0.9rem;">For BARAK RESIDENCY</p>
-                            <div style="height: 50px;"></div>
-                            <div style="border-top: 1px solid #333; padding-top: 5px; font-size: 0.8rem;">Authorized Signatory</div>
+                            <p style="margin: 0; font-weight: bold; font-size: 0.8rem;">For BARAK RESIDENCY</p>
+                            <div style="height: 40px;"></div>
+                            <div style="border-top: 1px solid #333; padding-top: 5px; font-size: 0.7rem;">Authorized Signatory</div>
                         </div>
-                    </div>
-
-                    <div style="margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
-                        <p style="color: #888; font-size: 0.8rem; margin: 0;">Computer generated invoice. No signature required for validity.</p>
-                        <p style="color: #1a237e; font-weight: bold; margin: 5px 0;">Thank you for staying with us!</p>
                     </div>
                 </div>
             `;
+            printArea.innerHTML += copyHTML;
+        });
 
         window.print();
 
@@ -3571,11 +3589,15 @@ class PMSApp {
                 guest: null,
                 currentGuestId: null,
                 orderSerial: 0,
+                billGenerated: false,
                 last_updated: serverTimestamp()
             });
 
+            // Step C: Delete Guest Document
             if (this.finalInvoiceData.guestId) {
-                await deleteDoc(doc(db, 'guests', this.finalInvoiceData.guestId));
+                try {
+                    await deleteDoc(doc(db, 'guests', this.finalInvoiceData.guestId));
+                } catch (e) { console.warn("Guest doc delete failed", e); }
             }
 
             // Local State Sync
@@ -3584,16 +3606,17 @@ class PMSApp {
                 room.status = 'available';
                 room.guest = null;
                 room.currentGuestId = null;
+                room.billGenerated = false;
             }
 
             this.syncState();
             this.closeCommandCenter();
             this.finalInvoiceData = null;
-            this.showToast("Checkout Finalized. Room is now Available.", "success");
+            this.showToast("Checkout Finalized & Recorded.", "success");
 
         } catch (err) {
             console.error("Checkout Finalization Error:", err);
-            this.showToast("Failed to finalize checkout. Check console.", "error");
+            this.showToast("Failed to finalize checkout.", "error");
         }
     }
 
@@ -4645,28 +4668,28 @@ class PMSApp {
 
             // Populate Main Table
             tbody.innerHTML += `
-            < tr style = "${isLow ? 'background:rgba(239, 68, 68, 0.1);' : ''}" >
+                <tr style="${isLow ? 'background:rgba(239, 68, 68, 0.1);' : ''}">
                     <td class="font-bold ${isLow ? 'color-red-500' : ''}">${item.item}</td>
                     <td>${item.category}</td>
                     <td class="font-bold ${isLow ? 'color-red-500' : ''}">${item.stock}</td>
                     <td class="text-gray">${item.threshold}</td>
-                </tr >
+                </tr>
             `;
 
             // Populate Alerts
             if (isLow) {
                 purchaseCount++;
                 purchaseList.innerHTML += `
-            < li style = "display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border:1px solid rgba(239, 68, 68, 0.4); border-radius:6px; padding:0.75rem;" >
+            <li style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border:1px solid rgba(239, 68, 68, 0.4); border-radius:6px; padding:0.75rem;">
                         <span class="font-bold" style="color:var(--color-red-500)">${item.item}</span>
                         <span class="text-sm">Req: <span class="font-bold">${item.threshold - item.stock}</span> units</span>
-                    </li >
+                    </li>
             `;
             }
         });
 
         if (purchaseCount === 0) {
-            purchaseList.innerHTML = `< li class="text-gray text-sm italic" > All stocks look good.Kitchen is ready.</li > `;
+            purchaseList.innerHTML = `<li class="text-gray text-sm italic">All stocks look good. Kitchen is ready.</li>`;
         }
     }
 
@@ -4677,13 +4700,13 @@ class PMSApp {
         this.db.employees.forEach(emp => {
             const netPayable = emp.baseSalary - emp.advances;
             tbody.innerHTML += `
-            < tr >
+                <tr>
                     <td class="font-bold color-primary">${emp.name}</td>
                     <td><span class="status-badge" style="background:rgba(148, 163, 184, 0.1); color:var(--color-slate-200);">${emp.role}</span></td>
                     <td>₹${emp.baseSalary.toLocaleString()}</td>
                     <td style="color:var(--color-yellow-500)">- ₹${emp.advances.toLocaleString()}</td>
                     <td class="font-bold color-success">₹${netPayable.toLocaleString()}</td>
-                </tr >
+                </tr>
             `;
         });
     }
@@ -4745,16 +4768,16 @@ class PMSApp {
         tbody.innerHTML = '';
 
         const recentSales = [...this.db.salesHistory].reverse().slice(0, 10);
-        if (recentSales.length === 0) tbody.innerHTML = `< tr > <td colspan="3" class="text-gray text-center">No sales yet.</td></tr > `;
+        if (recentSales.length === 0) tbody.innerHTML = `<tr><td colspan="3" class="text-gray text-center">No sales yet.</td></tr>`;
 
         recentSales.forEach(sale => {
             const label = sale.tableId ? `Table ${sale.tableId} ` : (sale.roomId ? `Room ${sale.roomId} ` : 'Misc');
             tbody.innerHTML += `
-            < tr >
+                <tr>
                     <td>${this.db.timeOnlyIST(sale.timestamp)}</td>
                     <td>${label}</td>
                     <td class="font-bold color-primary">₹${sale.total}</td>
-                </tr >
+                </tr>
             `;
         });
     }
@@ -4883,105 +4906,6 @@ class PMSApp {
             this.updateCommandCenter();
         }
     }
-
-    generateInvoice() {
-        if (!this.selectedRoomId) return;
-        const room = this.db.rooms[this.selectedRoomId];
-        if (room.status !== 'occupied') return;
-
-        const guest = room.guest;
-        const daysBilled = this.calculateBilledDays(guest.checkInTime);
-        const roomTotal = guest.tariff * daysBilled;
-        const subtotal = roomTotal + guest.foodTotal;
-        const gst = subtotal * 0.12;
-        const grandTotal = subtotal + gst;
-        const balance = grandTotal - guest.advance;
-
-        const copies = [
-            { id: 'Guest Copy', type: 'GUEST COPY' },
-            { id: 'Hotel Copy', type: 'HOTEL COPY' },
-            { id: 'Accounts Copy', type: 'ACCOUNTS COPY' }
-        ];
-
-        const printArea = document.getElementById('print-area');
-        printArea.innerHTML = '';
-
-        copies.forEach(copy => {
-            const pDate = this.db.formattedIST(new Date());
-
-            const copyHTML = `
-                <div class="invoice-copy">
-                    <div class="invoice-copy-type">${copy.type}</div>
-                    <div class="invoice-header">
-                        <h1>BARAK RESIDENCY</h1>
-                        <p>Silchar, Assam</p>
-                        <p>Phone: +91 XXXXXXXXX | Web: barakresidency.com</p>
-                    </div>
-                    
-                    <div class="invoice-details">
-                        <div>
-                            <strong>Guest Name:</strong> ${guest.name}<br>
-                            <strong>Room No:</strong> ${room.number}<br>
-                        </div>
-                        <div>
-                            <strong>Check In:</strong> ${this.db.formattedIST(guest.checkInTime)}<br>
-                            <strong>Date Printed:</strong> ${pDate}<br>
-                        </div>
-                    </div>
-
-                    <table class="invoice-table">
-                        <thead>
-                            <tr><th>Description</th><th>Details</th><th style="text-align: right">Amount (₹)</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Room Tariff</td>
-                                <td>₹${guest.tariff} x ${daysBilled} nights</td>
-                                <td style="text-align: right">${roomTotal.toFixed(2)}</td>
-                            </tr>
-                            ${guest.foodOrders.map(order => `
-                                <tr>
-                                    <td>Kitchen Order</td>
-                                    <td>${order.items.join(', ')}</td>
-                                    <td style="text-align: right">${order.total.toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-
-                    <table class="invoice-table" style="margin-top: -20px; border-top: 0;">
-                        <tbody>
-                            <tr>
-                                <td colspan="2" style="text-align: right"><strong>Subtotal</strong></td>
-                                <td style="width: 150px; text-align: right">₹${subtotal.toFixed(2)}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" style="text-align: right">GST (12%)</td>
-                                <td style="text-align: right">₹${gst.toFixed(2)}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" style="text-align: right"><strong>Grand Total</strong></td>
-                                <td style="text-align: right">₹${grandTotal.toFixed(2)}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" style="text-align: right">Advance Paid</td>
-                                <td style="text-align: right">- ₹${guest.advance.toFixed(2)}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" class="invoice-total">BALANCE DUE</td>
-                                <td class="invoice-total">₹${balance.toFixed(2)}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            printArea.innerHTML += copyHTML;
-        });
-
-        window.print();
-    }
-
-    // Stale duplicate triggerSuccessOverlay removed — primary version at line ~2225 handles all contexts.
 
     async saveSettings() {
         const urlObj = document.getElementById('setting-menu-url');

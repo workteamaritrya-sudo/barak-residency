@@ -306,6 +306,34 @@ class FirebaseSyncEngine {
         } catch(e) { console.error("Settings sync failed", e); }
     }
 
+    async updateRoomStatus(roomNum, status, guestData = null) {
+        try {
+            const { doc, updateDoc, serverTimestamp } = window.firebaseHooks;
+            const roomRef = doc(window.firebaseFS, 'rooms', roomNum.toString());
+            const updatePayload = {
+                status: status,
+                last_updated: serverTimestamp()
+            };
+            if (guestData) {
+                updatePayload.guestName = guestData.name || guestData.guestName;
+                updatePayload.guestPhone = guestData.phone || guestData.guestPhone;
+                updatePayload.guest = {
+                    ...guestData,
+                    guestName: guestData.name || guestData.guestName,
+                    guestPhone: guestData.phone || guestData.guestPhone,
+                    checkInTime: guestData.checkInTime || Date.now()
+                };
+            } else {
+                updatePayload.guest = null;
+                updatePayload.guestName = null;
+                updatePayload.guestPhone = null;
+                updatePayload.billGenerated = false;
+            }
+            await updateDoc(roomRef, updatePayload);
+            console.log(`[Room] Status updated for ${roomNum} to ${status}`);
+        } catch(e) { console.error("Update Room Status Failed", e); }
+    }
+
     async pushRoomToCloud(roomObj) {
         try {
             const roomRef = doc(window.firebaseFS, 'rooms', roomObj.number);
