@@ -3846,9 +3846,16 @@ class PMSApp {
                     const isDelivered = order && order.status === 'delivered';
 
                     actionHtml = `
-                    <div class="d-flex gap-2 mt-2">
-                        <button class="btn btn-primary" style="flex:1; font-size:0.7rem; padding:0.3rem;" onclick="app.printQuickKOT('${n.id}', '${orderId}', '${n.data.roomId}')">KOT</button>
-                        ${!isDelivered ? `<button class="btn btn-success" style="flex:1.5; font-size:0.7rem; padding:0.3rem;" onclick="app.markOrderDelivered('${orderId}')">MARK DELIVERED</button>` : `<span class="text-xs color-success" style="align-self:center;">DELIVERED ✓</span>`}
+                    <div class="d-flex gap-2 mt-2" style="display:flex; gap:5px;">
+                        <button class="btn btn-primary" style="flex:1; font-size:0.7rem; padding:0.3rem;" onclick="app.kotFromOrder('${orderId}', '${n.data.roomNumber || n.data.roomId}')">🖨 KOT</button>
+                        ${!isDelivered && order && order.status !== 'On the Way' && order.status !== 'ontheway'
+                            ? `<button class="btn btn-warning" style="flex:1; font-size:0.6rem; padding:0.3rem; background:#F97316; border-color:#F97316;" onclick="app.markOrderOnTheWay('${orderId}')">🛵 ON WAY</button>`
+                            : ''
+                        }
+                        ${!isDelivered 
+                            ? `<button class="btn btn-success" style="flex:1.5; font-size:0.7rem; padding:0.3rem;" onclick="app.markOrderDelivered('${orderId}')">✔ DELIVER</button>` 
+                            : `<span class="text-xs color-success" style="align-self:center; font-weight:800;">✓ DONE</span>`
+                        }
                     </div>
                 `;
                 }

@@ -14,6 +14,16 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="firebase-sync.js"></script>
+    <script type="module">
+        import { firebaseAuth, firebaseHooks } from './firebase-sync.js';
+        firebaseHooks.onAuthStateChanged(firebaseAuth, (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            } else {
+                document.getElementById('app-container').style.display = 'flex';
+            }
+        });
+    </script>
 </head>
 <body>
     <div class="management-hub" id="app-container" style="display: none;">
