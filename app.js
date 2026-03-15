@@ -3791,8 +3791,14 @@ class PMSApp {
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:6px;">
                     <button class="btn btn-primary" style="font-size:0.7rem; padding:0.3rem;" onclick="app.kotFromOrder('${orderId}','${roomNumber}')">🖨 PRINT KOT</button>
-                    ${isReady && !isDelivered ? `<button class="btn btn-warning" style="font-size:0.7rem; padding:0.3rem;" onclick="app.markOrderOnTheWay('${orderId}')">🛵 ON THE WAY</button>` : '<div></div>'}
-                    ${!isDelivered ? `<button class="btn btn-success" style="font-size:0.7rem; padding:0.3rem; grid-column:span 2;" onclick="app.markOrderDelivered('${orderId}')">✔ MARK DELIVERED</button>` : ''}
+                    ${!isDelivered && order.status !== 'On the Way' && order.status !== 'ontheway'
+                        ? `<button class="btn btn-warning" style="font-size:0.7rem; padding:0.3rem; background:#F97316; border-color:#F97316;" onclick="app.markOrderOnTheWay('${orderId}')">🛵 ON THE WAY</button>`
+                        : '<div></div>'
+                    }
+                    ${!isDelivered
+                        ? `<button class="btn btn-success" style="font-size:0.7rem; padding:0.3rem; grid-column:span 2; background:#16a34a; border-color:#16a34a;" onclick="app.markOrderDelivered('${orderId}')">✔ MARK DELIVERED</button>`
+                        : '<div style="grid-column:span 2; text-align:center; color:#6B7280; font-size:0.7rem; padding:4px;">✔ Delivered</div>'
+                    }
                 </div>
             `;
             container.appendChild(div);
