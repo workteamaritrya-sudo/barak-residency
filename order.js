@@ -130,17 +130,26 @@ class GuestPortal {
             {id:'m50-bhetf',name:'Bhetki Fry',category:'Starters',price:180,priceHalf:0,description:'Pure Bhetki fillet fry',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true}
         ];
 
-        // Push hardcoded menu to Firestore if collection is empty
+        // Push hardcoded menu to Firestore if collection is empty OR has stale/broken data
         const pushMenuToFirestore = async (items) => {
             try {
-                const { collection, getDocs, doc, setDoc } = window.firebaseHooks;
+                const { collection, getDocs, doc, setDoc, deleteDoc } = window.firebaseHooks;
                 const col = collection(window.firebaseFS, 'menuItems');
                 const snap = await getDocs(col);
-                if (snap.size === 0) {
-                    console.log('[Menu] Firestore empty — auto-seeding menu...');
+                
+                // Check if Firestore has stale data (items with Name/PriceFull fields or missing price)
+                const docs = snap.docs.map(d => d.data());
+                const hasStale = snap.size === 0 || 
+                    docs.some(d => (!d.name && d.Name) || (d.price == null && d.PriceFull) || d.price === 0);
+                
+                if (hasStale) {
+                    console.log('[Menu] Stale/empty Firestore data detected — re-seeding all 50 items...');
+                    // Delete old records
+                    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+                    // Write fresh hardcoded records
                     const writes = items.map(item => setDoc(doc(window.firebaseFS, 'menuItems', item.id), item));
                     await Promise.all(writes);
-                    console.log(`[Menu] Seeded ${items.length} items to Firestore.`);
+                    console.log(`[Menu] Seeded ${items.length} items to Firestore successfully.`);
                 }
             } catch (e) { console.warn('[Menu] Auto-seed failed:', e); }
         };
@@ -150,10 +159,23 @@ class GuestPortal {
         this.renderMenu();
         pushMenuToFirestore(BARAK_MENU);
 
+        // Helper: normalize field names from CSV legacy format to standard
+        const normalizeItem = (raw) => ({
+            id:          raw.id || `m-${Math.random().toString(36).slice(2,8)}`,
+            name:        raw.name || raw.Name || 'Dish',
+            category:    raw.category || raw.Category || 'General',
+            price:       parseFloat(raw.price || raw.PriceFull || raw.pricefull || 0),
+            priceHalf:   parseFloat(raw.priceHalf || raw.PriceHalf || raw.pricehalf || 0),
+            description: raw.description || raw.Description || 'Barak Residency Special',
+            imageUrl:    raw.imageUrl || raw.ImageURL || raw.image || raw.img || 'br.png',
+            portionType: raw.portionType || raw.PortionType || 'Plate',
+            isAvailable: raw.isAvailable !== false
+        });
+
         onSnapshot(collection(window.firebaseFS, 'menuItems'), (snap) => {
             const items = [];
-            snap.forEach(d => items.push(d.data()));
-            if (items.length > 0) {
+            snap.forEach(d => items.push(normalizeItem(d.data())));
+            if (items.length > 0 && items.some(i => i.name !== 'Dish' && i.price > 0)) {
                 this.menu = items;
                 localStorage.setItem('br_menu', JSON.stringify(items));
                 this.renderMenu();
@@ -246,18 +268,14 @@ class GuestPortal {
     }
 
     filterMenu() {
-        const query = document.getElementById('menu-search')?.value?.toLowerCase();
-        if (!query) {
-            this.renderMenu();
-            return;
-        }
-
-        const filtered = this.menu.filter(item => 
-            item.name.toLowerCase().includes(query) || 
-            (item.description && item.description.toLowerCase().includes(query)) ||
-            (item.category && item.category.toLowerCase().includes(query))
-        );
-
+        const q = document.getElementById('menu-search')?.value?.toLowerCase() || '';
+        if (!q) { this.renderMenu(); return; }
+        const filtered = this.menu.filter(item => {
+            const n = (item.name || item.Name || '').toLowerCase();
+            const d = (item.description || item.Description || '').toLowerCase();
+            const c = (item.category || item.Category || '').toLowerCase();
+            return n.includes(q) || d.includes(q) || c.includes(q);
+        });
         this.renderFilteredMenu(filtered);
     }
 
@@ -293,36 +311,51 @@ class GuestPortal {
     }
 
     promptPortion(itemId) {
-        const item = this.menu.find(m => m.id === itemId);
-        if (!item) return;
+        const raw = this.menu.find(m => m.id === itemId);
+        if (!raw) return;
 
+        // Normalize item fields
+        const item = {
+            ...raw,
+            name:        raw.name || raw.Name || 'Dish',
+            price:       parseFloat(raw.price || raw.PriceFull || 0),
+            priceHalf:   parseFloat(raw.priceHalf || raw.PriceHalf || 0),
+            description: raw.description || raw.Description || '',
+            imageUrl:    raw.imageUrl || raw.ImageURL || 'br.png',
+            portionType: raw.portionType || raw.PortionType || 'Plate',
+        };
         this.pendingItem = item;
-        
-        // If no special portion types, go straight to quantity
-        if (!item.portionType || item.portionType === 'None') {
+
+        const type = item.portionType;
+
+        // For Quantity/Cup — add directly, no modal
+        if (type === 'Quantity' || type === 'Cup' || !type) {
             this.promptQuantity(item, 'Regular', 'Standard', item.price);
             return;
         }
 
         document.getElementById('pm-item-name').innerText = item.name;
-        document.getElementById('pm-item-desc').innerText = "Select preferred size";
+        document.getElementById('pm-item-desc').innerText = 'Select preferred size';
         const container = document.getElementById('pm-options-container');
         container.innerHTML = '';
 
-        if (item.portionType === 'Plate') {
+        if (type === 'Plate') {
+            // Full Plate always available; Half only if priceHalf > 0
+            const halfPrice = item.priceHalf > 0 ? item.priceHalf : Math.floor(item.price * 0.6);
             const opts = [
-                { label: 'Full Plate', val: 'Full', price: item.price },
-                { label: 'Half Plate', val: 'Half', price: item.basePrice_Half || Math.floor(item.price * 0.6) }
+                { label: 'Full Plate', val: 'Full', price: item.price }
             ];
+            if (halfPrice > 0) opts.push({ label: 'Half Plate', val: 'Half', price: halfPrice });
+
             opts.forEach(opt => {
                 const btn = document.createElement('button');
                 btn.className = 'reorder-btn tint-blur';
                 btn.style.marginBottom = '0.5rem';
-                btn.innerHTML = `<div style="display:flex; justify-content:space-between"><span>${opt.label}</span><span>₹${opt.price}</span></div>`;
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
                 btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
                 container.appendChild(btn);
             });
-        } else if (item.portionType === 'Bottle') {
+        } else if (type === 'Bottle') {
             const sizes = [
                 { label: '1L Bottle', val: '1L', price: item.price },
                 { label: '750ml', val: '750ml', price: Math.floor(item.price * 0.8) },
@@ -332,7 +365,7 @@ class GuestPortal {
                 const btn = document.createElement('button');
                 btn.className = 'reorder-btn tint-blur';
                 btn.style.marginBottom = '0.5rem';
-                btn.innerHTML = `<div style="display:flex; justify-content:space-between"><span>${opt.label}</span><span>₹${opt.price}</span></div>`;
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
                 btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
                 container.appendChild(btn);
             });
