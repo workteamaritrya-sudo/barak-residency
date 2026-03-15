@@ -553,8 +553,10 @@ class GuestPortal {
             'Pending': { p: '0% ghost', n: 1, text: 'Order Placed' },
             'Kitchen': { p: '33%', n: 2, text: 'Being Prepared' },
             'preparing': { p: '33%', n: 2, text: 'Being Prepared' },
-            'Served': { p: '66%', n: 3, text: 'On the Way' },
-            'ready': { p: '66%', n: 3, text: 'On the Way' },
+            'Served': { p: '66%', n: 3, text: 'Order Ready' },
+            'ready': { p: '66%', n: 3, text: 'Order Ready' },
+            'On the Way': { p: '66%', n: 3, text: 'On the Way' },
+            'ontheway': { p: '66%', n: 3, text: 'On the Way' },
             'delivered': { p: '100%', n: 4, text: 'Delivered' },
             'Delivered': { p: '100%', n: 4, text: 'Delivered' }
         };

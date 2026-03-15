@@ -3123,41 +3123,58 @@ class PMSApp {
     generateKOT(orderObj) {
         const copies = [
             { id: 'Kitchen', type: 'KITCHEN KOT' },
-            { id: 'Waiter', type: 'WAITER KOT' },
-            { id: 'Audit', type: 'AUDIT KOT' }
+            { id: 'Reception', type: 'RECEPTION KOT' },
+            { id: 'Room', type: 'GUEST COPY' }
         ];
 
         const printArea = document.getElementById('print-area');
+        if (!printArea) return;
         printArea.innerHTML = '';
 
-        const pDate = this.db.timeOnlyIST(orderObj.timestamp);
+        const pDate = this.db.timeOnlyIST ? this.db.timeOnlyIST(orderObj.timestamp) : new Date(orderObj.timestamp).toLocaleTimeString();
+        const roomNum = orderObj.roomNumber || orderObj.roomId;
 
         copies.forEach(copy => {
             const html = `
-                <div class="invoice-copy" style="font-family: monospace; font-size: 1.1rem;">
-                    <div style="text-align:center; font-weight:bold; font-size: 1.5rem; text-decoration: underline;">${copy.type}</div>
-                    <div style="margin-top: 1rem;">
-                        <strong>${orderObj.tableId ? 'Table' : 'Room'}:</strong> ${orderObj.tableId || orderObj.roomId}<br>
-                        <strong>Order ID:</strong> ${orderObj.id}<br>
-                        <strong>Time:</strong> ${pDate}<br>
+                <div class="kot-print-block" style="font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 10px; border-bottom: 2px dashed #000; margin-bottom: 40px; color: black; background: white;">
+                    <div style="text-align:center; font-weight:bold; font-size: 1.4rem;">${copy.type}</div>
+                    <div style="text-align:center; font-size: 0.9rem; margin-bottom: 10px;">BARAK RESIDENCY</div>
+                    <div style="border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 5px 0; margin-bottom: 10px;">
+                        <strong>ROOM: ${roomNum}</strong><br>
+                        <strong>ID: ${orderObj.order_id || orderObj.id}</strong><br>
+                        <strong>TIME: ${pDate}</strong>
                     </div>
-                    <table style="width:100%; margin-top:1rem; border-collapse: collapse; text-align:left;">
-                        <tr style="border-bottom: 1px dashed black;">
-                            <th style="padding-bottom:5px;">Items</th>
+                    <table style="width:100%; border-collapse: collapse;">
+                        <tr style="border-bottom: 1px solid #000;">
+                            <th style="text-align:left;">Item</th>
+                            <th style="text-align:right;">Qty</th>
                         </tr>
-                        ${orderObj.items.map(item => `
-                            <tr><td style="padding: 5px 0;">- ${item}</td></tr>
-                        `).join('')}
+                        ${orderObj.items.map(item => {
+                            const name = typeof item === 'object' ? item.name : item;
+                            const qty = typeof item === 'object' ? (item.qty || item.quantity || 1) : 1;
+                            const variant = item.variant && item.variant !== 'Full' && item.variant !== 'Standard' ? ` (${item.variant})` : '';
+                            return `
+                                <tr>
+                                    <td style="padding: 4px 0; font-size: 1.1rem;">• ${name}${variant}</td>
+                                    <td style="text-align:right; font-weight:bold;">${qty}</td>
+                                </tr>
+                                ${item.specialInstructions ? `<tr><td colspan="2" style="font-size: 0.8rem; color: #000; font-weight: bold; padding-bottom: 5px;">>> ${item.specialInstructions}</td></tr>` : ''}
+                            `;
+                        }).join('')}
                     </table>
+                    <div style="margin-top: 20px; text-align:center; font-size: 0.7rem; border-top: 1px dashed #ccc; padding-top: 5px;">
+                        ${copy.id} Copy - Instant Sync System
+                    </div>
                 </div>
             `;
             printArea.innerHTML += html;
         });
 
-        // Using Success Overlay natively triggers for Waiters. 
-        // We only show Alert for Reception if generating KOT manually outside isolated flows.
+        // Trigger native print dialog (can be automated via browser settings for silent print)
+        window.print();
+
         if (this.currentPortal === 'reception') {
-            this.showAlert(`KOT Printed (3 Copies) for ${orderObj.tableId || orderObj.roomId}`);
+            this.showToast(`KOT Printed (3 Copies) for Room ${roomNum}`, "success");
         }
     }
 
@@ -3523,18 +3540,37 @@ class PMSApp {
     }
 
 
-    markOrderDelivered(orderId) {
+    markOrderOnTheWay(orderId) {
+        const order = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
+        if (order) {
+            order.status = 'ontheway';
+            if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, 'ontheway');
+            this.db.persistKitchenSync();
+            this.syncState();
+            this.showToast(`Order ${orderId} marked ON THE WAY`, "info");
+        }
+    }
+
+    async markOrderDelivered(orderId) {
         const order = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
         if (order) {
             order.status = 'delivered';
             if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, 'delivered');
             this.db.persistKitchenSync();
 
-            // Target: Only mark related notifications as read if needed, or keeping them for history
-            this.syncState();
-            this.showToast(`Order ${orderId} Marked as Delivered`, "success");
+            // Atomic Bill Update in Firestore
+            if (window.FirebaseSync && order.roomNumber) {
+                const { doc, updateDoc, increment, arrayUnion } = window.firebaseHooks;
+                const roomRef = doc(window.firebaseFS, 'rooms', order.roomNumber.toString());
+                
+                await updateDoc(roomRef, {
+                    'guest.foodTotal': increment(Number(order.total_price || order.total || 0)),
+                    'guest.foodOrders': arrayUnion(order)
+                });
+            }
 
-            // Sync via LocalStorage to trigger Guest Portal update immediately
+            this.syncState();
+            this.showToast(`Order ${orderId} Marked as Delivered & Bill Updated`, "success");
             localStorage.setItem('yukt_pms_sync', Date.now());
         }
     }
@@ -3672,17 +3708,22 @@ class PMSApp {
             <div class="room-order-guest">
                 ${this.db.rooms[roomNumber]?.salutation || ''} ${this.db.rooms[roomNumber]?.guestName || 'Occupied'}
             </div>
-            <div style="font-size: 0.8rem; color: ${isReady ? 'var(--color-green-400)' : 'var(--color-gold-primary)'}; font-weight: ${isReady ? '700' : '400'};">
-                Status: ${statusText}
+            <div style="font-size: 0.8rem; color: ${isReady ? 'var(--color-green-400)' : 'var(--color-gold-primary)'}; font-weight: 700;">
+                Status: <span style="text-transform: uppercase;">${statusText}</span>
             </div>
             <div class="mt-2" style="max-height: 200px; overflow-y: auto;">
                 <div style="padding: 0.5rem; background: rgba(212,175,55,0.05); border-left: 2px solid var(--gold-primary); border-radius: 4px; font-size: 0.8rem;">
                     ${itemStrings.map(i => `<div style="margin-bottom:2px;">• ${i}</div>`).join('')}
                 </div>
             </div>
-            <div class="room-order-actions">
-                <button class="btn btn-primary" style="flex:1; font-size:0.7rem; padding:0.3rem;" onclick="app.printQuickKOT('${n.id}', '${orderId}', '${roomNumber}')">KOT</button>
-                ${!isDelivered ? `<button class="btn btn-success" style="flex:1.5; font-size:0.7rem; padding:0.3rem;" onclick="app.markOrderDelivered('${orderId}')">MARK DELIVERED</button>` : ''}
+            <div class="room-order-actions" style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                <button class="btn btn-primary" style="font-size:0.7rem; padding:0.3rem;" onclick="app.printQuickKOT('${n.id}', '${orderId}', '${roomNumber}')">PRINT KOT</button>
+                ${isReady && !isDelivered && statusText !== 'Delivered' ? `
+                    <button class="btn btn-warning" style="font-size:0.7rem; padding:0.3rem;" onclick="app.markOrderOnTheWay('${orderId}')">ON THE WAY</button>
+                ` : ''}
+                ${!isDelivered && statusText !== 'Delivered' ? `
+                    <button class="btn btn-success" style="font-size:0.7rem; padding:0.3rem; grid-column: span 2;" onclick="app.markOrderDelivered('${orderId}')">MARK DELIVERED</button>
+                ` : ''}
             </div>
         `;
             container.appendChild(div);

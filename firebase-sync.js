@@ -175,22 +175,36 @@ class FirebaseSyncEngine {
         onSnapshot(ordersCol, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 const order = change.doc.data();
-                if (change.type === "modified" && order.status === 'Served') {
+                const status = order.status;
+                
+                if (change.type === "modified" && status === 'Served') {
                     this.playWaiterAlert();
-                } else if ((change.type === "added" || change.type === "modified") && (order.status === 'Pending' || order.status === 'Kitchen')) {
-                    // Play alerts for new orders or updates
-                    if (change.type === "added") {
+                } else if (change.type === "added" || change.type === "modified") {
+                    const isNewPending = change.type === "added" && (status === 'Pending' || status === 'Kitchen');
+                    
+                    if (isNewPending) {
                         this.playKitchenAlert();
                         this.playReceptionAlert();
+                        
+                        // MISSION: AUTO-KOT PRINTING FOR RECEPTION
+                        if (window.app && window.app.currentPortal === 'reception') {
+                            console.log("[Auto-KOT] New order detected, triggering print...");
+                            window.app.generateKOT({ 
+                                ...order, 
+                                id: order.order_id || change.doc.id,
+                                items: order.items || [] 
+                            });
+                        }
                     }
                     
                     // Mission: Auto-notify Reception Dashboard for Badge Update
                     if (window.app && window.app.db && order.roomNumber) {
-                        const msg = change.type === "added" ? `New Order: Room ${order.roomNumber}` : `Update: Room ${order.roomNumber} (Add-on)`;
+                        const msg = change.type === "added" ? `New Order: Room ${order.roomNumber}` : `Update: Room ${order.roomNumber} (${status})`;
                         window.app.db.addNotification('order', msg, 'reception', { 
                             type: 'room', 
-                            orderId: order.order_id || order.id, 
-                            roomNumber: order.roomNumber 
+                            orderId: order.order_id || change.doc.id, 
+                            roomNumber: order.roomNumber,
+                            items: order.items || []
                         });
                     }
                 }
@@ -270,9 +284,11 @@ class FirebaseSyncEngine {
     async pushOrderToCloud(orderObj) {
         try {
             const ordersRef = collection(window.firebaseFS, 'orders');
-            let cloudStatus = 'Pending';
-            if (orderObj.status === 'preparing' || orderObj.status === 'Kitchen') cloudStatus = 'Kitchen';
-            if (orderObj.status === 'ready' || orderObj.status === 'Served') cloudStatus = 'Served';
+            let cloudStatus = orderObj.status || 'Pending';
+            // Unified Normalization
+            if (cloudStatus === 'preparing') cloudStatus = 'Kitchen';
+            if (cloudStatus === 'ready') cloudStatus = 'Served';
+            if (cloudStatus === 'ontheway') cloudStatus = 'On the Way';
             
             await addDoc(ordersRef, {
                 ...orderObj,
@@ -389,9 +405,9 @@ class FirebaseSyncEngine {
             const q = query(ordersRef, where('order_id', '==', orderId));
             const snap = await getDocs(q);
             
-            // Mission Fix: Ensure exact 'Ready' database state
             let cloudStatus = status;
-            if (status === 'ready' || status === 'Ready') cloudStatus = 'Ready';
+            if (status === 'ready' || status === 'Ready') cloudStatus = 'Served'; // 'Served' maps to tracker stage 3
+            if (status === 'ontheway' || status === 'On the Way') cloudStatus = 'On the Way';
 
             snap.forEach(async (d) => {
                 await updateDoc(d.ref, { status: cloudStatus });
