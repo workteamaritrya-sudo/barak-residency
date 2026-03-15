@@ -609,11 +609,17 @@
                 <input type="text" id="setting-menu-url" class="form-control" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" style="background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: white;">
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem;">
-                <button class="btn btn-primary" style="width: 100%; font-size: 1.1rem;" onclick="app.saveSettings()">Save & Sync Menu</button>
+            <div class="form-group mb-4">
+                <label style="color: white; font-weight: bold;">Bulk Menu Paste Tool (CSV Content)</label>
+                <p class="text-sm text-gray" style="margin-bottom: 0.5rem;">Alternatively, paste raw CSV data here to immediately update the cloud menu. Use headers: id, name, price, category, icon, description, portionType, imageUrl.</p>
+                <textarea id="setting-menu-csv-bulk" class="form-control" style="background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: white; height: 120px; font-family: monospace; font-size: 0.8rem;" placeholder="m1,Veg Thali,250,Main Course,🍛,Assorted delights,Plate,https://..."></textarea>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn btn-primary" style="width: 100%; font-size: 1.1rem; background: var(--gold-primary); color: #000; border:none;" onclick="app.saveSettings()">🔥 Update & Deploy Menu</button>
                 <div style="display: flex; gap: 1rem;">
                     <button class="btn btn-outline" style="flex: 1;" onclick="document.getElementById('settings-modal').style.display='none'">Cancel</button>
-                    <button class="btn btn-danger" style="flex: 1; background: #c62828;" onclick="app.resetSystemFresh()">🚨 Hard Reset System</button>
+                    <button class="btn btn-danger" style="flex: 1; border-color: #ef4444; color: #ef4444; background: transparent;" onclick="app.resetSystemFresh()">🚨 Hard Reset System</button>
                 </div>
             </div>
         </div>
@@ -900,7 +906,7 @@
         <div class="security-box" style="padding: 2.5rem 2rem; width: 400px; text-align: center; position: relative;">
 
             <div class="security-header mb-4">
-                <h3 class="m-0" id="qp-item-name" style="color: var(--color-primary); padding-bottom: 10px;">Item Name</h3>
+                <h3 class="m-0" id="qp-item-name" style="color: var(--color-primary); padding-bottom: 10px; padding-top: 20px;">Item Name</h3>
             </div>
 
             <!-- View 1: Select Variant -->

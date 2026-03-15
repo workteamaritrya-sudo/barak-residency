@@ -34,14 +34,14 @@ class CentralDatabase {
         this.restaurantCustomersToday = parseInt(localStorage.getItem('yukt_rest_pax')) || 0;
 
         this.menu = JSON.parse(localStorage.getItem('br_menu')) || [
-            { id: 'm1', name: 'Chicken Biryani', price: 350, icon: '🥘', category: 'Dishes', description: 'Fragrant basmati rice cooked with tender chicken and spices.', photo: '', isAvailable: true },
-            { id: 'm2', name: 'Veg Thali', price: 200, icon: '🍛', category: 'Thalis', description: 'A complete meal with rice, dal, subji, and roti.', photo: '', isAvailable: true },
-            { id: 'm3', name: 'Paneer Butter Masala', price: 280, icon: '🍲', category: 'Dishes', description: 'Creamy tomato-based gravy with soft paneer cubes.', photo: '', isAvailable: true },
-            { id: 'm4', name: 'Tandoori Roti', price: 25, icon: '🫓', category: 'Dishes', description: 'Traditional clay oven-baked flatbread.', photo: '', isAvailable: true },
-            { id: 'm5', name: 'Mineral Water', price: 30, icon: '💧', category: 'Drinks', description: 'Purified drinking water.', photo: '', isAvailable: true },
-            { id: 'm6', name: 'Masala Chai', price: 40, icon: '☕', category: 'Drinks', description: 'Spiced Indian tea with milk.', photo: '', isAvailable: true },
-            { id: 'm7', name: 'Cold Coffee', photo: '', category: 'Drinks', description: 'Refreshingly chilled coffee blend.', isAvailable: true, price: 120, icon: '🧋' },
-            { id: 'm8', name: 'French Fries', price: 150, icon: '🍟', category: 'Snacks', description: 'Crispy golden potato fries.', photo: '', isAvailable: true }
+            { id: 'm1', name: 'Chicken Biryani', price: 350, icon: '🥘', category: 'Main Course', description: 'Fragrant basmati rice cooked with tender chicken and spices.', imageUrl: '', isAvailable: true },
+            { id: 'm2', name: 'Veg Thali', price: 200, icon: '🍛', category: 'Main Course', description: 'A complete meal with rice, dal, subji, and roti.', imageUrl: '', isAvailable: true },
+            { id: 'm3', name: 'Paneer Chilli', price: 180, icon: '🥘', category: 'Starters', description: 'Crispy paneer cubes tossed in spicy soy sauce.', imageUrl: '', isAvailable: true },
+            { id: 'm4', name: 'Spring Rolls', price: 120, icon: '🌯', category: 'Starters', description: 'Crunchy vegetables wrapped in thin pastry.', imageUrl: '', isAvailable: true },
+            { id: 'm5', name: 'Mineral Water', price: 30, icon: '💧', category: 'Drinks', description: 'Purified drinking water.', imageUrl: '', isAvailable: true },
+            { id: 'm6', name: 'Masala Chai', price: 40, icon: '☕', category: 'Drinks', description: 'Spiced Indian tea with milk.', imageUrl: '', isAvailable: true },
+            { id: 'm7', name: 'Gulab Jamun', price: 80, icon: '🍨', category: 'Desserts', description: 'Soft milk-solid balls in sugar syrup.', imageUrl: '', isAvailable: true },
+            { id: 'm8', name: 'Vanilla Ice Cream', price: 60, icon: '🍦', category: 'Desserts', description: 'Classic creamy vanilla flavor.', imageUrl: '', isAvailable: true }
         ];
         this.unavailableItems = JSON.parse(localStorage.getItem('br_unavailable_items')) || [];
 
@@ -376,21 +376,23 @@ class CentralDatabase {
                     
                     if (h.includes('price')) val = parseFloat(val) || 0;
                     if (h === 'isavailable') val = val.toLowerCase() === 'true';
-                    if (h === 'imageurl') h = 'imageUrl';
-                    if (h === 'portiontype') h = 'portionType';
+                    
+                    // Standardized mapping for UI consistency
+                    if (h === 'imageurl' || h === 'photo' || h === 'image') h = 'imageUrl';
+                    if (h === 'portiontype' || h === 'type') h = 'portionType';
                     if (h === 'baseprice_full') h = 'basePrice_Full';
                     if (h === 'baseprice_half') h = 'basePrice_Half';
+                    if (h === 'description' || h === 'desc') h = 'description';
+                    
                     item[h] = val;
                 });
 
-                // Legacy fallback mapping
+                // Pricing logic for portions
                 if (item.basePrice_Full && (!item.price || item.price === 0)) item.price = item.basePrice_Full;
 
-                if (!item.id) item.id = `ext-${Date.now()}-${i}`;
-                if (item.isavailable === undefined) item.isavailable = true;
-                item.isAvailable = item.isavailable;
+                if (!item.id) item.id = `m-${i}-${Date.now().toString().slice(-4)}`;
+                item.isAvailable = item.isAvailable !== undefined ? item.isAvailable : true;
                 
-                // Keep name title cased for safety
                 if(item.name) item.name = item.name.trim();
 
                 newMenu.push(item);
@@ -2337,7 +2339,7 @@ class PMSApp {
                 el.style.flexDirection = 'column';
                 el.style.gap = '5px';
 
-                const imgUrl = item.image ? item.image : '';
+                const imgUrl = item.imageUrl || item.image || item.photo || '';
                 const photoHtml = imgUrl ? `<img src="${imgUrl}" style="width:100%; height:80px; object-fit:cover; border-radius:8px; margin-bottom:5px;" onerror="this.style.display='none'">` : '';
 
                 el.innerHTML = `
@@ -2348,7 +2350,7 @@ class PMSApp {
                     </div>
                     <div class="menu-name" style="font-weight:bold;">${item.name}</div>
                     <div class="menu-desc" style="font-size:0.7rem; color:var(--color-slate-400); height:30px; overflow:hidden; line-height: 1.2;">${item.description || ''}</div>
-                    <button class="menu-add-btn" style="margin-top:auto;" onclick="app.promptItemVariant({id: '${item.id}', name: '${item.name}', price: ${item.price}}, '${portalCtx}')">Add</button>
+                    <button class="menu-add-btn" style="margin-top:auto;" onclick="app.promptItemVariant(${JSON.stringify(item).replace(/"/g, '&quot;')}, '${portalCtx}')">Add</button>
                 `;
                 grid.appendChild(el);
             });
@@ -2382,20 +2384,65 @@ class PMSApp {
     promptItemVariant(item, context) {
         this.pendingCartItem = item;
         this.pendingCartContext = context;
-        this.pendingCartVariant = 'Full';
 
         document.getElementById('qp-item-name').innerText = item.name;
+
+        // Generate Dynamic Portion Buttons
+        const variantContainer = document.getElementById('qp-view-variant');
+        variantContainer.innerHTML = ''; // Clear prev
+
+        let options = [];
+        const type = item.portionType || 'Plate';
+
+        if (type === 'Plate' || type === 'Plate (Half/Full)') {
+            options = [
+                { label: 'Full Plate', val: 'Full', price: item.price },
+                { label: 'Half Plate', val: 'Half', price: item.basePrice_Half || Math.floor(item.price * 0.6) }
+            ];
+        } else if (type === 'Bottle') {
+            options = [
+                { label: '1L Bottle', val: '1L', price: item.price },
+                { label: '750ml', val: '750ml', price: Math.floor(item.price * 0.75) },
+                { label: '2L Bottle', val: '2L', price: Math.floor(item.price * 1.8) }
+            ];
+        } else if (type === 'Cup') {
+            options = [
+                { label: 'Standard Cup', val: 'Regular', price: item.price },
+                { label: 'Large/Pot', val: 'Large', price: Math.floor(item.price * 1.5) }
+            ];
+        } else {
+            // Default to Single Portion
+            options = [{ label: 'Standard Portion', val: 'Regular', price: item.price }];
+        }
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-outline';
+            btn.style.cssText = 'padding: 1.5rem; font-size: 1.1rem; border-color: var(--color-primary); color: var(--color-primary);';
+            btn.innerText = `${opt.label} (₹${opt.price})`;
+            btn.onclick = () => this.qpSelectVariant(opt.val, opt.label, opt.price);
+            variantContainer.appendChild(btn);
+        });
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-outline';
+        cancelBtn.style.cssText = 'margin-top: 1rem; border: none; text-decoration: underline;';
+        cancelBtn.innerText = 'Cancel';
+        cancelBtn.onclick = () => document.getElementById('quantity-prompt-modal').style.display = 'none';
+        variantContainer.appendChild(cancelBtn);
 
         // Reset Views
         document.getElementById('qp-view-variant').style.display = 'flex';
         document.getElementById('qp-view-quantity').style.display = 'none';
-
         document.getElementById('quantity-prompt-modal').style.display = 'flex';
     }
 
-    qpSelectVariant(variantMode) {
-        this.pendingCartVariant = variantMode;
-        document.getElementById('qp-selected-variant-text').innerText = variantMode === 'Half' ? 'Half Plate (Special Price)' : 'Full Plate';
+    qpSelectVariant(variantVal, variantLabel, variantPrice) {
+        this.pendingCartVariant = variantVal;
+        this.pendingCartVariantLabel = variantLabel;
+        this.pendingCartPrice = variantPrice;
+
+        document.getElementById('qp-selected-variant-text').innerText = `${variantLabel} (₹${variantPrice})`;
 
         // Reset Qty Drawer
         document.getElementById('qp-qty').value = 1;
@@ -2415,16 +2462,17 @@ class PMSApp {
         if (!this.pendingCartItem) return;
 
         const variant = this.pendingCartVariant;
+        const variantLabel = this.pendingCartVariantLabel;
+        const price = this.pendingCartPrice;
         const qty = parseInt(document.getElementById('qp-qty').value) || 1;
         document.getElementById('quantity-prompt-modal').style.display = 'none';
 
         // Clone item to append variant tag and adjust price
         const finalItem = { ...this.pendingCartItem };
-        if (variant === 'Half') {
-            finalItem.name = `${finalItem.name} [Half]`;
-            finalItem.id = `${finalItem.id}-h`;
-            finalItem.price = Math.floor(finalItem.price * 0.6); // standard half pricing rule
-        }
+        finalItem.id = `${finalItem.id}-${variant}`;
+        finalItem.name = `${finalItem.name} [${variantLabel}]`;
+        finalItem.price = price;
+        finalItem.variant = variantLabel;
 
         this.addToCart(finalItem, qty, this.pendingCartContext);
     }
@@ -4418,38 +4466,48 @@ class PMSApp {
 
     // Stale duplicate triggerSuccessOverlay removed — primary version at line ~2225 handles all contexts.
 
-    saveSettings() {
+    async saveSettings() {
         const urlObj = document.getElementById('setting-menu-url');
-        if (urlObj) {
-            const url = urlObj.value.trim();
-            if (url) {
-                localStorage.setItem('yukt_menu_sheet_url', url);
+        const bulkObj = document.getElementById('setting-menu-csv-bulk');
+        const url = urlObj ? urlObj.value.trim() : '';
+        const bulkCSV = bulkObj ? bulkObj.value.trim() : '';
+
+        if (url) {
+            localStorage.setItem('yukt_menu_sheet_url', url);
+        } else {
+            localStorage.removeItem('yukt_menu_sheet_url');
+        }
+
+        // Push settings to cloud
+        if (window.FirebaseSync) {
+            window.FirebaseSync.pushSettingsToCloud();
+        }
+
+        try {
+            if (bulkCSV) {
+                // MISSION: ADVANCED BULK CSV SYNC
+                const success = await this.db.syncMenuFromCSV(bulkCSV);
+                if (success) {
+                    alert('🔥 Success! Bulk Menu Uploaded and Synced to Cloud.');
+                    if (bulkObj) bulkObj.value = ''; // clear after success
+                }
             } else {
-                localStorage.removeItem('yukt_menu_sheet_url');
+                // Force refresh if only URL changed
+                localStorage.removeItem('br_menu');
+                await this.db.loadMenu();
+                alert('Success! Settings saved and cloud sync active.');
             }
 
-            // Push to cloud instantly
-            if (window.FirebaseSync) {
-                window.FirebaseSync.pushSettingsToCloud();
-            }
+            const modal = document.getElementById('settings-modal');
+            if (modal) modal.style.display = 'none';
 
-            // Force refresh of the menu - clear cache first
-            localStorage.removeItem('br_menu');
-            this.db.loadMenu().then(() => {
-                const modal = document.getElementById('settings-modal');
-                if (modal) modal.style.display = 'none';
-
-                // Trigger re-renders
-                if (this.currentPortal === 'rest-desk') this.renderRestDesk();
-                if (this.currentPortal === 'rest-waiter') this.renderWaiterMenu('rest-waiter');
-                if (this.currentPortal === 'hotel-waiter') this.renderWaiterMenu('hotel-waiter');
-
-                this.addNotification('system', `Menu URL updated to ${url || 'default'}. Cloud sync active.`, 'reception');
-                alert('Success! Menu URL Saved & Synced. All devices (Waiter, Reception, QR) will now update automatically.');
-            }).catch(err => {
-                console.error("Manual sync failed", err);
-                alert('Warning: Settings saved locally but menu fetching failed. Please check the URL.');
-            });
+            // Trigger re-renders
+            if (this.currentPortal === 'rest-desk') this.renderRestDesk();
+            if (this.currentPortal.includes('waiter')) this.renderWaiterMenu(this.currentPortal);
+            
+        } catch (err) {
+            console.error("Manual sync failed", err);
+            alert('Warning: Settings saved locally but menu fetching failed.');
         }
     }
 

@@ -225,42 +225,134 @@ class GuestPortal {
         const grid = document.getElementById('menu-grid');
         if (!grid) return;
         grid.innerHTML = '';
+        const categories = {};
         this.menu.forEach(item => {
             if (item.isAvailable === false) return;
+            const cat = item.category || 'General';
+            if (!categories[cat]) categories[cat] = [];
+            categories[cat].push(item);
+        });
 
-            const card = document.createElement('div');
-            card.className = 'food-card';
-            
-            const itemImg = item.photo || item.image || "";
-            const imageHtml = itemImg.trim() !== '' 
-                ? `<img src="${itemImg}" class="food-icon" alt="${item.name}" onerror="this.src='placeholder_food.png'">` 
-                : `<div class="food-icon">${item.icon || '🍽️'}</div>`;
+        Object.keys(categories).forEach(catName => {
+            // Category Title
+            const catHeader = document.createElement('div');
+            catHeader.className = 'menu-title';
+            catHeader.style.marginTop = '2rem';
+            catHeader.innerText = catName;
+            grid.appendChild(catHeader);
+
+            categories[catName].forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'food-card';
                 
-            const price = item.price || "--";
-            const desc = item.description || "No description available.";
-            const descHtml = `<div class="food-desc">${desc}</div>`;
-                
-            card.innerHTML = `
-                ${imageHtml}
-                <div class="food-info">
-                    <div class="food-name">${item.name || "Unknown Item"}</div>
-                    ${descHtml}
-                    <div class="food-price">₹${price}</div>
-                </div>
-                <button class="add-btn" onclick="portal.addToCart('${item.id}')">ADD</button>
-            `;
-            grid.appendChild(card);
+                const itemImg = item.imageUrl || item.photo || item.image || "";
+                const imageHtml = itemImg.trim() !== '' 
+                    ? `<img src="${itemImg}" class="food-icon" alt="${item.name}" onerror="this.src='placeholder_food.png'">` 
+                    : `<div class="food-icon">${item.icon || '🍽️'}</div>`;
+                    
+                const price = item.price || "--";
+                const desc = item.description || "No description available.";
+                const descHtml = `<div class="food-desc">${desc}</div>`;
+                    
+                card.innerHTML = `
+                    ${imageHtml}
+                    <div class="food-info">
+                        <div class="food-name">${item.name || "Unknown Item"}</div>
+                        ${descHtml}
+                        <div class="food-price">₹${price}</div>
+                    </div>
+                    <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
+                `;
+                grid.appendChild(card);
+            });
         });
     }
 
-    addToCart(itemId) {
+    promptPortion(itemId) {
         const item = this.menu.find(m => m.id === itemId);
         if (!item) return;
-        const existing = this.cart.find(c => c.id === itemId);
-        if (existing) existing.qty++;
-        else this.cart.push({ ...item, qty: 1 });
+
+        // If no portion type, add directly
+        if (!item.portionType || item.portionType === 'None') {
+            this.executeAddToCart(item, 'Regular', 'Standard', item.price);
+            return;
+        }
+
+        this.pendingItem = item;
+        document.getElementById('pm-item-name').innerText = item.name;
+        document.getElementById('pm-item-desc').innerText = item.description || "Select your portion size.";
+
+        const container = document.getElementById('pm-options-container');
+        container.innerHTML = '';
+
+        let options = [];
+        const type = item.portionType;
+
+        if (type === 'Plate' || type === 'Plate (Half/Full)') {
+            options = [
+                { label: 'Full Plate', val: 'Full', price: item.price },
+                { label: 'Half Plate', val: 'Half', price: item.basePrice_Half || Math.floor(item.price * 0.6) }
+            ];
+        } else if (type === 'Bottle') {
+            options = [
+                { label: '1L Bottle', val: '1L', price: item.price },
+                { label: '750ml', val: '750ml', price: Math.floor(item.price * 0.75) },
+                { label: '2L Bottle', val: '2L', price: Math.floor(item.price * 1.8) }
+            ];
+        } else if (type === 'Cup') {
+            options = [
+                { label: 'Standard Cup', val: 'Regular', price: item.price },
+                { label: 'Large/Pot', val: 'Large', price: Math.floor(item.price * 1.5) }
+            ];
+        } else {
+            options = [{ label: 'Standard', val: 'Regular', price: item.price }];
+        }
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'add-btn btn-block';
+            btn.style.padding = '1.25rem';
+            btn.innerHTML = `<div style="display:flex; justify-content:space-between;"><span>${opt.label}</span><span>₹${opt.price}</span></div>`;
+            btn.onclick = () => {
+                this.executeAddToCart(item, opt.val, opt.label, opt.price);
+                document.getElementById('portion-modal').style.display = 'none';
+            };
+            container.appendChild(btn);
+        });
+
+        document.getElementById('portion-modal').style.display = 'flex';
+    }
+
+    executeAddToCart(item, variantVal, variantLabel, price) {
+        const finalId = `${item.id}-${variantVal}`;
+        const existing = this.cart.find(c => c.id === finalId);
+        
+        if (existing) {
+            existing.qty++;
+        } else {
+            this.cart.push({
+                ...item,
+                id: finalId,
+                name: variantVal !== 'Regular' ? `${item.name} [${variantLabel}]` : item.name,
+                price: price,
+                qty: 1,
+                variant: variantLabel
+            });
+        }
 
         this.updateCartBar();
+        
+        // Visual feedback
+        const btn = document.querySelector(`button[onclick*="${item.id}"]`);
+        if (btn) {
+            const originalText = btn.innerText;
+            btn.innerText = "✓ ADDED";
+            btn.style.background = "#22c55e";
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.background = "";
+            }, 1000);
+        }
     }
 
     updateCartBar() {
