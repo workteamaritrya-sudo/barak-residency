@@ -3355,52 +3355,36 @@ class PMSApp {
             return;
         }
 
-        this.showToast("Fetching Order History & Calculating GST...", "info");
+        this.showToast("Generating Final Bill...", "info");
 
         const guest = room.guest;
         const guestId = guest.cloudId || room.currentGuestId;
 
-        // 2. Itemized Billing Logic: Build from billSummary first, then fallback to orders collection
-        let orders = [];
-        if (window.FirebaseSync && window.firebaseFS) {
-            const { collection, query, where, getDocs } = window.firebaseHooks;
-            // Primary: billSummary array already stored in guest document
-            const billSummary = guest.billSummary || [];
-            if (billSummary.length > 0) {
-                orders = billSummary;
-            } else {
-                // Fallback: query the orders collection
-                try {
-                    const ordersRef = collection(window.firebaseFS, 'orders');
-                    const q = query(ordersRef, where('roomNumber', '==', roomNum.toString()));
-                    const snap = await getDocs(q);
-                    snap.forEach(d => {
-                        const o = d.data();
-                        if (o.status === 'Delivered' || o.status === 'delivered') orders.push(o);
-                    });
-                } catch (e) { console.error("History fetch failed", e); }
-            }
-        } else {
-            orders = guest.billSummary || guest.foodOrders || [];
-        }
-
-        // 3. Advanced GST Calculator
-        const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : guest.checkInTime);
+        // 1. Calculate Timings & Days
+        const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : (guest.checkInTime || guest.check_in_date || Date.now()));
         const days = this.calculateBilledDays(checkInTimeValue);
-        const tariff = Number(guest.tariff) || 0;
-        const roomSubtotal = days * tariff;
+        
+        // 2. Aggregate Food Orders (Itemized)
+        let orders = this.db.kitchenOrders.filter(o => {
+            const oTime = o.timestamp && typeof o.timestamp === 'object' && o.timestamp.seconds ? o.timestamp.seconds * 1000 : (Number(o.timestamp) || 0);
+            return (o.roomNumber == roomNum || o.roomId == roomNum) && 
+                   oTime >= (checkInTimeValue - 300000) && // 5 min buffer
+                   o.status !== 'Cancelled' && o.status !== 'cancelled';
+        });
 
-        // Room GST Rules
-        let roomGSTPerc = 0;
-        if (tariff > 7500) roomGSTPerc = 18;
-        else if (tariff > 1000) roomGSTPerc = 12;
+        if (orders.length === 0 && guest.billSummary) orders = guest.billSummary;
+
+        // 3. GST & Totals
+        const tariff = Number(guest.tariff) || Number(room.tariff) || 0;
+        const roomSubtotal = days * tariff;
+        let roomGSTPerc = (tariff > 7500) ? 18 : ((tariff > 1000) ? 12 : 0);
         const roomGSTValue = (roomSubtotal * roomGSTPerc) / 100;
 
-        const foodSubtotal = orders.reduce((sum, o) => sum + (Number(o.total_price || o.total_amount || o.total) || 0), 0);
+        const foodSubtotal = orders.reduce((sum, o) => sum + (Number(o.total_price || o.total || o.total_amount || 0)), 0);
         const foodGSTPerc = 5;
         const foodGSTValue = (foodSubtotal * foodGSTPerc) / 100;
 
-        const advance = Number(guest.advance) || 0;
+        const advance = Number(guest.advance) || Number(guest.advancePaid) || 0;
         const grandTotal = (roomSubtotal + roomGSTValue) + (foodSubtotal + foodGSTValue);
         const balancePayable = grandTotal - advance;
 
@@ -3424,139 +3408,123 @@ class PMSApp {
         };
 
         try {
-            // 4. Printable Invoice UI (3 Copies: Guest, Hotel, Accounts)
             const printArea = document.getElementById('print-area');
-            if (!printArea) {
-                console.error("Print area missing from DOM");
-                this.showToast("Print error: div#print-area not found.", "error");
-                return;
+            if (printArea) {
+                // User Mission: 2 Copies Only
+                const invoiceCopyTypes = ['Guest Copy', 'Hotel / Office Copy'];
+                printArea.innerHTML = ''; 
+                const checkInDateStr = this.db.formattedIST(checkInTimeValue);
+                const checkOutDateStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+                const safeBalance = isNaN(balancePayable) ? 0 : balancePayable;
+
+                invoiceCopyTypes.forEach(copyType => {
+                    const copyHTML = `
+                        <div class="printable-invoice" style="padding: 40px; font-family: 'Segoe UI', sans-serif; color: #1a1a1a; background: white; width: 100%; min-height: 1100px; border-bottom: 2px dashed #ccc; margin-bottom: 50px; page-break-after: always; visibility: visible !important;">
+                            <div style="text-align: right; font-weight: bold; color: #888; font-size: 0.8rem; margin-bottom: 10px;">${copyType}</div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #D4AF37; padding-bottom: 20px; margin-bottom: 30px;">
+                                <div>
+                                    <h1 style="margin: 0; color: #1a237e; font-size: 2.2rem; letter-spacing: 1px;">BARAK RESIDENCY</h1>
+                                    <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">Modern Luxury • Silchar, Assam</p>
+                                    <p style="margin: 2px 0; font-size: 0.8rem; color: #888;">GSTIN: 18AABCB1234F1Z5</p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <h2 style="margin: 0; color: #D4AF37; font-size: 1.5rem;">TAX INVOICE</h2>
+                                    <p style="margin: 5px 0; font-size: 0.9rem;">Inv No: BR/${roomNum}/${Date.now().toString().substr(-6)}</p>
+                                    <p style="margin: 0; font-size: 0.9rem;">Date: ${new Date().toLocaleDateString()}</p>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 35px; background: #fcfcfc; padding: 20px; border-radius: 8px;">
+                                <div>
+                                    <h4 style="margin: 0 0 10px 0; color: #D4AF37; border-bottom: 1px solid #eee; padding-bottom: 5px;">GUEST DETAILS</h4>
+                                    <p style="margin: 4px 0;"><strong>Name:</strong> ${guest.guestName || guest.name || 'Walk-in'}</p>
+                                    <p style="margin: 4px 0;"><strong>Phone:</strong> ${guest.guestPhone || guest.phone || '---'}</p>
+                                    <p style="margin: 4px 0;"><strong>ID Ref:</strong> ${(guestId || '---').toString().substr(0, 10).toUpperCase()}</p>
+                                </div>
+                                <div>
+                                    <h4 style="margin: 0 0 10px 0; color: #D4AF37; border-bottom: 1px solid #eee; padding-bottom: 5px;">STAY DETAILS</h4>
+                                    <p style="margin: 4px 0;"><strong>Room:</strong> ${roomNum}</p>
+                                    <p style="margin: 4px 0;"><strong>Check-in:</strong> ${checkInDateStr}</p>
+                                    <p style="margin: 4px 0;"><strong>Check-out:</strong> ${checkOutDateStr}</p>
+                                </div>
+                            </div>
+
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                                <thead>
+                                    <tr style="background: #1a237e; color: white;">
+                                        <th style="padding: 12px; text-align: left; border: 1px solid #eee;">Particulars</th>
+                                        <th style="padding: 12px; text-align: center; border: 1px solid #eee;">Days/Qty</th>
+                                        <th style="padding: 12px; text-align: right; border: 1px solid #eee;">Rate</th>
+                                        <th style="padding: 12px; text-align: center; border: 1px solid #eee;">GST</th>
+                                        <th style="padding: 12px; text-align: right; border: 1px solid #eee;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #eee;">Luxury Room Accommodation</td>
+                                        <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${days}</td>
+                                        <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${roomSubtotal.toFixed(2)}</td>
+                                        <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${roomGSTPerc}%</td>
+                                        <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${(roomSubtotal + roomGSTValue).toFixed(2)}</td>
+                                    </tr>
+                                    ${orders.length > 0 ? `
+                                    <tr style="background:#f8faff;">
+                                        <td colspan="5" style="padding: 8px 12px; border: 1px solid #eee; font-weight:bold; color:#1a237e;">Food & Beverage Summary</td>
+                                    </tr>
+                                    ${orders.map((o, idx) => {
+                                        const total = Number(o.total_price || o.total || o.total_amount || 0);
+                                        const items = (o.items || []).map(i => typeof i === 'object' ? `${i.name} x${i.qty||1}` : i).join(', ');
+                                        return `
+                                        <tr>
+                                            <td style="padding:8px 12px; border:1px solid #eee; font-size:0.8rem;">
+                                                Order #${o.orderSerial || o.id || (idx+1)}<br><small>${items}</small>
+                                            </td>
+                                            <td style="padding:8px 12px; text-align:center; border:1px solid #eee;">1</td>
+                                            <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${total.toFixed(2)}</td>
+                                            <td style="padding:8px 12px; text-align:center; border:1px solid #eee;">5%</td>
+                                            <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${(total * 1.05).toFixed(2)}</td>
+                                        </tr>`;
+                                    }).join('')}
+                                    ` : ''}
+                                </tbody>
+                                <tfoot>
+                                    <tr style="background: #fcfcfc;">
+                                        <td colspan="4" style="padding:12px; text-align:right; border:1px solid #eee; font-weight:bold;">Grand Total</td>
+                                        <td style="padding:12px; text-align:right; border:1px solid #eee; font-weight:bold; color:#1a237e;">₹${grandTotal.toFixed(2)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="4" style="padding:12px; text-align:right; border:1px solid #eee; color:#2e7d32;">Less: Advance Received</td>
+                                        <td style="padding:12px; text-align:right; border:1px solid #eee; color:#2e7d32;">- ₹${advance.toFixed(2)}</td>
+                                    </tr>
+                                    <tr style="background: #fff8e1; font-size: 1.2rem;">
+                                        <td colspan="4" style="padding:12px; text-align:right; border:1px solid #eee; font-weight:900;">Net Amount Payable</td>
+                                        <td style="padding:12px; text-align:right; border:1px solid #eee; font-weight:900; color:#c62828;">₹${safeBalance.toFixed(2)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+
+                            <div style="margin-bottom: 30px; padding: 15px; border: 1px dashed #bbb; font-size: 0.85rem;">
+                                <strong>Amount in Words:</strong> ${numberToWords(safeBalance)}
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; margin-top: 60px;">
+                                <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 8px; font-size: 0.8rem;">Guest Signature</div>
+                                <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 8px; font-size: 0.8rem;">Authorized Signatory</div>
+                            </div>
+                        </div>
+                    `;
+                    printArea.innerHTML += copyHTML;
+                });
+                
+                console.log("[Print] Bill generated. Total Items:", orders.length);
+                setTimeout(() => { window.print(); }, 800);
             }
-
-            const invoiceCopyTypes = ['Guest Copy', 'Hotel Copy', 'Accounts Copy'];
-            printArea.innerHTML = ''; 
-
-            const checkInDateStr = this.db.formattedIST(checkInTimeValue);
-            const checkOutDateStr = new Date().toLocaleString();
-            const safeBalance = isNaN(balancePayable) ? 0 : balancePayable;
-
-            invoiceCopyTypes.forEach(copyType => {
-                const copyHTML = `
-                    <div class="printable-invoice" style="padding: 40px; font-family: 'Segoe UI', sans-serif; color: #1a1a1a; background: white; width: 100%; border-bottom: 2px dashed #ccc; margin-bottom: 50px; page-break-after: always;">
-                        <div style="text-align: right; font-weight: bold; color: #888; font-size: 0.8rem; margin-bottom: 10px;">${copyType}</div>
-                        <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #D4AF37; padding-bottom: 20px; margin-bottom: 30px;">
-                            <div>
-                                <h1 style="margin: 0; color: #1a237e; font-size: 2.2rem; letter-spacing: 1px;">BARAK RESIDENCY</h1>
-                                <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">Luxury Apartment & Hotel • Silchar, Assam</p>
-                                <p style="margin: 2px 0; font-size: 0.8rem; color: #888;">GSTIN: 18AABCB1234F1Z5</p>
-                            </div>
-                            <div style="text-align: right;">
-                                <h2 style="margin: 0; color: #D4AF37; font-size: 1.5rem;">TAX INVOICE</h2>
-                                <p style="margin: 5px 0; font-size: 0.9rem;">Invoice No: BR/${roomNum}/${Date.now().toString().substr(-6)}</p>
-                                <p style="margin: 0; font-size: 0.9rem;">Date: ${new Date().toLocaleDateString()}</p>
-                            </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 35px; background: #fcfcfc; padding: 20px; border-radius: 8px;">
-                            <div>
-                                <h4 style="margin: 0 0 10px 0; color: #D4AF37; border-bottom: 1px solid #eee; padding-bottom: 5px;">GUEST INFORMATION</h4>
-                                <p style="margin: 4px 0;"><strong>Name:</strong> ${guest.guestName || guest.name || 'Walk-in Guest'}</p>
-                                <p style="margin: 4px 0;"><strong>Phone:</strong> ${guest.guestPhone || guest.phone || '---'}</p>
-                                <p style="margin: 4px 0;"><strong>ID Ref:</strong> ${(guestId || 'PENDING').toString().substr(0, 8).toUpperCase()}</p>
-                            </div>
-                            <div>
-                                <h4 style="margin: 0 0 10px 0; color: #D4AF37; border-bottom: 1px solid #eee; padding-bottom: 5px;">STAY LOGISTICS</h4>
-                                <p style="margin: 4px 0;"><strong>Room No:</strong> ${roomNum}</p>
-                                <p style="margin: 4px 0;"><strong>Check-in:</strong> ${checkInDateStr}</p>
-                                <p style="margin: 4px 0;"><strong>Check-out:</strong> ${checkOutDateStr}</p>
-                            </div>
-                        </div>
-
-                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                            <thead>
-                                <tr style="background: #1a237e; color: white;">
-                                    <th style="padding: 12px; text-align: left; border: 1px solid #eee;">Service Description</th>
-                                    <th style="padding: 12px; text-align: center; border: 1px solid #eee;">Qty/Days</th>
-                                    <th style="padding: 12px; text-align: right; border: 1px solid #eee;">Base Price</th>
-                                    <th style="padding: 12px; text-align: center; border: 1px solid #eee;">GST %</th>
-                                    <th style="padding: 12px; text-align: right; border: 1px solid #eee;">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td style="padding: 12px; border: 1px solid #eee;">Room Accommodation (Luxury)</td>
-                                    <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${days}</td>
-                                    <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${roomSubtotal.toFixed(2)}</td>
-                                    <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${roomGSTPerc}%</td>
-                                    <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${(roomSubtotal + roomGSTValue).toFixed(2)}</td>
-                                </tr>
-                                ${orders.length > 0 ? `
-                                <tr style="background:#fffbf0;">
-                                    <td colspan="5" style="padding: 8px 12px; border: 1px solid #eee; font-weight:900; color:#D4AF37; font-size: 0.8rem;">FOOD & BEVERAGE — ITEMIZATION</td>
-                                </tr>
-                                ${orders.map((o, idx) => {
-                                    const oTotal = Number(o.total_price || o.total_amount || o.total) || 0;
-                                    const itemsDetail = (o.items || []).map(i => {
-                                        const name = typeof i === 'object' ? i.name : i;
-                                        const qty = typeof i === 'object' ? (i.qty || 1) : 1;
-                                        return `${name} x${qty}`;
-                                    }).join(', ');
-                                    return `<tr>
-                                        <td style="padding:6px 12px; border:1px solid #eee; font-size:0.75rem;">
-                                            Order #${o.order_id || o.id || (idx+1)}<br>
-                                            <small style="color:#666;">${itemsDetail}</small>
-                                        </td>
-                                        <td style="padding:6px 12px; text-align:center; border:1px solid #eee;">1</td>
-                                        <td style="padding:6px 12px; text-align:right; border:1px solid #eee;">₹${oTotal.toFixed(2)}</td>
-                                        <td style="padding:6px 12px; text-align:center; border:1px solid #eee;">5%</td>
-                                        <td style="padding:6px 12px; text-align:right; border:1px solid #eee;">₹${(oTotal * 1.05).toFixed(2)}</td>
-                                    </tr>`;
-                                }).join('')}
-                                ` : ''}
-                            </tbody>
-                            <tfoot>
-                                <tr style="background: #f9f9f9; font-weight: bold;">
-                                    <td colspan="4" style="padding: 12px; text-align: right; border:1px solid #eee;">Gross Total (Inc. Taxes)</td>
-                                    <td style="padding: 12px; text-align: right; border:1px solid #eee; color: #1a237e;">₹${grandTotal.toFixed(2)}</td>
-                                </tr>
-                                <tr style="color: #2e7d32;">
-                                    <td colspan="4" style="padding: 12px; text-align: right; border:1px solid #eee;">Less: Advance Paid</td>
-                                    <td style="padding: 12px; text-align: right; border:1px solid #eee;">- ₹${advance.toFixed(2)}</td>
-                                </tr>
-                                <tr style="background: #fefcf0; font-size: 1.3rem; color: #c62828;">
-                                    <td colspan="4" style="padding: 12px; text-align: right; border:1px solid #eee;">Net Balance Payable</td>
-                                    <td style="padding: 12px; text-align: right; border:1px solid #eee; font-weight: 900;">₹${safeBalance.toFixed(2)}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-
-                        <div style="margin-bottom: 20px; padding: 10px; background: #fdfdfd; border: 1px dashed #ddd; border-radius: 4px;">
-                            <p style="margin: 0; font-size: 0.8rem; font-style: italic; color: #444;"><strong>Amount in Words:</strong> ${numberToWords(safeBalance)}</p>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; margin-top: 40px;">
-                            <div style="text-align: center; width: 200px;">
-                                <div style="height: 40px;"></div>
-                                <div style="border-top: 1px solid #333; padding-top: 5px; font-size: 0.7rem;">Guest Signature</div>
-                            </div>
-                            <div style="text-align: center; width: 200px;">
-                                <p style="margin: 0; font-weight: bold; font-size: 0.8rem;">For BARAK RESIDENCY</p>
-                                <div style="height: 40px;"></div>
-                                <div style="border-top: 1px solid #333; padding-top: 5px; font-size: 0.7rem;">Authorized Signatory</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                printArea.innerHTML += copyHTML;
-            });
-
-            setTimeout(() => { window.print(); }, 500);
-
         } catch (e) {
             console.error("Print UI Error", e);
             this.showToast("Critical UI error during print generation.", "error");
         }
 
-        // 5. Finalize State
+        // Finalize state
         this.finalInvoiceData = {
             roomNum,
             guestId,
@@ -3565,7 +3533,6 @@ class PMSApp {
             totals: { roomSubtotal, roomGSTValue, foodSubtotal, foodGSTValue, grandTotal, advance, balancePayable },
             timestamp: Date.now()
         };
-        
         room.billGenerated = true;
         this.db.persistRoom(roomNum);
         this.updateCommandCenter();
