@@ -2,7 +2,7 @@ import { firebaseConfig } from "./firebase-config.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
 import { getDatabase, ref, set, onValue, get, push } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, getDocs, or, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, getDocs, or, enableIndexedDbPersistence, deleteDoc, Timestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
 // Initialize Firebase with Public Configuration
@@ -23,7 +23,7 @@ enableIndexedDbPersistence(firestore).catch((err) => {
 // Make available globally for app.js and order.js
 window.firebaseFS = firestore;
 window.firebaseST = storage;
-window.firebaseHooks = { doc, collection, query, where, updateDoc, addDoc, serverTimestamp, onSnapshot, getDocs, setDoc, sRef, uploadBytes, getDownloadURL, or };
+window.firebaseHooks = { doc, collection, query, where, updateDoc, addDoc, serverTimestamp, onSnapshot, getDocs, setDoc, sRef, uploadBytes, getDownloadURL, or, deleteDoc, Timestamp };
 
 class FirebaseSyncEngine {
     constructor() {
@@ -205,26 +205,26 @@ class FirebaseSyncEngine {
 
     async pushGuestToCloud(guestObj) {
         try {
+            const { collection, addDoc, serverTimestamp, Timestamp } = window.firebaseHooks;
             const guestsRef = collection(window.firebaseFS, 'guests');
             const dataToSave = {
                 fullName: guestObj.name || guestObj.fullName || "Unknown Guest",
                 phoneNumber: guestObj.phone || guestObj.phoneNumber || "---",
                 age: Number(guestObj.age) || 0,
-                idImageUrl: guestObj.idProofUrl || guestObj.idImageUrl || "",
+                idImageUrl: guestObj.idProofUrl || guestObj.idImageUrl || null,
                 advancePaid: Number(guestObj.advance) || Number(guestObj.advancePaid) || 0,
                 roomNumber: guestObj.room || guestObj.roomNumber,
                 tariff: Number(guestObj.tariff) || 0,
-                checkInDate: guestObj.checkInDate || new Date().toISOString(),
+                checkInDate: Timestamp.now(), // Fixed: Use Firestore Timestamp
                 checkInTimestamp: serverTimestamp(),
                 foodOrders: guestObj.foodOrders || [],
-                foodSync: guestObj.foodSync || "active",
+                foodSync: "active",
                 status: 'active'
             };
 
             const guestDoc = await addDoc(guestsRef, dataToSave);
 
             // Mission 3: Government Compliance Log (Duplicate Snapshot)
-            // Save to police_logs for permanent record
             const policeRef = collection(window.firebaseFS, 'police_logs');
             await addDoc(policeRef, {
                 ...dataToSave,
@@ -237,6 +237,49 @@ class FirebaseSyncEngine {
         } catch(e) { 
             console.error("Cloud Guest Sync Failed", e); 
             throw e; 
+        }
+    }
+
+    async deleteGuestFromCloud(guestId) {
+        try {
+            const { doc, deleteDoc } = window.firebaseHooks;
+            const guestRef = doc(window.firebaseFS, 'guests', guestId);
+            await deleteDoc(guestRef);
+        } catch(e) { console.error("Guest deletion failed", e); }
+    }
+
+    async finishCheckoutTransaction(roomNumber, billObj, guestId) {
+        try {
+            const { doc, updateDoc, collection, addDoc, serverTimestamp, deleteDoc } = window.firebaseHooks;
+            
+            // Step B: Create record in ledger
+            const ledgerRef = collection(window.firebaseFS, 'ledger');
+            await addDoc(ledgerRef, { 
+                ...billObj, 
+                timestamp: serverTimestamp(),
+                logType: 'ROOM_CHECKOUT'
+            });
+
+            // Step C: Update room collection
+            const roomRef = doc(window.firebaseFS, 'rooms', roomNumber.toString());
+            await updateDoc(roomRef, {
+                status: 'available',
+                guest: null,
+                currentGuestId: null,
+                orderSerial: 0, // Reset serial
+                last_updated: serverTimestamp()
+            });
+
+            // Step D: Delete from guests collection
+            if (guestId) {
+                const guestRef = doc(window.firebaseFS, 'guests', guestId);
+                await deleteDoc(guestRef);
+            }
+
+            console.log("[Firebase] Checkout Transaction Successful");
+        } catch(e) {
+            console.error("Checkout Transaction Failed", e);
+            throw e;
         }
     }
 

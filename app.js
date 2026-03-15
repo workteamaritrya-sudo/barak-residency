@@ -1000,23 +1000,28 @@ class PMSApp {
         }
 
         const guestData = {
-            name: name,
-            fullName: name,
-            phone: phone,
-            phoneNumber: phone,
-            age: age,
-            idProofUrl: idUrl,
-            idImageUrl: idUrl,
-            advance: Number(advance),
-            advancePaid: Number(advance),
+            name: name || "Unknown Guest",
+            fullName: name || "Unknown Guest",
+            phone: phone || "---",
+            phoneNumber: phone || "---",
+            age: parseInt(age) || 0,
+            idProofUrl: idUrl || null,
+            idImageUrl: idUrl || null,
+            advance: Number(advance) || 0,
+            advancePaid: Number(advance) || 0,
             room: roomNum,
             roomNumber: roomNum,
-            tariff: Number(tariff),
-            checkInDate: new Date().toISOString(),
+            tariff: Number(tariff) || 0,
+            checkInDate: (window.firebaseHooks && window.firebaseHooks.Timestamp) ? window.firebaseHooks.Timestamp.now() : new Date().toISOString(),
             checkInTimestamp: Date.now(),
             foodOrders: [],
             foodSync: "active"
         };
+        
+        // Ensure no undefined values
+        Object.keys(guestData).forEach(key => {
+            if (guestData[key] === undefined) guestData[key] = null;
+        });
 
         try {
             // Mission 1 & 3: Push Guest and Government Compliance Log
@@ -1075,30 +1080,38 @@ class PMSApp {
         document.getElementById('cc-guest-phone').innerText = guest.phone;
 
         const idEl = document.getElementById('cc-guest-id');
-        idEl.innerText = guest.idStatus;
-        idEl.className = 'meta-value status-badge';
-        if (guest.idStatus === 'Verified') {
+        const idUrl = guest.idProofUrl || guest.idImageUrl;
+        
+        if (idUrl) {
+            idEl.innerHTML = `<a href="${idUrl}" target="_blank" style="color: inherit; text-decoration: none;">View ID</a>`;
             idEl.style.color = 'var(--color-green-400)';
             idEl.style.background = 'rgba(74, 222, 128, 0.1)';
         } else {
+            idEl.innerText = 'No ID Uploaded';
             idEl.style.color = 'var(--color-red-500)';
             idEl.style.background = 'rgba(239, 68, 68, 0.1)';
         }
 
-        document.getElementById('cc-checkin-datetime').innerText = this.db.formattedIST(guest.checkInTime);
+        const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : guest.checkInTime);
+        document.getElementById('cc-checkin-datetime').innerText = this.db.formattedIST(checkInTimeValue);
 
-        const daysBilled = this.calculateBilledDays(guest.checkInTime);
+        const daysBilled = this.calculateBilledDays(checkInTimeValue);
         document.getElementById('cc-stay-days').innerText = daysBilled;
 
-        document.getElementById('cc-tariff').innerText = `₹${guest.tariff}`;
+        const tariff = Number(guest.tariff) || 0;
+        document.getElementById('cc-tariff').innerText = `₹${tariff}`;
         document.getElementById('cc-ledger-days').innerText = daysBilled;
 
-        const roomTotal = guest.tariff * daysBilled;
+        const roomTotal = tariff * daysBilled;
         document.getElementById('cc-room-total').innerText = `₹${roomTotal}`;
-        document.getElementById('cc-food-total').innerText = `₹${guest.foodTotal}`;
-        document.getElementById('cc-advance').innerText = guest.advance;
+        
+        const foodTotal = Number(guest.foodTotal) || 0;
+        document.getElementById('cc-food-total').innerText = `₹${foodTotal}`;
+        
+        const advance = Number(guest.advance) || 0;
+        document.getElementById('cc-advance').innerText = advance;
 
-        const balance = roomTotal + guest.foodTotal - guest.advance;
+        const balance = roomTotal + foodTotal - advance;
         const balanceEl = document.getElementById('cc-balance');
         balanceEl.innerText = `₹${balance}`;
 
@@ -1174,41 +1187,55 @@ class PMSApp {
 
         this.showConfirm(`Checkout ${guest.name} from Room ${room.number}?`, async (confirmed) => {
             if (confirmed) {
-                // 2. Mission: Automated Billing
-                const days = this.calculateBilledDays(guest.checkInTime);
-                const roomBill = days * guest.tariff;
-                const totalBill = roomBill + guest.foodTotal;
-                const balance = totalBill - guest.advance;
+                this.showToast("Finalizing Cloud Checkout...", "info");
+                
+                // Step A: Calculation
+                const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : guest.checkInTime);
+                const days = this.calculateBilledDays(checkInTimeValue);
+                const tariff = Number(guest.tariff) || 0;
+                const roomBill = days * tariff;
+                const foodTotal = Number(guest.foodTotal) || 0;
+                const totalBill = roomBill + foodTotal;
+                const advance = Number(guest.advance) || 0;
+                const balance = totalBill - advance;
 
                 const billObj = {
                     roomNumber: room.number,
                     guestName: guest.name,
                     phone: guest.phone,
                     daysStayed: days,
-                    roomTariff: guest.tariff,
+                    roomTariff: tariff,
                     roomTotal: roomBill,
-                    foodTotal: guest.foodTotal,
-                    advance: guest.advance,
+                    foodTotal: foodTotal,
+                    advance: advance,
                     totalBill: totalBill,
                     balance: balance,
-                    checkInTime: guest.checkInTime,
+                    checkInTime: checkInTimeValue,
                     checkOutTime: Date.now(),
                     type: 'room_checkout'
                 };
 
-                console.log("[Checkout] Finalizing Bill:", billObj);
+                try {
+                    // Mission 2: Rewrite Checkout as Cloud Transaction
+                    if (window.FirebaseSync) {
+                        const guestId = guest.cloudId || room.currentGuestId;
+                        await window.FirebaseSync.finishCheckoutTransaction(room.number, billObj, guestId);
+                    }
 
-                // Push to Firestore (Billing & Ledger per Mission 2 & 4) - Mission 3
-                if (window.FirebaseSync) {
-                    await window.FirebaseSync.pushBillingToCloud(billObj);
-                    await window.FirebaseSync.updateRoomStatus(room.number, 'available');
+                    // Local Cleanup
+                    room.status = 'available';
+                    room.guest = null;
+                    room.currentGuestId = null;
+                    localStorage.setItem(`br_room_serial_${room.number}`, "0");
+                    
+                    this.db.persistRoom(this.selectedRoomId); 
+                    this.syncState(); 
+                    this.closeCommandCenter();
+                    this.showToast("Checkout Complete!", "success");
+                } catch(err) {
+                    console.error("Checkout failed", err);
+                    this.showToast("Checkout Failed. Please check connection.", "error");
                 }
-
-                room.status = 'available';
-                room.guest = null;
-                this.db.persistRoom(this.selectedRoomId); 
-                this.syncState(); 
-                this.closeCommandCenter();
             }
         });
     }
@@ -3626,7 +3653,15 @@ class PMSApp {
             const nowStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
             const nowIST = new Date(nowStr);
 
-            const ciStr = new Date(checkInDate).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+            // Handle Firestore Timestamp vs Javascript Date/Number
+            let parsedDate;
+            if (checkInDate && typeof checkInDate === 'object' && checkInDate.seconds) {
+                parsedDate = new Date(checkInDate.seconds * 1000);
+            } else {
+                parsedDate = new Date(checkInDate);
+            }
+
+            const ciStr = parsedDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
             const ciIST = new Date(ciStr);
 
             let count = 1;
