@@ -3727,8 +3727,11 @@ class PMSApp {
         // Source of truth: kitchenOrders for room type orders
         const roomOrders = this.db.kitchenOrders
             .filter(o => o.orderType === 'Room' || o.roomNumber)
-            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-            .slice(0, 20);
+            .sort((a, b) => {
+                const getTime = (t) => t && typeof t === 'object' && t.seconds ? t.seconds * 1000 : (t || 0);
+                return getTime(b.timestamp) - getTime(a.timestamp);
+            })
+            .slice(0, 25);
 
         if (roomOrders.length === 0) {
             container.innerHTML = '<div class="text-gray" style="text-align: center; margin-top: 2rem;">No active room orders</div>';
@@ -3819,7 +3822,8 @@ class PMSApp {
         // Filter: ONLY show Reception or Both
         this.db.notifications
             .filter(n => n.target === 'reception' || n.target === 'both')
-            .slice(0, 20)
+            .sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0))
+            .slice(0, 30)
             .forEach(n => {
                 const div = document.createElement('div');
                 div.className = `notification-card ${n.status}`;
