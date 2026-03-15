@@ -330,35 +330,101 @@ class CentralDatabase {
     }
 
     // Simplified CSV-to-Menu Sync
-    syncMenuFromCSV(csvText) {
-        const lines = csvText.trim().split('\n');
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    async syncMenuFromCSV(csvTextOrUrl) {
+        if (!window.firebaseFS) return false;
+        
+        try {
+            // CSV Parser handling quotes from Google Sheets
+            const parseCSVLine = (text) => {
+                const result = [];
+                let cur = '', inQuote = false;
+                for (let i = 0; i < text.length; i++) {
+                    const c = text[i];
+                    if (c === '"') inQuote = !inQuote;
+                    else if (c === ',' && !inQuote) { result.push(cur.trim()); cur = ''; }
+                    else cur += c;
+                }
+                result.push(cur.trim());
+                return result;
+            };
 
-        const newMenu = [];
-        for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',').map(v => v.trim());
-            if (values.length < headers.length) continue;
+            const triggerToast = (msg, type) => {
+                if (window.app && window.app.showToast) window.app.showToast(msg, type);
+                else console.log(`[Toast] ${type}: ${msg}`);
+            };
 
-            const item = {};
-            headers.forEach((h, idx) => {
-                let val = values[idx];
-                if (h === 'price') val = parseFloat(val) || 0;
-                if (h === 'isavailable') val = val.toLowerCase() === 'true';
-                item[h] = val;
-            });
+            triggerToast("Fetching and parsing fresh Menu Data...", "sync");
+            let csvText = csvTextOrUrl;
+            if (csvTextOrUrl.includes('http')) {
+                const res = await fetch(csvTextOrUrl);
+                csvText = await res.text();
+            }
 
-            // Ensure ID exists
-            if (!item.id) item.id = `ext-${i}`;
-            if (!item.isavailable && item.isavailable !== false) item.isavailable = true;
+            const lines = csvText.trim().split('\n');
+            const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/['"\s]/g, ''));
 
-            newMenu.push(item);
-        }
+            const newMenu = [];
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                const values = parseCSVLine(lines[i]);
+                if (values.length < headers.length) continue;
 
-        if (newMenu.length > 0) {
-            this.menu = newMenu;
-            localStorage.setItem('br_menu', JSON.stringify(this.menu));
-            this.triggerSyncEvent();
-            return true;
+                const item = {};
+                headers.forEach((h, idx) => {
+                    let val = values[idx] || '';
+                    if (val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length - 1);
+                    
+                    if (h.includes('price')) val = parseFloat(val) || 0;
+                    if (h === 'isavailable') val = val.toLowerCase() === 'true';
+                    if (h === 'imageurl') h = 'imageUrl';
+                    if (h === 'portiontype') h = 'portionType';
+                    if (h === 'baseprice_full') h = 'basePrice_Full';
+                    if (h === 'baseprice_half') h = 'basePrice_Half';
+                    item[h] = val;
+                });
+
+                // Legacy fallback mapping
+                if (item.basePrice_Full && (!item.price || item.price === 0)) item.price = item.basePrice_Full;
+
+                if (!item.id) item.id = `ext-${Date.now()}-${i}`;
+                if (item.isavailable === undefined) item.isavailable = true;
+                item.isAvailable = item.isavailable;
+                
+                // Keep name title cased for safety
+                if(item.name) item.name = item.name.trim();
+
+                newMenu.push(item);
+            }
+
+            if (newMenu.length > 0) {
+                const { collection, getDocs, doc, deleteDoc, setDoc } = window.firebaseHooks;
+                const menuCol = collection(window.firebaseFS, 'menuItems');
+                
+                // 1. Wipe old menu
+                triggerToast("Clearing old menu from database...", "sync");
+                const snapshot = await getDocs(menuCol);
+                const deletePromises = [];
+                snapshot.forEach(d => deletePromises.push(deleteDoc(d.ref)));
+                await Promise.all(deletePromises);
+                
+                // 2. Upload new menu
+                triggerToast(`Uploading ${newMenu.length} items to cloud...`, "sync");
+                const uploadPromises = [];
+                newMenu.forEach(item => {
+                    const docRef = doc(window.firebaseFS, 'menuItems', item.id);
+                    uploadPromises.push(setDoc(docRef, item));
+                });
+                await Promise.all(uploadPromises);
+                
+                this.menu = newMenu;
+                localStorage.setItem('br_menu', JSON.stringify(this.menu));
+                this.triggerSyncEvent();
+                triggerToast("Menu successfully synced to cloud!", "success");
+                return true;
+            }
+        } catch (e) {
+            console.error("Menu sync failed", e);
+            if (window.app && window.app.showToast) window.app.showToast("Menu sync failed. Check console.", "error");
         }
         return false;
     }
@@ -591,22 +657,47 @@ class PMSApp {
 
     showSecurityModal(portalId) {
         const title = document.getElementById('sec-title');
-        if (!title) return;
         const hint = document.getElementById('sec-hint');
-        if (!hint) return;
         const pwdInput = document.getElementById('sec-pwd');
-        if (!pwdInput) return;
+        const emailGroup = document.getElementById('sec-email-group');
+        const pwdLabel = document.getElementById('sec-pwd-label');
 
-        switch (portalId) {
-            case 'rest-waiter':
-            case 'hotel-waiter': title.innerText = "Waiter POS Auth"; hint.innerText = "1234"; break;
-            case 'kitchen': title.innerText = "Kitchen KDS Auth"; hint.innerText = "5678"; break;
-            default: title.innerText = "Admin Portal Auth"; hint.innerText = "9999"; break;
+        if (!title || !pwdInput || !emailGroup) return;
+
+        // Reset view
+        emailGroup.style.display = 'none';
+        pwdLabel.innerHTML = 'Password (<span id="sec-hint"></span>)';
+        const newHint = document.getElementById('sec-hint');
+
+        const isAdmin = ['rest-desk', 'owner'].includes(portalId);
+
+        if (isAdmin) {
+            title.innerText = "Executive Admin Login";
+            emailGroup.style.display = 'block';
+            pwdLabel.innerText = "Password";
+            if (newHint) newHint.parentElement.style.display = 'none';
+        } else {
+            switch (portalId) {
+                case 'rest-waiter':
+                case 'hotel-waiter': 
+                    title.innerText = "Waiter POS Auth"; 
+                    if (newHint) newHint.innerText = "1234"; 
+                    break;
+                case 'kitchen': 
+                    title.innerText = "Kitchen KDS Auth"; 
+                    if (newHint) newHint.innerText = "5678"; 
+                    break;
+            }
         }
 
         pwdInput.value = '';
         document.getElementById('security-modal').style.display = 'flex';
-        setTimeout(() => pwdInput.focus(), 100);
+        
+        if (isAdmin) {
+            document.getElementById('sec-email').focus();
+        } else {
+            pwdInput.focus();
+        }
     }
 
     closeSecurityModal() {
@@ -614,46 +705,72 @@ class PMSApp {
         this.pendingPortal = null;
     }
 
-    submitSecurity(e) {
+    async submitSecurity(e) {
         e.preventDefault();
+        const email = document.getElementById('sec-email').value;
         const pwd = document.getElementById('sec-pwd').value;
-        if (!pwd) return;
+        const submitBtn = document.getElementById('sec-submit-btn');
         const portal = this.pendingPortal;
 
-        let isValid = false;
-        if (['rest-waiter', 'hotel-waiter'].includes(portal) && pwd === '1234') isValid = true;
-        if (portal === 'kitchen' && pwd === '5678') isValid = true;
-        if (['rest-desk', 'owner'].includes(portal) && pwd === '9999') isValid = true;
-
-        if (!isValid) {
-            alert('Invalid Password. Access Denied.');
-            return;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Authenticating...";
         }
 
-        // Success
-        this.closeSecurityModal();
+        let isValid = false;
+        const isAdmin = ['rest-desk', 'owner'].includes(portal);
 
-        // Elegant Welcome Greeting
-        const greeting = document.createElement('div');
-        greeting.className = 'luxury-entry-greeting';
+        try {
+            if (isAdmin) {
+                // MISSION: FIXED LOGIN USING FIREBASE AUTH
+                if (window.firebaseHooks && window.firebaseAuth) {
+                    await window.firebaseHooks.signInWithEmailAndPassword(window.firebaseAuth, email, pwd);
+                    isValid = true;
+                } else {
+                    throw new Error("Firebase Auth not initialized.");
+                }
+            } else {
+                // Waiter/Kitchen remains on PIN for speed in high-pressure environments
+                if (['rest-waiter', 'hotel-waiter'].includes(portal) && pwd === '1234') isValid = true;
+                if (portal === 'kitchen' && pwd === '5678') isValid = true;
+            }
 
-        let role = "Administrator";
-        let sub = "System Access Granted";
-        if (portal.includes('waiter')) { role = "Dining Staff"; sub = "Service Portal Ready"; }
-        if (portal === 'kitchen') { role = "Executive Chef"; sub = "KDS Kitchen Sync Active"; }
-        if (portal === 'rest-desk') { role = "Restaurant Manager"; sub = "Command Center Online"; }
+            if (!isValid) {
+                throw new Error("Invalid Credentials. Access Denied.");
+            }
 
-        greeting.innerHTML = `<div>Welcome, <span style="color:var(--gold-primary)">${role}</span></div><div class="sub-greet">${sub}</div>`;
-        document.body.appendChild(greeting);
-        setTimeout(() => greeting.remove(), 3000);
+            // Success
+            this.closeSecurityModal();
 
-        // Enforce Full Screen & Stealth Header
-        document.body.classList.add('fs-mode');
-        document.body.classList.add('isolated-mode'); // Enable Isolation
-        const docEl = document.documentElement;
-        if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => { });
+            // Elegant Welcome Greeting
+            const greeting = document.createElement('div');
+            greeting.className = 'luxury-entry-greeting';
 
-        this.switchPortal(portal);
+            let role = "Administrator";
+            let sub = "System Access Granted";
+            if (portal.includes('waiter')) { role = "Dining Staff"; sub = "Service Portal Ready"; }
+            if (portal === 'kitchen') { role = "Executive Chef"; sub = "KDS Kitchen Sync Active"; }
+            if (portal === 'rest-desk') { role = "Restaurant Manager"; sub = "Command Center Online"; }
+
+            greeting.innerHTML = `<div>Welcome, <span style="color:var(--gold-primary)">${role}</span></div><div class="sub-greet">${sub}</div>`;
+            document.body.appendChild(greeting);
+            setTimeout(() => greeting.remove(), 3000);
+
+            // Enforce Full Screen & Stealth Header
+            document.body.classList.add('fs-mode');
+            document.body.classList.add('isolated-mode'); // Enable Isolation
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => { });
+
+            this.switchPortal(portal);
+        } catch (err) {
+            alert(err.message || "Authentication Failed.");
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Authenticate";
+            }
+        }
     }
 
     exitIsolatedMode() {

@@ -661,18 +661,20 @@
             <button class="btn btn-icon" onclick="app.closeSecurityModal()"
                 style="position: absolute; top: 1rem; left: 1rem; font-size: 1.5rem; color: var(--color-slate-400); background: none; border: none; cursor: pointer; padding: 0;">✖</button>
             <div class="security-header mb-4">
-                <h3 id="sec-title" class="color-primary m-0" style="margin: 0; text-align: center;">Restricted Access
-                </h3>
+                <h3 id="sec-title" class="color-primary m-0" style="margin: 0; text-align: center;">Restricted Access</h3>
             </div>
-            <p id="sec-desc" class="text-gray mb-4 text-sm" style="text-align: center;">Please enter your department
-                password.</p>
+            <p id="sec-desc" class="text-gray mb-4 text-sm" style="text-align: center;">Authenticate to access this department.</p>
 
             <form id="security-form" onsubmit="app.submitSecurity(event)">
+                <div id="sec-email-group" class="form-group mb-4" style="display: none;">
+                    <label>Email Address</label>
+                    <input type="email" id="sec-email" class="form-control" autocomplete="email" placeholder="admin@barak.com">
+                </div>
                 <div class="form-group mb-4">
-                    <label>Password (<span id="sec-hint"></span>)</label>
+                    <label id="sec-pwd-label">Password (<span id="sec-hint"></span>)</label>
                     <input type="password" id="sec-pwd" class="form-control" autocomplete="off" autofocus required>
                 </div>
-                <button type="submit" class="btn btn-primary w-100" style="padding: 1rem;">Authenticate</button>
+                <button type="submit" class="btn btn-primary w-100" style="padding: 1rem;" id="sec-submit-btn">Authenticate</button>
             </form>
         </div>
     </div>
@@ -898,11 +900,11 @@
         <div class="security-box" style="padding: 2.5rem 2rem; width: 400px; text-align: center; position: relative;">
 
             <div class="security-header mb-4">
-                <h3 class="m-0" id="qp-item-name" style="color: var(--color-primary);">Item Name</h3>
+                <h3 class="m-0" id="qp-item-name" style="color: var(--color-primary); padding-bottom: 10px;">Item Name</h3>
             </div>
 
             <!-- View 1: Select Variant -->
-            <div id="qp-view-variant" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div id="qp-view-variant" class="portion-options" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 20px;">
                 <p class="text-sm text-gray" style="margin-bottom: 0.5rem; margin-top: -1rem;">Select Portion Size</p>
                 <button class="btn btn-outline"
                     style="padding: 1.5rem; font-size: 1.1rem; border-color: var(--color-primary); color: var(--color-primary);"
@@ -915,7 +917,7 @@
             </div>
 
             <!-- View 2: Select Quantity -->
-            <div id="qp-view-quantity" style="display: none; flex-direction: column; gap: 1.5rem;">
+            <div id="qp-view-quantity" style="display: none; flex-direction: column; gap: 1.5rem; margin-top: 20px;">
                 <p class="text-sm text-gray" id="qp-selected-variant-text"
                     style="color: var(--color-primary); font-weight: bold; margin-bottom: 0px; margin-top: -1rem;">Full
                     Plate</p>
