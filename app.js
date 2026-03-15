@@ -560,6 +560,9 @@ class PMSApp {
                 if (roleTabs[role]) {
                     this.switchTab(roleTabs[role]);
                 }
+
+                const headerLogout = document.getElementById('header-logout');
+                if (headerLogout) headerLogout.style.display = 'block';
             } else {
                 if (hub) hub.classList.remove('no-sidebar');
                 if (sidebar) sidebar.style.display = 'flex';

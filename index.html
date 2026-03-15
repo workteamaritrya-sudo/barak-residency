@@ -60,7 +60,10 @@
             <section id="tab-dashboard" class="portal-content active">
                 <div class="luxury-portal-header">
                     <div class="luxury-identity golden-brand">EXECUTIVE ROOM DASHBOARD</div>
-                    <div class="portal-time-luxury" id="live-clock">--:-- --</div>
+                    <div style="display: flex; align-items: center; gap: 2rem;">
+                        <div class="portal-time-luxury" id="live-clock">--:-- --</div>
+                        <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" id="header-logout" style="display: none; border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
+                    </div>
                 </div>
                 
                 <div class="reception-split-container">
@@ -171,7 +174,10 @@
             <section id="tab-kitchen" class="portal-content">
                 <div class="luxury-portal-header">
                     <div class="luxury-identity golden-brand">KITCHEN DISPLAY SYSTEM</div>
-                    <div id="kds-pending-stats" class="text-gray">0 Orders Pending</div>
+                    <div style="display: flex; align-items: center; gap: 2rem;">
+                        <div id="kds-pending-stats" class="text-gray">0 Orders Pending</div>
+                        <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" class="header-logout-alt" style="border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
+                    </div>
                 </div>
                 <div class="kds-grid" id="kds-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; padding: 1.5rem;"></div>
             </section>
@@ -210,6 +216,7 @@
             <section id="tab-financials" class="portal-content">
                 <div class="luxury-portal-header">
                     <div class="luxury-identity golden-brand">FINANCIAL ANALYTICS</div>
+                    <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" style="border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
                 </div>
                 <div class="kpi-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: 1.5rem;">
                     <div class="kpi-card glass-panel luxury-glow">
