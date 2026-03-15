@@ -250,17 +250,39 @@ class GuestPortal {
             }
         });
 
-        // 3. Active Order Tracking
-        if (this.activeOrderId) {
-            const q = query(collection(window.firebaseFS, 'orders'), where('order_id', '==', this.activeOrderId));
-            onSnapshot(q, (snap) => {
-                if (!snap.empty) {
-                    const order = snap.docs[0].data();
-                    this.updateTrackingUI(order.status);
-                    this.updateActivePreview(true);
-                }
-            });
-        }
+        // 3. Active Order Tracking — listen to this room's orders in real-time
+        const { query: qFn, where: wFn } = window.firebaseHooks;
+        const roomOrdersQuery = qFn(
+            collection(window.firebaseFS, 'orders'),
+            wFn('roomNumber', '==', String(this.roomNumber))
+        );
+        onSnapshot(roomOrdersQuery, (snap) => {
+            if (snap.empty) return;
+            // Pick the most recent non-delivered order
+            const active = snap.docs
+                .map(d => d.data())
+                .filter(o => o.status !== 'Delivered' && o.status !== 'delivered')
+                .sort((a, b) => {
+                    const ta = a.timestamp?.seconds ? a.timestamp.seconds*1000 : (a.timestamp || 0);
+                    const tb = b.timestamp?.seconds ? b.timestamp.seconds*1000 : (b.timestamp || 0);
+                    return tb - ta;
+                });
+
+            if (active.length > 0) {
+                const latest = active[0];
+                this.activeOrderId = latest.order_id || latest.id;
+                localStorage.setItem(`br_active_order_${this.roomNumber}`, this.activeOrderId);
+                this.updateTrackingUI(latest.status);
+                this.updateActivePreview(true);
+            } else {
+                // All orders delivered — clear tracker after delay
+                setTimeout(() => {
+                    this.activeOrderId = null;
+                    localStorage.removeItem(`br_active_order_${this.roomNumber}`);
+                    this.updateActivePreview(false);
+                }, 5000);
+            }
+        });
     }
 
     updateBranding() {
@@ -506,14 +528,18 @@ class GuestPortal {
     async placeOrder() {
         if (this.cart.length === 0) return;
 
-        const orderId = this.activeOrderId || await window.FirebaseSync.getNextOrderSerial(this.roomNumber);
+        const orderId = await window.FirebaseSync.getNextOrderSerial(this.roomNumber);
         this.activeOrderId = orderId;
         localStorage.setItem(`br_active_order_${this.roomNumber}`, orderId);
 
         const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
         const orderObj = {
             order_id: orderId,
-            roomNumber: this.roomNumber,
+            id: orderId,
+            roomNumber: String(this.roomNumber),
+            roomId: String(this.roomNumber),
+            guestName: this.guestName || 'Guest',
+            salutation: this.salutation || '',
             items: this.cart,
             total_price: total,
             status: 'Pending',
@@ -523,6 +549,7 @@ class GuestPortal {
 
         if (window.FirebaseSync) {
             await window.FirebaseSync.pushOrderToCloud(orderObj);
+            console.log('[Order] Placed:', orderId, 'for Room', this.roomNumber);
         }
 
         this.cart = [];

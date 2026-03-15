@@ -289,18 +289,23 @@ class FirebaseSyncEngine {
     async pushOrderToCloud(orderObj) {
         try {
             const ordersRef = collection(window.firebaseFS, 'orders');
+            // Use order_id (not orderObj.id which is undefined) as the document key
+            const oid = orderObj.order_id || orderObj.id || `room-${orderObj.roomNumber}-${Date.now()}`;
+            const orderDocRef = doc(window.firebaseFS, 'orders', String(oid));
+
             let cloudStatus = orderObj.status || 'Pending';
-            // Unified Normalization
             if (cloudStatus === 'preparing') cloudStatus = 'Kitchen';
-            if (cloudStatus === 'ready') cloudStatus = 'Served';
-            if (cloudStatus === 'ontheway') cloudStatus = 'On the Way';
-            
-            await addDoc(ordersRef, {
+            if (cloudStatus === 'ready')     cloudStatus = 'Served';
+            if (cloudStatus === 'ontheway')  cloudStatus = 'On the Way';
+
+            await setDoc(orderDocRef, {
                 ...orderObj,
-                order_id: orderObj.id,
+                order_id: oid,
+                id: oid,
                 status: cloudStatus,
                 timestamp: serverTimestamp()
             });
+            console.log('[Order] Written to Firestore with id:', oid);
         } catch(e) { console.error("Cloud Order Push Failed", e); }
     }
 
