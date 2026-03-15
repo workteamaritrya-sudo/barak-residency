@@ -1180,65 +1180,92 @@ class PMSApp {
         this.syncState();
     }
 
-    checkout() {
-        const room = this.db.rooms[this.selectedRoomId];
-        const guest = room.guest;
-        if (!guest) return;
+    async checkoutRoom() {
+        const roomNum = this.selectedRoomId;
+        const room = this.db.rooms[roomNum];
+        if (!room || !room.guest) {
+            this.showToast("No active guest recorded for this room.", "warning");
+            return;
+        }
 
-        this.showConfirm(`Checkout ${guest.name} from Room ${room.number}?`, async (confirmed) => {
-            if (confirmed) {
-                this.showToast("Finalizing Cloud Checkout...", "info");
+        const guest = room.guest;
+        const guestId = guest.cloudId || room.currentGuestId;
+
+        this.showConfirm(`Authorize Checkout for ${guest.name} (Room ${roomNum})?`, async (confirmed) => {
+            if (!confirmed) return;
+
+            this.showToast("Executing Unified Cloud Checkout...", "info");
+
+            try {
+                const { doc, updateDoc, collection, addDoc, serverTimestamp, deleteDoc, getDoc } = window.firebaseHooks;
                 
-                // Step A: Calculation
+                // 1. NaN-Proof Calculations (Mission Fix)
+                const tariff = Number(guest.tariff) || 0;
+                const advance = Number(guest.advance) || 0;
+                const foodTotal = Number(guest.foodTotal) || 0;
+                
+                // The user's specific request for totalBill math
+                const totalBill = tariff - advance; 
+                
                 const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : guest.checkInTime);
                 const days = this.calculateBilledDays(checkInTimeValue);
-                const tariff = Number(guest.tariff) || 0;
-                const roomBill = days * tariff;
-                const foodTotal = Number(guest.foodTotal) || 0;
-                const totalBill = roomBill + foodTotal;
-                const advance = Number(guest.advance) || 0;
-                const balance = totalBill - advance;
+                const roomCharges = days * tariff;
+                const finalBalance = (roomCharges + foodTotal) - advance;
 
-                const billObj = {
-                    roomNumber: room.number,
-                    guestName: guest.name,
-                    phone: guest.phone,
-                    daysStayed: days,
-                    roomTariff: tariff,
-                    roomTotal: roomBill,
-                    foodTotal: foodTotal,
-                    advance: advance,
-                    totalBill: totalBill,
-                    balance: balance,
-                    checkInTime: checkInTimeValue,
-                    checkOutTime: Date.now(),
-                    type: 'room_checkout'
-                };
+                // 2. Step A: Mirror Data to Ledger for permanent records
+                const ledgerRef = collection(window.firebaseFS, 'ledger');
+                await addDoc(ledgerRef, {
+                    ...guest,
+                    checkoutSummary: {
+                        daysStayed: days,
+                        roomCharges: roomCharges,
+                        foodTotal: foodTotal,
+                        advancePaid: advance,
+                        totalBillValue: totalBill, // Specific field for requested math
+                        finalSettlement: finalBalance,
+                        checkOutTime: Date.now()
+                    },
+                    status: 'completed',
+                    logType: 'ROOM_CHECKOUT_TRANSACTION'
+                });
 
-                try {
-                    // Mission 2: Rewrite Checkout as Cloud Transaction
-                    if (window.FirebaseSync) {
-                        const guestId = guest.cloudId || room.currentGuestId;
-                        await window.FirebaseSync.finishCheckoutTransaction(room.number, billObj, guestId);
-                    }
+                // 3. Step B: Reset Room Identity
+                const roomRef = doc(window.firebaseFS, 'rooms', roomNum.toString());
+                await updateDoc(roomRef, {
+                    status: 'available',
+                    guest: null,
+                    currentGuestId: null,
+                    orderSerial: 0,
+                    last_updated: serverTimestamp()
+                });
 
-                    // Local Cleanup
-                    room.status = 'available';
-                    room.guest = null;
-                    room.currentGuestId = null;
-                    localStorage.setItem(`br_room_serial_${room.number}`, "0");
-                    
-                    this.db.persistRoom(this.selectedRoomId); 
-                    this.syncState(); 
-                    this.closeCommandCenter();
-                    this.showToast("Checkout Complete!", "success");
-                } catch(err) {
-                    console.error("Checkout failed", err);
-                    this.showToast("Checkout Failed. Please check connection.", "error");
+                // 4. Step C: Clear Active Guest Record
+                if (guestId) {
+                    const guestRef = doc(window.firebaseFS, 'guests', guestId);
+                    await deleteDoc(guestRef);
                 }
+
+                // 5. Local State Cleanup
+                room.status = 'available';
+                room.guest = null;
+                room.currentGuestId = null;
+                localStorage.setItem(`br_room_serial_${roomNum}`, "0");
+                
+                this.db.persistRoom(roomNum); 
+                this.syncState(); 
+                this.closeCommandCenter();
+                this.showToast("Checkout Complete & Recorded.", "success");
+
+            } catch(err) {
+                // 4. Detailed Error Handling
+                console.error("UNIFIED CHECKOUT ERROR:", err);
+                this.showToast(`Transaction Failed: ${err.message || 'Check Connection'}`, "error");
             }
         });
     }
+
+    // Alias for legacy button hooks
+    checkout() { this.checkoutRoom(); }
 
 
     // --- NEW HOTEL WAITER PORTAL (Occupied Rooms Only) ---
