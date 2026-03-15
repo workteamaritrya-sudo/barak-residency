@@ -224,20 +224,21 @@ class FirebaseSyncEngine {
             const { collection, addDoc, serverTimestamp, Timestamp } = window.firebaseHooks;
             const guestsRef = collection(window.firebaseFS, 'guests');
             const dataToSave = {
-                fullName: guestObj.name || guestObj.fullName || "Unknown Guest",
-                phoneNumber: guestObj.phone || guestObj.phoneNumber || "---",
+                guestName: guestObj.guestName || guestObj.name || guestObj.fullName || "Unknown Guest",
+                guestPhone: guestObj.guestPhone || guestObj.phone || guestObj.phoneNumber || "---",
                 age: Number(guestObj.age) || 0,
                 idImageUrl: guestObj.idProofUrl || guestObj.idImageUrl || null,
                 advancePaid: Number(guestObj.advance) || Number(guestObj.advancePaid) || 0,
                 roomNumber: guestObj.room || guestObj.roomNumber,
                 tariff: Number(guestObj.tariff) || 0,
-                checkInDate: Timestamp.now(), // Fixed: Use Firestore Timestamp
+                checkInDate: Timestamp.now(), 
                 checkInTimestamp: serverTimestamp(),
                 foodOrders: guestObj.foodOrders || [],
                 foodSync: "active",
                 status: 'active'
             };
 
+            console.log('Pushing to Firestore:', dataToSave);
             const guestDoc = await addDoc(guestsRef, dataToSave);
 
             // Mission 3: Government Compliance Log (Duplicate Snapshot)

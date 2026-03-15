@@ -1000,9 +1000,9 @@ class PMSApp {
         }
 
         const guestData = {
-            name: name || "Unknown Guest",
+            guestName: name || "Unknown Guest",
             fullName: name || "Unknown Guest",
-            phone: phone || "---",
+            guestPhone: phone || "---",
             phoneNumber: phone || "---",
             age: parseInt(age) || 0,
             idProofUrl: idUrl || null,
@@ -1015,7 +1015,8 @@ class PMSApp {
             checkInDate: (window.firebaseHooks && window.firebaseHooks.Timestamp) ? window.firebaseHooks.Timestamp.now() : new Date().toISOString(),
             checkInTimestamp: Date.now(),
             foodOrders: [],
-            foodSync: "active"
+            foodSync: "active",
+            status: "active"
         };
         
         // Ensure no undefined values
@@ -1030,18 +1031,29 @@ class PMSApp {
                 cloudGuestId = await window.FirebaseSync.pushGuestToCloud(guestData);
             }
 
-            // Mission 2: Live Room Update (Status + currentGuestId)
+            // Mission 2: Live Room Update (Status + guestName + currentGuestId)
             if (this.db.rooms[roomNum]) {
                 const room = this.db.rooms[roomNum];
                 room.status = 'occupied';
+                room.guestName = name; // Enforced Key
                 room.guest = { ...guestData, cloudId: cloudGuestId };
-                room.currentGuestId = cloudGuestId; // Mission 2
+                room.currentGuestId = cloudGuestId; 
                 
-                // Mission 4: Order Serial Reset
                 localStorage.setItem(`br_room_serial_${roomNum}`, "0");
                 
                 this.db.persistRooms();
-                if (window.FirebaseSync) await window.FirebaseSync.pushRoomToCloud(room);
+                
+                // Mission: Force Room Update with guestName before success
+                if (window.FirebaseSync) {
+                    const { doc, updateDoc } = window.firebaseHooks;
+                    const roomRef = doc(window.firebaseFS, 'rooms', roomNum.toString());
+                    await updateDoc(roomRef, { 
+                        status: 'occupied', 
+                        guestName: name, 
+                        currentGuestId: cloudGuestId,
+                        last_updated: (window.firebaseHooks.serverTimestamp())
+                    });
+                }
             }
 
             // Mission 5: UI Feedback (Step 5) and Form Clear
@@ -1073,11 +1085,11 @@ class PMSApp {
     }
 
     populateOccupiedView(room) {
-        const guest = room.guest;
+        const guest = room.guest || {};
 
-        document.getElementById('cc-guest-name').innerText = guest.name;
-        document.getElementById('cc-guest-age').innerText = guest.age;
-        document.getElementById('cc-guest-phone').innerText = guest.phone;
+        document.getElementById('cc-guest-name').innerText = guest.guestName || guest.name || 'No Name Found';
+        document.getElementById('cc-guest-age').innerText = guest.age || '---';
+        document.getElementById('cc-guest-phone').innerText = guest.guestPhone || guest.phone || '---';
 
         const idEl = document.getElementById('cc-guest-id');
         const idUrl = guest.idProofUrl || guest.idImageUrl;

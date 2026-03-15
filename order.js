@@ -142,7 +142,7 @@ class GuestPortal {
                 const guestDoc = snapshot.docs[0];
                 const guestData = guestDoc.data();
                 
-                this.guestName = guestData.fullName || guestData.name || "Guest";
+                this.guestName = guestData.guestName || guestData.fullName || guestData.name || "Guest";
                 this.currentGuestId = guestDoc.id;
                 
                 document.getElementById('room-display').innerText = `Room ${this.roomNumber} • ${this.guestName}`;
