@@ -3579,11 +3579,31 @@ class PMSApp {
             if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, status);
             this.db.persistKitchenSync();
 
+            // Play kitchen sound for PREPARING status
+            if (status === 'preparing' || status === 'Kitchen') {
+                new Audio('kitchensound.mp3.mpeg').play().catch(() => {});
+            }
+
             if (status === 'ready') {
-                const target = order.tableId ? `Table ${order.tableId}` : (order.roomId ? `Room ${order.roomId}` : `Pickup ${order.id}`);
-                const notifyTarget = order.tableId || order.orderType === 'pickup' ? 'desk' : 'reception';
-                const notifyData = order.roomId ? { type: 'room', orderId: orderId, roomId: order.roomId } : null;
-                this.db.addNotification('ready', `Order ${orderId} for ${target} is READY!`, notifyTarget, notifyData);
+                // Room label from roomNumber (not legacy roomId)
+                const roomNum = order.roomNumber || order.roomId;
+                const target = order.tableId
+                    ? `Table ${order.tableId}`
+                    : (roomNum ? `Room ${roomNum}` : `Order ${orderId}`);
+                const notifyTarget = (order.tableId || order.orderType === 'pickup') ? 'desk' : 'reception';
+
+                // Persistent notification to reception panel
+                this.db.addNotification('ready',
+                    `✅ FOOD READY: ${target} — Order ${orderId}`,
+                    notifyTarget,
+                    { type: 'room', orderId, roomNumber: roomNum, items: order.items || [] }
+                );
+
+                // Alert sound at reception
+                if (this.currentPortal === 'reception') {
+                    new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
+                    this.showToast(`✅ Kitchen says READY: ${target}`, 'success');
+                }
             }
             this.syncState();
         }

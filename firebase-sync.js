@@ -176,50 +176,82 @@ class FirebaseSyncEngine {
             snapshot.docChanges().forEach((change) => {
                 const order = change.doc.data();
                 const status = order.status;
-                
-                if (change.type === "modified" && (status === 'Served' || status === 'ready')) {
-                    this.playWaiterAlert();
-                    // Also alert Reception: food is ready for pickup
+                const oid = order.order_id || change.doc.id;
+                const roomNum = order.roomNumber || order.roomId || '';
+
+                // ---------- NEW ORDER ARRIVED ----------
+                if (change.type === 'added' && (status === 'Pending' || status === 'Kitchen')) {
+                    // 1. Kitchen portal: beep + KDS refresh (handled after list rebuild)
+                    if (window.app && window.app.currentPortal === 'kitchen') {
+                        new Audio('kitchensound.mp3.mpeg').play().catch(() => {});
+                        window.app.showToast(`🔔 New Order: Room ${roomNum} — ${oid}`, 'info');
+                    }
+
+                    // 2. Reception portal: auto-print KOT
                     if (window.app && window.app.currentPortal === 'reception') {
                         new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
-                        window.app.showToast(`✅ Order READY for Room ${order.roomNumber || ''}!`, 'success');
-                    }
-                } else if (change.type === "added" || change.type === "modified") {
-                    const isNewPending = change.type === "added" && (status === 'Pending' || status === 'Kitchen');
-                    
-                    if (isNewPending) {
-                        this.playKitchenAlert();
-                        this.playReceptionAlert();
-                        
-                        // MISSION: AUTO-KOT PRINTING FOR RECEPTION
-                        if (window.app && window.app.currentPortal === 'reception') {
-                            console.log("[Auto-KOT] New order detected, triggering print...");
-                            window.app.generateKOT({ 
-                                ...order, 
-                                id: order.order_id || change.doc.id,
-                                items: order.items || [] 
-                            });
-                        }
-                    }
-                    
-                    // Mission: Auto-notify Reception Dashboard for Badge Update
-                    if (window.app && window.app.db && order.roomNumber) {
-                        const msg = change.type === "added" ? `New Order: Room ${order.roomNumber}` : `Update: Room ${order.roomNumber} (${status})`;
-                        window.app.db.addNotification('order', msg, 'reception', { 
-                            type: 'room', 
-                            orderId: order.order_id || change.doc.id, 
-                            roomNumber: order.roomNumber,
+                        window.app.generateKOT({
+                            ...order,
+                            id: oid,
                             items: order.items || []
                         });
                     }
+
+                    // 3. Persistent reception notification card (stays until dismissed)
+                    if (window.app && window.app.db && roomNum) {
+                        window.app.db.addNotification(
+                            'order',
+                            `🛎 New Order — Room ${roomNum} | ID: ${oid}`,
+                            'reception',
+                            { type: 'room', orderId: oid, roomNumber: roomNum, items: order.items || [] }
+                        );
+                    }
+                }
+
+                // ---------- ORDER MARKED READY (by KDS) ----------
+                if (change.type === 'modified' && (status === 'Served' || status === 'ready')) {
+                    if (window.app && window.app.currentPortal === 'reception') {
+                        new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
+                        window.app.showToast(`✅ FOOD READY: Room ${roomNum} — ${oid}`, 'success');
+                    }
+                    // Persistent "READY" card in reception panel
+                    if (window.app && window.app.db && roomNum) {
+                        window.app.db.addNotification(
+                            'ready',
+                            `✅ READY for Pickup — Room ${roomNum} | ${oid}`,
+                            'reception',
+                            { type: 'room', orderId: oid, roomNumber: roomNum, items: order.items || [] }
+                        );
+                    }
+                }
+
+                // ---------- ORDER ON THE WAY ----------
+                if (change.type === 'modified' && status === 'On the Way') {
+                    if (window.app && window.app.db && roomNum) {
+                        window.app.db.addNotification(
+                            'info',
+                            `🛵 On the Way — Room ${roomNum} | ${oid}`,
+                            'reception',
+                            { type: 'room', orderId: oid, roomNumber: roomNum, items: order.items || [] }
+                        );
+                    }
+                }
+
+                // ---------- ORDER DELIVERED ----------
+                if (change.type === 'modified' && status === 'Delivered') {
+                    if (window.app && window.app.currentPortal === 'reception') {
+                        new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
+                        window.app.showToast(`✔ Delivered — Room ${roomNum} | Bill Updated`, 'success');
+                    }
                 }
             });
-            
+
+            // Rebuild kitchenOrders list
             const orderList = [];
             snapshot.forEach(d => {
                 const data = d.data();
                 orderList.push({
-                    ...data, 
+                    ...data,
                     id: data.order_id || d.id,
                     total_price: data.total_price || data.total || 0,
                     status: data.status || 'Pending'
@@ -232,7 +264,7 @@ class FirebaseSyncEngine {
                 if (window.app.currentPortal === 'kitchen') window.app.renderKDS();
                 if (window.app.currentPortal === 'reception') {
                     window.app.syncState();
-                    window.app.renderRoomOrderPanel(); // Forced re-render
+                    window.app.renderRoomOrderPanel();
                 }
             }
         });
@@ -411,46 +443,58 @@ class FirebaseSyncEngine {
 
     async updateOrderStatus(orderId, status) {
         try {
-            const ordersRef = collection(window.firebaseFS, 'orders');
-            const q = query(ordersRef, where('order_id', '==', orderId));
-            const snap = await getDocs(q);
-            
+            // Since we store orders with order_id as doc ID via setDoc, update directly
             let cloudStatus = status;
-            if (status === 'ready' || status === 'Ready') cloudStatus = 'Served';
+            if (status === 'ready' || status === 'Ready')         cloudStatus = 'Served';
+            if (status === 'preparing' || status === 'Kitchen')   cloudStatus = 'Kitchen';
             if (status === 'ontheway' || status === 'On the Way') cloudStatus = 'On the Way';
             if (status === 'Delivered' || status === 'delivered') cloudStatus = 'Delivered';
 
-            snap.forEach(async (d) => {
-                await updateDoc(d.ref, { status: cloudStatus });
-            });
+            // 1. Try direct doc update (fast path — works when setDoc was used)
+            try {
+                const orderDocRef = doc(window.firebaseFS, 'orders', String(orderId));
+                await updateDoc(orderDocRef, { status: cloudStatus });
+                console.log('[Status] Updated', orderId, '->', cloudStatus);
+                return;
+            } catch (directErr) { /* fallthrough to query */ }
+
+            // 2. Fallback: query by order_id field (legacy docs)
+            const q = query(
+                collection(window.firebaseFS, 'orders'),
+                where('order_id', '==', String(orderId))
+            );
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                await Promise.all(snap.docs.map(d => updateDoc(d.ref, { status: cloudStatus })));
+            }
         } catch(e) { console.error("Cloud Status Update Failed", e); }
     }
 
-    async getNextOrderSerial(id, guestId = null) {
+    async getNextOrderSerial(roomId) {
         try {
-            const { collection, query, where, getDocs, or } = window.firebaseHooks;
-            const ordersRef = collection(window.firebaseFS, 'orders');
-            
-            let q;
-            if (guestId) {
-                // If guestId is provided, count orders for this specific guest check-in session
-                q = query(ordersRef, where('guestId', '==', guestId));
-            } else {
-                // Fallback to room/table total count if no guest context
-                q = query(ordersRef, 
-                    or(
-                        where('roomId', '==', id.toString()),
-                        where('tableId', '==', id.toString())
-                    )
-                );
-            }
-            
-            const snap = await getDocs(q);
-            const count = snap.size;
-            return `${id}${count + 1}`;
+            // Use Firestore atomic counter in the room document — reliable sequential IDs
+            const roomRef = doc(window.firebaseFS, 'rooms', String(roomId));
+            let nextSerial = 1;
+            await runTransaction(window.firebaseFS, async (tx) => {
+                const roomSnap = await tx.get(roomRef);
+                const current = roomSnap.exists() ? (roomSnap.data().orderSerial || 0) : 0;
+                nextSerial = current + 1;
+                tx.update(roomRef, { orderSerial: nextSerial });
+            });
+            return `${roomId}${nextSerial}`;
         } catch(e) {
             console.error("Failed to get next serial", e);
-            return `${id}${Date.now().toString().slice(-4)}`;
+            // Fallback: count existing orders for this room
+            try {
+                const q = query(
+                    collection(window.firebaseFS, 'orders'),
+                    where('roomNumber', '==', String(roomId))
+                );
+                const snap = await getDocs(q);
+                return `${roomId}${snap.size + 1}`;
+            } catch(e2) {
+                return `${roomId}${Date.now().toString().slice(-4)}`;
+            }
         }
     }
 
