@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Barak Residency Pro PMS</title>
+    <title>Barak Residency | Management Hub</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="favicon.ico">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,64 +12,58 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <!-- External Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script type="module" src="firebase-sync.js"></script>
 </head>
-
 <body>
-    <div id="root-isolated">
+    <div class="management-hub" id="app-container" style="display: none;">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <img src="br.png" alt="Barak Residency">
+                <div style="display:flex; flex-direction:column;">
+                    <span class="golden-brand" style="font-size: 0.9rem;">BARAK</span>
+                    <span class="golden-brand" style="font-size: 0.6rem; letter-spacing: 4px; opacity:0.7;">SILCHAR</span>
+                </div>
+            </div>
 
+            <div class="sidebar-nav">
+                <div class="side-item active" id="side-dashboard" onclick="app.switchTab('dashboard')">
+                    <span>🏨</span> Live Dashboard
+                </div>
+                <div class="side-item" id="side-kitchen" onclick="app.switchTab('kitchen')">
+                    <span>🍳</span> Kitchen (KDS)
+                </div>
+                <div class="side-item" id="side-inventory" onclick="app.switchTab('inventory')">
+                    <span>📦</span> Menu & Inventory
+                </div>
+                <div class="side-item" id="side-financials" onclick="app.switchTab('financials')">
+                    <span>📊</span> Financial Analytics
+                </div>
+            </div>
 
-
-
-        <!-- Main App Container (Hidden in Guest Portal Mode) -->
-        <div class="app-container" id="app-container">
-
-            <!-- Stealth Header Wrapper -->
-            <div class="stealth-trigger"></div>
-            <header class="header stealth-header" id="main-header">
-                <div class="brand">
-                    <img src="br.png" alt="Barak Residency" class="logo">
-                    <div style="display: flex; flex-direction: column;">
-                        <h1 style="color: var(--gold-primary); font-family: 'Outfit', serif; letter-spacing: 2px; text-transform: uppercase; margin: 0;">BARAK RESIDENCY</h1>
-                        <span style="color: var(--gold-primary); font-size: 0.8rem; letter-spacing: 4px; opacity: 0.8; margin-top: -5px;">SILCHAR</span>
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="user-avatar">??</div>
+                    <div class="user-info">
+                        <span class="user-name" id="user-display-name">Loading...</span>
+                        <span class="user-role" id="user-display-role">---</span>
                     </div>
                 </div>
+                <button class="btn btn-outline btn-block text-sm" onclick="app.handleLogout()">
+                    🚪 LOGOUT
+                </button>
+            </div>
+        </aside>
 
-                <!-- Portal Navigation -->
-                <div class="portal-nav pb-2 pt-2">
-                    <button class="nav-btn active" id="nav-reception"
-                        onclick="app.requestPortalSwitch('reception')">Reception</button>
-                    <button class="nav-btn" id="nav-rest-waiter"
-                        onclick="window.open('?view=rest-waiter', '_blank')">Restaurant Waiter</button>
-                    <button class="nav-btn" id="nav-hotel-waiter"
-                        onclick="window.open('?view=hotel-waiter', '_blank')">Hotel Waiter</button>
-                    <button class="nav-btn" id="nav-kitchen" onclick="window.open('?view=kitchen', '_blank')">
-                        Kitchen KDS
-                        <span class="badge" id="kds-badge" style="display:none;">0</span>
-                    </button>
-                    <button class="nav-btn" id="nav-rest-desk"
-                        onclick="window.open('?view=rest-desk', '_blank')">Restaurant Desk</button>
-                    <button class="nav-btn" id="nav-owner" onclick="window.open('?view=owner', '_blank')">Owner
-                        Hub</button>
+        <main class="main-content" id="portal-view">
+            <!-- 1. DASHBOARD TAB (RECEPTION) -->
+            <section id="tab-dashboard" class="portal-content active">
+                <div class="luxury-portal-header">
+                    <div class="luxury-identity golden-brand">EXECUTIVE ROOM DASHBOARD</div>
+                    <div class="portal-time-luxury" id="live-clock">--:-- --</div>
                 </div>
-
-                <div class="d-flex align-center" style="gap:1rem;">
-                </div>
-            </header>
-
-            <!-- Dynamic Portal View Container -->
-            <main class="workspace" id="portal-view">
-                <!-- RECEPTION PORTAL (Default) -->
-                <div id="view-reception" class="portal-content active">
-                    <div class="luxury-portal-header">
-                        <div class="luxury-identity golden-brand">BARAK RESIDENCY, SILCHAR</div>
-                        <div class="portal-time-luxury">--:-- --</div>
-                    </div>
+                
                 <div class="reception-split-container">
-                    <!-- LEFT COLUMN: Room Grid (2/3) -->
                     <div class="reception-rooms-area">
                         <section class="room-section">
                             <div class="floor">
@@ -84,24 +77,20 @@
                         </section>
                     </div>
 
-                    <!-- RIGHT COLUMN: Sidebar (1/3) -->
-                    <div class="reception-orders-sidebar glass-panel" style="gap: 1.5rem;">
-                        <!-- Room Orders Section -->
+                    <div class="reception-orders-sidebar glass-panel">
                         <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
                             <h3 style="color: var(--gold-primary); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1rem;">
                                 ROOM ORDERS 
-                                <span id="room-order-badge-count" class="badge show" style="position: relative; top: 0; right: 0; background: var(--color-indigo-500);">0</span>
+                                <span id="room-order-badge-count" class="badge">0</span>
                             </h3>
                             <div id="room-orders-panel" style="flex: 1; overflow-y: auto;">
-                                <div class="text-gray" style="text-align: center; margin-top: 1rem;">No active room orders</div>
+                                <div class="text-gray" style="text-align: center; margin-top: 1rem;">No active orders</div>
                             </div>
                         </div>
-
-                        <!-- Live Service Requests Section -->
-                        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 0.5rem;">
+                        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 1rem;">
                             <h3 style="color: #f43f5e; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1rem;">
-                                LIVE SERVICE REQUESTS
-                                <span id="service-req-count" class="badge show" style="position: relative; top: 0; right: 0; background: #f43f5e;">0</span>
+                                SERVICE REQUESTS
+                                <span id="service-req-count" class="badge">0</span>
                             </h3>
                             <div id="service-requests-panel" style="flex: 1; overflow-y: auto;">
                                 <div class="text-gray" style="text-align: center; margin-top: 1rem;">No pending requests</div>
@@ -110,1109 +99,142 @@
                     </div>
                 </div>
 
-                    <!-- REMOVED FROM BOTTOM: Moved to Sidebar -->
-
-                    <!-- 3D Reception Command Center (Side Panel) -->
-                    <aside class="command-center" id="command-center">
-                        <div class="glass-panel cc-inner">
-                            <button class="close-btn" onclick="app.closeCommandCenter()">&times;</button>
-                            <h2 class="cc-title" id="cc-room-title">Room --</h2>
-
-                            <div id="cc-content-empty" class="cc-state-empty" style="display: none;">
-                                <p>Room is available.</p>
-                                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                                    <button class="btn btn-primary flex-1" onclick="app.showCheckInForm()">Check In</button>
-                                    <button class="btn btn-outline flex-1" style="border-color: #a855f7; color: #a855f7;" onclick="app.openReserveModal()">Reserve</button>
-                                </div>
-                            </div>
-
-                            <div id="cc-content-reserved" class="cc-state-reserved" style="display: none;">
-                                <div class="cc-section">
-                                    <h3 style="color: #a855f7;"><span class="icon">📅</span> Reservation Details</h3>
-                                    <div class="metadata-grid">
-                                        <div class="meta-item"><span class="meta-label">Guest</span><span class="meta-value" id="cc-res-name">--</span></div>
-                                        <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-value" id="cc-res-phone">--</span></div>
-                                        <div class="meta-item"><span class="meta-label">Arrival</span><span class="meta-value" id="cc-res-arrival">--</span></div>
-                                        <div class="meta-item"><span class="meta-label">Status</span><span class="meta-value status-badge" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">Reserved</span></div>
-                                    </div>
-                                </div>
-                                <button class="btn btn-primary btn-block mt-4" style="background: #a855f7; border: none;" onclick="app.convertResToCheckin()">Convert to Check-in</button>
-                                <button class="btn btn-outline btn-block mt-2" onclick="app.cancelReservation()">Cancel Reservation</button>
-                            </div>
-
-                            <div id="cc-content-occupied" class="cc-state-occupied" style="display: none;">
-                                <!-- Guest Profile -->
-                                <div class="cc-section">
-                                    <h3><span class="icon">👤</span> Guest Metadata</h3>
-                                    <div class="metadata-grid">
-                                        <div class="meta-item"><span class="meta-label">Name</span><span
-                                                class="meta-value" id="cc-guest-name">--</span></div>
-                                        <div class="meta-item"><span class="meta-label">Age</span><span
-                                                class="meta-value" id="cc-guest-age">--</span></div>
-                                        <div class="meta-item"><span class="meta-label">Phone</span><span
-                                                class="meta-value" id="cc-guest-phone">--</span></div>
-                                        <div class="meta-item"><span class="meta-label">ID Proof</span><span
-                                                class="meta-value status-badge" id="cc-guest-id">Verified</span></div>
-                                    </div>
-                                </div>
-
-                                <!-- Stay Logistics -->
-                                <div class="cc-section">
-                                    <h3><span class="icon">🗓️</span> Stay Logistics</h3>
-                                    <div class="logistics-card">
-                                        <div class="datetime-row">
-                                            <div class="text-sm text-gray">Check-in (IST)</div>
-                                            <div class="text-md font-bold" id="cc-checkin-datetime">--</div>
-                                        </div>
-                                        <div class="days-counter mt-2">
-                                            <div class="text-sm text-gray">Days Billed (Auto-inc @12PM)</div>
-                                            <div class="text-xl font-bold color-primary" id="cc-stay-days">0</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Ledger -->
-                                <div class="cc-section">
-                                    <h3><span class="icon">💳</span> Live Ledger</h3>
-                                    <div class="ledger-card">
-                                        <div class="ledger-row"><span>Tariff:</span><span id="cc-tariff">₹0</span></div>
-                                        <div class="ledger-row border-bottom pb-2"><span>Room Total (<span
-                                                    id="cc-ledger-days">0</span>d):</span><span
-                                                id="cc-room-total">₹0</span></div>
-                                        <div class="ledger-row mt-2"><span>Food Sync:</span><span
-                                                id="cc-food-total">₹0</span></div>
-                                        <div class="ledger-row border-bottom pb-2"><span>Advance:</span><span
-                                                class="color-success">- ₹<span id="cc-advance">0</span></span></div>
-                                        <div class="ledger-row total-row mt-3"><span>Balance:</span><span
-                                                id="cc-balance" class="balance-value">₹0</span></div>
-                                        <div class="mt-3 pt-2" style="border-top: 1px dashed rgba(255,255,255,0.1);">
-                                            <div class="text-xs text-gray mb-1"
-                                                style="text-transform:uppercase; letter-spacing:1px; font-size: 0.7rem;">
-                                                Itemized Food Bill</div>
-                                        <div id="cc-food-items-list" class="text-sm"
-                                            style="max-height: 150px; overflow-y: auto; color: var(--color-slate-300);">
-                                            <!-- Populated by app.js -->
-                                        </div>
-                                    </div>
-                                </div>
+                <aside class="command-center" id="command-center">
+                    <div class="glass-panel cc-inner">
+                        <button class="close-btn" onclick="app.closeCommandCenter()">&times;</button>
+                        <h2 class="cc-title" id="cc-room-title">Room --</h2>
+                        
+                        <div id="cc-content-empty">
+                            <p>Room is available.</p>
+                            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                                <button class="btn btn-primary flex-1" onclick="app.showCheckInForm()">Check In</button>
+                                <button class="btn btn-outline flex-1" style="border-color: #a855f7; color: #a855f7;" onclick="app.openReserveModal()">Reserve</button>
                             </div>
                         </div>
 
-                        <div class="cc-actions">
-                            <button class="btn btn-outline" onclick="app.generateFinalBill()">Print Tax Invoice</button>
-                            <button class="btn btn-success mt-2" onclick="app.finalizePayAndCheckout()" id="pay-checkout-btn" style="width: 100%; font-weight: bold;">Pay & Checkout</button>
-                            <button class="btn btn-danger mt-2" onclick="app.checkout()" style="display:none">Legacy Checkout</button>
-                        </div>
-                    </div>
-
-                    <!-- NEW: Reception Notification Panel REPLACED by Sidebar -->
-                </div>
-            </aside>
-                <!-- Check-in Form (HIDDEN legacy, now handled by fullscreen modal) -->
-                <div id="cc-content-checkin" class="cc-state-checkin" style="display: none;"></div>
-        </div>
-        </aside>
-    </div>
-
-    <!-- RESTAURANT WAITER PORTAL -->
-    <div id="view-rest-waiter" class="portal-content" style="display: none;">
-        <div class="luxury-portal-header">
-            <div class="luxury-identity golden-brand">BARAK RESIDENCY, SILCHAR</div>
-            <div class="portal-time-luxury">--:-- --</div>
-        </div>
-        <div class="portal-top-bar"
-            style="display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-            <button class="btn btn-outline btn-logout" onclick="app.exitIsolatedMode()">Logout</button>
-        </div>
-
-        <div class="waiter-layout" id="rest-waiter-main-layout">
-            <div class="waiter-sidebar glass-panel">
-                <h2 id="rest-waiter-sidebar-title">Select Rest. Table</h2>
-                <div class="waiter-room-list" id="rest-waiter-table-list">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-            <div class="waiter-pos glass-panel" id="rest-waiter-pos-area" style="opacity: 0.5; pointer-events: none;">
-                <div class="pos-header" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <h2 id="rest-waiter-pos-title">Select a table</h2>
-                        <button id="btn-link-table" class="btn btn-outline"
-                            style="display: none; padding: 0.3rem 0.8rem; font-size: 0.9rem; border-color: #A020F0; color: #A020F0;"
-                            onclick="app.showLinkTableModal()">🔗 Link Another Table</button>
-                    </div>
-                </div>
-                <div id="rest-waiter-active-orders" class="mb-4" style="display:none;">
-                    <h3 style="color: var(--gold-primary); font-size: 0.9rem; margin-bottom: 0.5rem;">Active Orders</h3>
-                    <div id="rest-waiter-orders-list" style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem;"></div>
-                </div>
-                <div class="pos-body">
-                    <div style="margin-bottom: 1rem;">
-                        <input type="search" id="rest-waiter-menu-search" class="form-control"
-                            placeholder="Search menu..." oninput="app.filterWaiterMenu('rest-waiter')"
-                            style="background: rgba(15,23,42,0.9); padding: 0.8rem; color: white; border: 1px solid gold; border-radius: 8px; width: 100%; box-shadow: 0 4px 10px rgba(255,215,0,0.1);">
-                    </div>
-                    <div class="pos-menu" id="rest-waiter-menu-grid"></div>
-                    <div class="pos-cart">
-                        <div class="cart-items" id="rest-waiter-cart-items"></div>
-                        <div class="cart-total mt-4">
-                            <div class="d-flex justify-between"><span>Total</span><span class="font-bold text-xl">₹<span
-                                        id="rest-waiter-cart-total">0</span></span></div>
-                            <button class="btn btn-primary btn-block mt-3" onclick="app.placeOrder('rest-waiter')"
-                                id="btn-rest-waiter-order" disabled style="font-size: 1.25rem; padding: 1rem;">Place
-                                Order</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- HOTEL WAITER PORTAL (Room Service) -->
-    <div id="view-hotel-waiter" class="portal-content" style="display: none;">
-        <div class="luxury-portal-header">
-            <div class="luxury-identity golden-brand">BARAK RESIDENCY, SILCHAR</div>
-            <div class="portal-time-luxury">--:-- --</div>
-        </div>
-        <div class="portal-top-bar"
-            style="display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-            <button class="btn btn-outline btn-logout" onclick="app.exitIsolatedMode()">Logout</button>
-        </div>
-
-        <div class="waiter-layout" id="hotel-waiter-main-layout">
-            <div class="waiter-sidebar glass-panel">
-                <h2 id="hotel-waiter-sidebar-title">Select Occupied Room</h2>
-                <div class="waiter-room-list" id="hotel-waiter-room-list">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-            <div class="waiter-pos glass-panel" id="hotel-waiter-pos-area" style="opacity: 0.5; pointer-events: none;">
-                <div class="pos-header">
-                    <h2 id="hotel-waiter-pos-title">Select a room to order</h2>
-                </div>
-                <div id="hotel-waiter-active-orders" class="mb-4" style="display:none;">
-                    <h3 style="color: var(--gold-primary); font-size: 0.9rem; margin-bottom: 0.5rem;">Active Orders</h3>
-                    <div id="hotel-waiter-orders-list" style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem;"></div>
-                </div>
-                <div class="pos-body">
-                    <div style="margin-bottom: 1rem;">
-                        <input type="search" id="hotel-waiter-menu-search" class="form-control"
-                            placeholder="Search menu..." oninput="app.filterWaiterMenu('hotel-waiter')"
-                            style="background: rgba(15,23,42,0.9); padding: 0.8rem; color: white; border: 1px solid gold; border-radius: 8px; width: 100%; box-shadow: 0 4px 10px rgba(255,215,0,0.1);">
-                    </div>
-                    <div class="pos-menu" id="hotel-waiter-menu-grid"></div>
-                    <div class="pos-cart">
-                        <div class="cart-items" id="hotel-waiter-cart-items"></div>
-                        <div class="cart-total mt-4">
-                            <div class="d-flex justify-between"><span>Total</span><span class="font-bold text-xl">₹<span
-                                        id="hotel-waiter-cart-total">0</span></span></div>
-                            <button class="btn btn-primary btn-block mt-3" onclick="app.placeOrder('hotel-waiter')"
-                                id="btn-hotel-waiter-order" disabled>Push to Kitchen & Ledger</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- KITCHEN PORTAL (KDS) -->
-    <div id="view-kitchen" class="portal-content" style="display: none;">
-        <div class="luxury-portal-header">
-            <div class="luxury-identity golden-brand">BARAK RESIDENCY, SILCHAR</div>
-            <div class="portal-time-luxury">--:-- --</div>
-        </div>
-        <div class="portal-top-bar" style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
-            <button class="btn btn-outline btn-logout" onclick="app.exitIsolatedMode()">Logout</button>
-        </div>
-        <div class="kds-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h2>Kitchen Display System (KDS)</h2>
-                <span class="text-gray">Live Sync Active</span>
-            </div>
-            <button class="btn btn-outline"
-                style="border-color: var(--color-mint-400); color: var(--color-mint-400); font-size: 0.9rem; padding: 0.4rem 0.8rem;"
-                onclick="app.unlockAudioContext()">🔔 Enable Audio</button>
-        </div>
-        <div class="kds-grid" id="kds-grid">
-            <!-- Orders Populated dynamically -->
-        </div>
-    </div>
-
-    <!-- RESTAURANT DESK PORTAL -->
-    <div id="view-rest-desk" class="portal-content" style="display: none;">
-        <div class="luxury-portal-header">
-            <div class="luxury-identity golden-brand">BARAK RESIDENCY, SILCHAR</div>
-            <div class="portal-time-luxury">--:-- --</div>
-        </div>
-        <div class="portal-top-bar"
-            style="display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-            <button class="btn btn-primary"
-                style="background: var(--color-indigo-400); border: none; padding: 0.5rem 1rem;"
-                onclick="app.generatePickupOrder()">🥡 NEW PICKUP ORDER</button>
-            <button class="btn btn-outline btn-logout" onclick="app.exitIsolatedMode()">Logout</button>
-        </div>
-        <div class="rest-desk-dashboard">
-            <div class="desk-layout">
-                <!-- Main Billing Area (2/3) -->
-                <div class="desk-main-content">
-                    <div class="d-flex justify-between align-center px-2">
-                        <h2 class="mb-0">Restaurant Desk & Billing</h2>
-                        <div class="daily-revenue-tracker"
-                            style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
-                            <span
-                                style="font-size: 0.85rem; color: var(--color-slate-400); text-transform: uppercase; letter-spacing: 1px;">Daily
-                                Revenue</span>
-                            <span id="desk-revenue-display"
-                                style="font-family: monospace; font-size: 1.1rem; font-weight: bold; color: var(--color-green-400); filter: blur(4px); transition: filter 0.3s; pointer-events: none;">₹
-                                ****</span>
-                            <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; border-color: transparent;"
-                                onclick="app.toggleRestRevVisibility(this)" title="Reveal Revenue">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                                    <path
-                                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="kpi-grid mb-4" style="grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-                        <div class="kpi-card glass-panel" style="padding: 1rem;">
-                            <div class="kpi-title">Total Seats Occupied</div>
-                            <div class="kpi-value" id="rest-desk-pax" style="font-size: 1.5rem;">0</div>
-                        </div>
-                        <div class="kpi-card glass-panel" style="padding: 1rem;">
-                            <div class="kpi-title">Active Tables</div>
-                            <div class="kpi-value" id="rest-desk-active-tables" style="font-size: 1.5rem;">0</div>
-                        </div>
-                    </div>
-    <div id="root-isolated">
-        <!-- Unified Management Hub (Professional Sidebar Layout) -->
-        <div class="management-hub" id="app-container" style="display: none;">
-            <aside class="sidebar">
-                <div class="sidebar-logo">
-                    <img src="br.png" alt="Barak Residency">
-                    <div style="display:flex; flex-direction:column;">
-                        <span class="golden-brand" style="font-size: 0.9rem;">BARAK</span>
-                        <span class="golden-brand" style="font-size: 0.6rem; letter-spacing: 4px; opacity:0.7;">SILCHAR</span>
-                    </div>
-                </div>
-
-                <div class="sidebar-nav">
-                    <div class="side-item active" id="side-dashboard" onclick="app.switchTab('dashboard')">
-                        <span>🏨</span> Live Dashboard
-                    </div>
-                    <div class="side-item" id="side-kitchen" onclick="app.switchTab('kitchen')">
-                        <span>🍳</span> Kitchen (KDS)
-                    </div>
-                    <div class="side-item" id="side-inventory" onclick="app.switchTab('inventory')">
-                        <span>📦</span> Menu & Inventory
-                    </div>
-                    <div class="side-item" id="side-financials" onclick="app.switchTab('financials')">
-                        <span>📊</span> Financial Analytics
-                    </div>
-                </div>
-
-                <div class="sidebar-footer">
-                    <div class="user-profile">
-                        <div class="user-avatar" id="user-avatar">??</div>
-                        <div class="user-info">
-                            <span class="user-name" id="user-display-name">Loading...</span>
-                            <span class="user-role" id="user-display-role">---</span>
-                        </div>
-                    </div>
-                    <button class="btn btn-outline btn-block text-sm" onclick="app.handleLogout()">
-                        🚪 LOGOUT
-                    </button>
-                </div>
-            </aside>
-
-            <main class="main-content" id="portal-view">
-                <!-- 1. DASHBOARD TAB (RECEPTION) -->
-                <section id="tab-dashboard" class="portal-content active">
-                    <div class="luxury-portal-header">
-                        <div class="luxury-identity golden-brand">EXECUTIVE ROOM DASHBOARD</div>
-                        <div class="portal-time-luxury" id="live-clock">--:-- --</div>
-                    </div>
-                    
-                    <div class="reception-split-container">
-                        <div class="reception-rooms-area">
-                            <section class="room-section">
-                                <div class="floor">
-                                    <h2>First Floor</h2>
-                                    <div class="room-grid" id="floor-1"></div>
-                                </div>
-                                <div class="floor mt-4">
-                                    <h2>Second Floor</h2>
-                                    <div class="room-grid" id="floor-2"></div>
-                                </div>
-                            </section>
-                        </div>
-
-                        <div class="reception-orders-sidebar glass-panel" style="gap: 1.5rem;">
-                            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
-                                <h3 style="color: var(--gold-primary); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1rem;">
-                                    ROOM ORDERS 
-                                    <span id="room-order-badge-count" class="badge">0</span>
-                                </h3>
-                                <div id="room-orders-panel" style="flex: 1; overflow-y: auto;">
-                                    <div class="text-gray" style="text-align: center; margin-top: 1rem;">No active orders</div>
+                        <div id="cc-content-occupied" style="display: none;">
+                            <div class="cc-section">
+                                <h3>👤 Guest Info</h3>
+                                <div class="metadata-grid">
+                                    <div class="meta-item"><span class="meta-label">Name</span><span class="meta-value" id="cc-guest-name">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-value" id="cc-guest-phone">--</span></div>
                                 </div>
                             </div>
-                            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 0.5rem;">
-                                <h3 style="color: #f43f5e; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1rem;">
-                                    LIVE SERVICE
-                                    <span id="service-req-count" class="badge">0</span>
-                                </h3>
-                                <div id="service-requests-panel" style="flex: 1; overflow-y: auto;">
-                                    <div class="text-gray" style="text-align: center; margin-top: 1rem;">No pending requests</div>
+                            <div class="cc-section">
+                                <h3>💰 Ledger</h3>
+                                <div class="ledger-pill">
+                                    <span>Current Total</span>
+                                    <span id="cc-total-bill">₹ 0</span>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                                    <button class="btn btn-outline flex-1" onclick="app.toggleOrderHistory()">History</button>
+                                    <button class="btn btn-primary flex-1" onclick="app.generateInvoice()">Checkout</button>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </aside>
+            </section>
 
-                    <!-- Command Center Side Panel -->
-                    <aside class="command-center" id="command-center">
-                        <div class="glass-panel cc-inner">
-                            <button class="close-btn" onclick="app.closeCommandCenter()">&times;</button>
-                            <h2 class="cc-title" id="cc-room-title">Room --</h2>
-                            <div id="cc-content-empty">
-                                <p>Room is available.</p>
-                                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                                    <button class="btn btn-primary flex-1" onclick="app.showCheckInForm()">Check In</button>
-                                </div>
-                            </div>
-                            <div id="cc-content-occupied" style="display: none;">
-                                <div class="cc-section">
-                                    <h3><span class="icon">👤</span> Guest Metadata</h3>
-                                    <div class="metadata-grid">
-                                        <div class="meta-item"><span class="meta-label">Name</span><span class="meta-value" id="cc-guest-name">--</span></div>
-                                        <div class="meta-item"><span class="meta-label">ID Sync</span><span class="meta-value" id="cc-guest-id-status">Verified</span></div>
-                                    </div>
-                                </div>
-                                <div class="cc-section">
-                                    <h3><span class="icon">💰</span> Ledger Sync</h3>
-                                    <div class="ledger-pill">
-                                        <span>Current Bill</span>
-                                        <span id="cc-total-bill">₹ 0.00</span>
-                                    </div>
-                                    <button class="btn btn-primary btn-block mt-3" onclick="app.generateInvoice()">Final Checkout</button>
-                                </div>
-                            </div>
-                        </div>
-                    </aside>
-                </section>
-
-                <!-- 2. KITCHEN TAB (KDS) -->
-                <section id="tab-kitchen" class="portal-content">
-                    <div class="luxury-portal-header">
-                        <div class="luxury-identity golden-brand">KITCHEN DISPLAY SYSTEM (KDS)</div>
-                    </div>
-                    <div class="kds-grid" id="kds-grid-container">
-                        <!-- Populated by JS -->
-                    </div>
-                </section>
-
-                <!-- 3. INVENTORY & MENU TAB -->
-                <section id="tab-inventory" class="portal-content">
-                    <div class="luxury-portal-header">
-                        <div class="luxury-identity golden-brand">MENU & INVENTORY CONTROL</div>
-                    </div>
-                    
-                    <div class="glass-panel" style="padding: 2rem;">
-                        <div class="d-flex justify-between align-center mb-6">
-                            <div>
-                                <h2 class="mb-1">Menu Management</h2>
-                                <p class="text-gray text-sm">Sync your CSV menu or manage item availability.</p>
-                            </div>
-                            <button class="btn btn-primary" onclick="const url = prompt('Enter CSV Menu URL:'); if(url) app.db.syncMenuFromCSV(url);">
-                                🔄 SYNC FRESH CSV
-                            </button>
-                        </div>
-
-                        <div id="menu-management-container">
-                            <div id="menu-loading-msg" class="text-center p-5 opacity-50">Fetching Menu Data...</div>
-                            <!-- Menu items or empty state will be rendered here -->
-                             <div id="menu-items-table-wrapper" style="display:none;">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Item Name</th>
-                                            <th>Category</th>
-                                            <th>Price (F/H)</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="management-menu-list"></tbody>
-                                </table>
-                             </div>
-                        </div>
-
-                        <div id="menu-empty-state" class="empty-menu-state" style="display: none;">
-                            <i>🍽️</i>
-                            <h3>No Items Found</h3>
-                            <p class="text-gray">Your menu is currently empty. Please use the "Sync Fresh CSV" button to upload your menu.</p>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 glass-panel" style="padding:2rem;">
-                        <h2>Kitchen Inventory</h2>
-                        <div id="inventory-list-container" class="mt-4">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Material</th>
-                                        <th>Category</th>
-                                        <th>Current Stock</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="inventory-list"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 4. FINANCIALS TAB -->
-                <section id="tab-financials" class="portal-content">
-                    <div class="luxury-portal-header">
-                        <div class="luxury-identity golden-brand">FINANCIAL INTELLIGENCE HUB</div>
-                    </div>
-                    
-                    <div class="kpi-grid">
-                        <div class="kpi-card glass-panel">
-                            <div class="kpi-title">Room Revenue Today</div>
-                            <div class="kpi-value" id="kpi-room-revenue">₹ 0</div>
-                        </div>
-                        <div class="kpi-card glass-panel">
-                            <div class="kpi-title">Rest. Earnings Today</div>
-                            <div class="kpi-value" id="kpi-rest-revenue">₹ 0</div>
-                        </div>
-                        <div class="kpi-card glass-panel" style="grid-column: span 1;">
-                            <div class="kpi-title">Daily Profit (EBITDA)</div>
-                            <div class="kpi-value" id="kpi-ebitda" style="color: var(--color-green-400);">₹ 0</div>
-                        </div>
-                    </div>
-
-                    <div class="charts-row mt-4">
-                        <div class="chart-container glass-panel">
-                            <canvas id="revenueChart"></canvas>
-                        </div>
-                        <div class="chart-container glass-panel">
-                            <canvas id="profitabilityChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 glass-panel">
-                        <h3>Recent Transactions</h3>
-                        <div id="sales-history-container" class="mt-4">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Time</th>
-                                        <th>Reference</th>
-                                        <th>Entity</th>
-                                        <th>Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="sales-history-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
-            </main>
-        </div>
-    </div>
-
-    </main>
-    </div>
-    </div><!-- END ROOT OVERWRITE WRAPPER -->
-
-    <!-- SETTINGS MODAL -->
-    <div id="settings-modal" class="modal-overlay" style="display: none; z-index: 10008;">
-        <div class="security-box" style="padding: 2.5rem 2rem; width: 600px;">
-            <div class="security-header mb-4">
-                <h2 style="color: var(--gold-primary);"><span style="font-size: 1.5rem;">⚙️</span> System Settings</h2>
-                <p class="text-gray">Configure global application variables and links.</p>
-            </div>
-            
-            <div class="form-group mb-4">
-                <label style="color: white; font-weight: bold;">Google Sheets Menu Link (CSV)</label>
-                <p class="text-sm text-gray" style="margin-bottom: 0.5rem;">Publish your Google Sheet to the web as a CSV, and paste the generated link here. Both the Restaurant Desk and Guest Portal will use this to instantly pull your menu.</p>
-                <input type="text" id="setting-menu-url" class="form-control" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" style="background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: white;">
-            </div>
-
-            <div class="form-group mb-4">
-                <label style="color: white; font-weight: bold;">Bulk Menu Paste Tool (CSV Content)</label>
-                <p class="text-sm text-gray" style="margin-bottom: 0.5rem;">Alternatively, paste raw CSV data here to immediately update the cloud menu. Use headers: id, name, price, category, icon, description, portionType, imageUrl.</p>
-                <textarea id="setting-menu-csv-bulk" class="form-control" style="background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: white; height: 120px; font-family: monospace; font-size: 0.8rem;" placeholder="m1,Veg Thali,250,Main Course,🍛,Assorted delights,Plate,https://..."></textarea>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem;">
-                <button class="btn btn-primary" style="width: 100%; font-size: 1.1rem; background: var(--gold-primary); color: #000; border:none;" onclick="app.saveSettings()">🔥 Update & Deploy Menu</button>
-                <div style="display: flex; gap: 1rem;">
-                    <button class="btn btn-outline" style="flex: 1;" onclick="document.getElementById('settings-modal').style.display='none'">Cancel</button>
-                    <button class="btn btn-danger" style="flex: 1; border-color: #ef4444; color: #ef4444; background: transparent;" onclick="app.resetSystemFresh()">🚨 Hard Reset System</button>
+            <!-- 2. KITCHEN TAB -->
+            <section id="tab-kitchen" class="portal-content">
+                <div class="luxury-portal-header">
+                    <div class="luxury-identity golden-brand">KITCHEN DISPLAY SYSTEM</div>
+                    <div id="kds-pending-stats" class="text-gray">0 Orders Pending</div>
                 </div>
-            </div>
-        </div>
-    </div>
+                <div class="kds-grid" id="kds-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; padding: 1.5rem;"></div>
+            </section>
 
-    <!-- GUEST PORTAL (Mobile URL Override) -->
-    <div id="guest-portal" class="guest-portal" style="display: none;">
-        <div class="guest-header">
-            <img src="YUKT.ai.png" alt="YUKT" class="guest-logo"
-                onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'40\' fill=\'none\' stroke=\'%236366F1\' stroke-width=\'5\'/><text x=\'50\' y=\'55\' font-size=\'20\' font-family=\'sans-serif\' text-anchor=\'middle\' fill=\'%236366F1\'>YUKT</text></svg>'">
-            <div>
-                <h2>Room Service</h2>
-                <p id="guest-room-number" class="text-sm color-primary">Room --</p>
-            </div>
-        </div>
-
-        <div class="guest-menu" id="guest-menu-grid">
-            <!-- Swiggy style menu items -->
-        </div>
-
-        <div class="guest-cart-bar" id="guest-cart-bar" style="transform: translateY(100%);">
-            <div class="cart-details">
-                <span id="guest-cart-count">0 items</span>
-                <span class="font-bold">₹<span id="guest-cart-total">0</span></span>
-            </div>
-            <button class="btn btn-primary" onclick="app.placeOrder('guest')">Order Now</button>
-        </div>
-
-        <!-- Order Success Overlay -->
-        <div class="guest-success" id="guest-success" style="display:none;">
-            <div class="success-icon">✅</div>
-            <h2 id="guest-success-title">Order Placed!</h2>
-            <p id="guest-success-msg">The kitchen is preparing your food.</p>
-            <div id="guest-success-id" style="font-size:1.5rem; font-weight:bold; color:var(--gold-primary); margin:10px 0;">ID: ----</div>
-            <p class="text-sm text-gray mt-2">Amount added to room ledger.</p>
-            <button class="btn btn-outline mt-4"
-                onclick="document.getElementById('guest-success').style.display='none'">Order More</button>
-        </div>
-    </div>
-
-
-    <!-- SECURITY MODAL OVERLAY -->
-    <div id="security-modal" class="modal-overlay" style="display: none;">
-        <div class="security-box" style="position: relative;">
-            <button class="btn btn-icon" onclick="app.closeSecurityModal()"
-                style="position: absolute; top: 1rem; left: 1rem; font-size: 1.5rem; color: var(--color-slate-400); background: none; border: none; cursor: pointer; padding: 0;">✖</button>
-            <div class="security-header mb-4">
-                <h3 id="sec-title" class="color-primary m-0" style="margin: 0; text-align: center;">Restricted Access</h3>
-            </div>
-            <p id="sec-desc" class="text-gray mb-4 text-sm" style="text-align: center;">Authenticate to access this department.</p>
-
-            <form id="security-form" onsubmit="app.submitSecurity(event)">
-                <div id="sec-email-group" class="form-group mb-4" style="display: none;">
-                    <label>Email Address</label>
-                    <input type="email" id="sec-email" class="form-control" autocomplete="email" placeholder="admin@barak.com">
+            <!-- 3. INVENTORY TAB -->
+            <section id="tab-inventory" class="portal-content">
+                <div class="luxury-portal-header">
+                    <div class="luxury-identity golden-brand">MENU & INVENTORY SYNC</div>
+                    <button class="btn btn-primary btn-sm" onclick="app.triggerMenuSync()">SYNC FROM CSV</button>
                 </div>
-                <div class="form-group mb-4">
-                    <label id="sec-pwd-label">Password (<span id="sec-hint"></span>)</label>
-                    <input type="password" id="sec-pwd" class="form-control" autocomplete="off" autofocus required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100" style="padding: 1rem;" id="sec-submit-btn">Authenticate</button>
-            </form>
-        </div>
-    </div>
-    <!-- PROFESSIONAL FEEDBACK SYSTEM -->
-    <div id="success-overlay-pms" class="success-overlay-pms" style="display: none;">
-        <!-- Filled Dynamically by app.js triggerSuccessOverlay(context, order) -->
-    </div>
-
-    <!-- Using a short generic base64 sine wave beep for the chime -->
-    <audio id="success-chime"
-        src="data:audio/wav;base64,UklGRloAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YToAAAAA/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/w="
-        preload="auto"></audio>
-    <audio id="kds-chime"
-        src="data:audio/wav;base64,UklGRloAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YToAAAAA/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/w="
-        preload="auto"></audio>
-    <audio id="success-sound" src="orderconfirm.mp3" preload="auto"></audio>
-
-    <!-- FULLSCREEN RE-ENTRY -->
-    <button id="reenter-fs-btn" class="btn btn-primary"
-        style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 10000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border-radius: 50px; padding: 1rem 2rem; font-size: 1.1rem; border: 2px solid #fff;"
-        onclick="if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});">
-        📺 Re-enter Terminal Mode
-    </button>
-
-    <!-- CUSTOM ERP MODALS -->
-    <!-- Alert Modal -->
-    <div id="alert-modal" class="modal-overlay" style="display: none; z-index: 10005;">
-        <div class="security-box" style="padding: 2rem; width: 350px;">
-            <div class="security-header mb-4">
-                <h3 class="color-primary m-0" style="text-align: center;">Notification</h3>
-            </div>
-            <p id="alert-msg" class="text-md mb-4" style="text-align: center; color: white;"></p>
-            <button class="btn btn-primary w-100" onclick="document.getElementById('alert-modal').style.display='none'"
-                style="padding: 0.8rem;">OK</button>
-        </div>
-    </div>
-
-    <!-- Order Confirmation Modal -->
-    <div id="order-confirm-modal" class="modal-overlay" style="display: none; z-index: 10006;">
-        <div class="security-box" style="padding: 2rem; width: 450px;">
-            <div class="security-header mb-4">
-                <h3 class="color-primary m-0" style="text-align: center;">Confirm Order: <span
-                        id="confirm-order-id"></span></h3>
-            </div>
-            <div id="confirm-order-items" class="text-md mb-4"
-                style="text-align: left; color: white; max-height: 250px; overflow-y: auto;"></div>
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                <button class="btn btn-primary w-100"
-                    style="padding: 1rem; font-size: 1.1rem; background: linear-gradient(135deg, #10b981, #059669); border: none;"
-                    onclick="app.confirmAndSendOrder()">Confirm & Send to Kitchen</button>
-                <button class="btn btn-outline w-100" style="padding: 0.8rem;"
-                    onclick="document.getElementById('order-confirm-modal').style.display='none'">Edit Order</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Confirm Modal -->
-    <div id="confirm-modal" class="modal-overlay" style="display: none; z-index: 10005;">
-        <div class="security-box" style="padding: 2rem; width: 400px;">
-            <div class="security-header mb-4">
-                <h3 class="color-primary m-0" style="text-align: center;">Action Required</h3>
-            </div>
-            <p id="confirm-msg" class="text-md mb-4" style="text-align: center; color: white;"></p>
-            <div style="display: flex; gap: 1rem;">
-                <button class="btn btn-outline" style="flex: 1;" onclick="app.resolveConfirm(false)">Cancel</button>
-                <button class="btn btn-danger"
-                    style="flex: 1; border-color: var(--color-red-500); color: var(--color-red-500);"
-                    onclick="app.resolveConfirm(true)">Confirm</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Table Check-in Modal -->
-    <div id="waiter-modal-overlay" class="modal-overlay" style="display: none; z-index: 10005;">
-        <div class="security-box" style="padding: 2.5rem 2rem; width: 450px; position: relative; max-width: 95vw;">
-            <div class="security-header mb-4">
-                <h3 class="color-primary m-0" style="text-align: center;" id="tci-title">Table Check-in</h3>
-            </div>
-            <form id="table-checkin-form" onsubmit="app.submitTableCheckin(event)">
-                <input type="hidden" id="tci-tableid">
-
-                <!-- ACTIVE GUESTS (Dynamically Populated if Occupied) -->
-                <div id="tci-active-guests-list"
-                    style="display: none; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;"></div>
-
-                <!-- NEW GUEST INPUTS (Hidden if table is occupied) -->
-                <div id="tci-inputs-wrapper">
-                    <div class="form-group mb-4" style="text-align: left;">
-                        <label>Guest Name / Details</label>
-                        <input type="text" id="tci-name" class="form-control" autocomplete="off" autofocus
-                            placeholder="Walk-in Guest" style="min-height: 50px;">
+                <div class="glass-panel" style="margin: 1.5rem; padding: 1.5rem;">
+                    <div id="menu-loading-msg">Fetching cloud menu...</div>
+                    <div id="menu-items-table-wrapper" style="display: none;">
+                        <table class="inventory-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Category</th>
+                                    <th>Portion</th>
+                                    <th>Price</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-list"></tbody>
+                        </table>
                     </div>
-                    <div class="form-group mb-4" style="text-align: left;">
-                        <label>Number of Persons (Pax)</label>
-                        <input type="number" id="tci-pax" class="form-control" autocomplete="off" min="1" max="10"
-                            value="2" style="min-height: 50px;">
+                    <div id="menu-empty-state" style="display: none; text-align: center; padding: 3rem;">
+                        <span style="font-size: 3rem;">📦</span>
+                        <h3>No menu items found.</h3>
+                        <p>Upload a menu.csv file to get started.</p>
                     </div>
                 </div>
+            </section>
 
-                <div id="link-btn-wrapper" style="display: none; margin-bottom: 1.5rem;">
-                    <button type="button" class="btn btn-outline"
-                        style="width: 100%; border-color: #A020F0; color: #A020F0; padding: 1rem; border-radius: 8px; font-weight: bold; border-style: dashed;"
-                        onclick="app.showLinkTableModal()">🔗 LINK ANOTHER TABLE</button>
+            <!-- 4. FINANCIALS TAB -->
+            <section id="tab-financials" class="portal-content">
+                <div class="luxury-portal-header">
+                    <div class="luxury-identity golden-brand">FINANCIAL ANALYTICS</div>
                 </div>
-
-                <!-- BUTTON CONTROLS -->
-                <div style="display: flex; gap: 1rem; flex-direction: column;" id="tci-btn-wrapper">
-                    <button type="button" class="btn btn-success"
-                        style="display:none; width: 100%; border-radius: 8px; padding: 1rem;" id="btn-reorder-table"
-                        onclick="app.reorderTableModal()">Existing Guest</button>
-                    <button type="button" class="btn btn-outline"
-                        style="display:none; border-color: var(--color-mint-400); color: var(--color-mint-400); width: 100%; border-radius: 8px; padding: 1rem;"
-                        id="btn-add-new-guest" onclick="app.addNewGuestToTable()">Add New Guest</button>
-
-                    <button type="submit" class="btn btn-primary"
-                        style="width: 100%; border-radius: 8px; padding: 1rem; font-size: 1.1rem; font-weight: bold;"
-                        id="btn-confirm-tci">Start Order</button>
-                    <button type="button" class="btn btn-outline border-transparent text-gray mt-2"
-                        onclick="app.cancelTableModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Print Template -->
-    <div id="print-area"></div>
-
-    <!-- On-Screen Invoice Preview Modal -->
-    <div id="invoice-preview-modal" class="modal-overlay" style="display: none; z-index: 10000;">
-        <div class="security-box" style="max-width: 500px; padding: 2rem;">
-            <div class="d-flex justify-between align-center mb-4">
-                <h3 class="color-primary m-0">Final Bill Preview</h3>
-                <button class="btn btn-icon"
-                    onclick="document.getElementById('invoice-preview-modal').style.display = 'none'"
-                    style="font-size: 1.5rem; color: var(--color-slate-400); background: none; border: none; cursor: pointer;">✖</button>
-            </div>
-            <div id="invoice-preview-content" class="bg-white"
-                style="color: black; padding: 1.5rem; text-align: left; height: 400px; overflow-y: auto; font-family: monospace;">
-                <!-- Filled dynamically -->
-            </div>
-            <div class="d-flex justify-end mt-4">
-                <button class="btn btn-success" id="btn-print-final-bill">Print 2 Copies & Close Table</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Link Table Modal (Full Screen Drawer) -->
-    <div id="link-table-modal" class="modal-overlay"
-        style="display: none; z-index: 10005; align-items: stretch; justify-content: stretch; padding: 2rem;">
-        <div class="security-box"
-            style="width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; background: rgba(15, 23, 42, 0.95); padding: 0; overflow: hidden; border: 1px solid var(--glass-border);">
-
-            <!-- Left Side: Active Links Tracker -->
-            <div
-                style="padding: 2rem; border-right: 1px solid var(--glass-border); display: flex; flex-direction: column;">
-                <h2 style="color: #A020F0; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="font-size: 1.5rem;">🔗</span> Master Bill Group</h2>
-                <p class="text-gray" id="link-table-subtitle" style="margin-bottom: 2rem;">Loading master context...</p>
-
-                <h3 style="margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px dashed var(--glass-border);">
-                    Previously Linked Tables</h3>
-                <div id="link-existing-list" style="flex: 1; overflow-y: auto;">
-                    <!-- Populated dynamically -->
-                    <div class="text-center text-gray" style="padding: 2rem;">No previously linked tables</div>
-                </div>
-
-                <button class="btn btn-outline" style="margin-top: 1rem; padding: 1rem;"
-                    onclick="document.getElementById('link-table-modal').style.display='none'">← Return to POS</button>
-            </div>
-
-            <!-- Right Side: New Link Drawer Selection -->
-            <div style="padding: 2rem; display: flex; flex-direction: column; background: rgba(0,0,0,0.2);">
-                <h2 style="margin-bottom: 1rem;">Link A New Table</h2>
-                <p class="text-gray mb-4">Select an available table from the drawer to expand your guest capacity.</p>
-
-                <div class="form-group mb-4">
-                    <label>How many Pax are you linking?</label>
-                    <input type="number" id="link-pax-input" class="form-control" autocomplete="off" min="1" value="1"
-                        oninput="app.renderLinkTableDropdown()"
-                        style="background: rgba(0,0,0,0.5); padding: 1.25rem; color: white; border: 1px solid var(--glass-border); border-radius: 8px; font-size: 1.2rem;">
-                </div>
-
-                <div class="form-group flex-1" style="display: flex; flex-direction: column;">
-                    <label>Available Tables (Drag Drawer)</label>
-                    <select id="link-table-dropdown" class="form-control mb-4" size="8"
-                        style="flex: 1; background: rgba(0,0,0,0.5); padding: 1rem; color: white; border: 1px solid var(--glass-border); border-radius: 8px; width: 100%; font-size: 1.1rem;">
-                        <!-- Options generated here -->
-                    </select>
-                </div>
-
-                <button class="btn btn-primary"
-                    style="background-color: #A020F0; border-color: #A020F0; padding: 1.25rem; font-size: 1.2rem;"
-                    onclick="app.submitLinkTable()">Confirm Link & Return</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="room-session-modal" class="modal-overlay" style="display: none; z-index: 10007;">
-        <div class="security-box" style="padding: 2.5rem 2rem; width: 450px; text-align: center;">
-            <div class="security-header mb-4">
-                <h2 id="rsm-room-title" style="color: var(--gold-primary); font-family: 'Outfit', serif;">Room 101</h2>
-                <p class="text-gray">An active order session is already in progress.</p>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                <button class="btn btn-primary" id="btn-rsm-addon" style="padding: 1.5rem; font-size: 1.1rem; border: 2px solid var(--gold-primary); background: var(--gold-dim); color: white;">
-                    Add to Active Session <span id="rsm-active-id" class="font-bold">1011</span>
-                </button>
-                <div style="display: flex; align-items: center; gap: 1rem; margin: 0.5rem 0;">
-                    <div style="flex: 1; height: 1px; background: var(--glass-border);"></div>
-                    <span class="text-xs text-gray">OR</span>
-                    <div style="flex: 1; height: 1px; background: var(--glass-border);"></div>
-                </div>
-                <button class="btn btn-outline" id="btn-rsm-new" style="padding: 1.25rem; font-size: 1rem; border-color: var(--color-slate-400); color: var(--color-slate-400);">
-                    Start Fresh Order <span id="rsm-next-id" class="font-bold">1012</span>
-                </button>
-                <button class="btn btn-outline" style="margin-top: 1rem; border: none; text-decoration: underline;"
-                    onclick="document.getElementById('room-session-modal').style.display='none'">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="quantity-prompt-modal" class="modal-overlay" style="display: none; z-index: 10006;">
-        <div class="security-box" style="padding: 2.5rem 2rem; width: 400px; text-align: center; position: relative;">
-
-            <div class="security-header mb-4" style="margin-top: 20px;">
-                <h3 class="m-0" id="qp-item-name" style="color: var(--color-primary); padding-bottom: 15px; padding-top: 30px; font-size: 1.8rem;">Item Name</h3>
-            </div>
-
-            <!-- View 1: Select Variant -->
-            <div id="qp-view-variant" class="portion-options" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 20px;">
-                <p class="text-sm text-gray" style="margin-bottom: 0.5rem; margin-top: -1rem;">Select Portion Size</p>
-                <button class="btn btn-outline"
-                    style="padding: 1.5rem; font-size: 1.1rem; border-color: var(--color-primary); color: var(--color-primary);"
-                    onclick="app.qpSelectVariant('Full')">Full Plate</button>
-                <button class="btn btn-outline"
-                    style="padding: 1.5rem; font-size: 1.1rem; border-color: var(--color-indigo-400); color: var(--color-indigo-400);"
-                    onclick="app.qpSelectVariant('Half')">Half Plate</button>
-                <button class="btn btn-outline" style="margin-top: 1rem; border: none; text-decoration: underline;"
-                    onclick="document.getElementById('quantity-prompt-modal').style.display='none'">Cancel</button>
-            </div>
-
-            <!-- View 2: Select Quantity -->
-            <div id="qp-view-quantity" style="display: none; flex-direction: column; gap: 1.5rem; margin-top: 20px;">
-                <p class="text-sm text-gray" id="qp-selected-variant-text"
-                    style="color: var(--color-primary); font-weight: bold; margin-bottom: 0px; margin-top: -1rem;">Full
-                    Plate</p>
-
-                <div class="form-group" style="text-align: left;">
-                    <label>Enter Quantity</label>
-                    <div
-                        style="display: flex; align-items: center; gap: 1rem; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 1rem; border: 1px solid var(--glass-border);">
-                        <button class="btn btn-outline"
-                            style="width: 50px; height: 50px; border-radius: 50%; padding: 0; font-size: 1.5rem;"
-                            onclick="document.getElementById('qp-qty').value = Math.max(1, parseInt(document.getElementById('qp-qty').value) - 1)">-</button>
-                        <input type="number" id="qp-qty" min="1" value="1"
-                            style="width: 80px; text-align: center; background: transparent; border: none; color: white; font-size: 2rem; font-weight: bold; outline: none;">
-                        <button class="btn btn-outline"
-                            style="width: 50px; height: 50px; border-radius: 50%; padding: 0; font-size: 1.5rem;"
-                            onclick="document.getElementById('qp-qty').value = parseInt(document.getElementById('qp-qty').value) + 1">+</button>
+                <div class="kpi-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: 1.5rem;">
+                    <div class="kpi-card glass-panel luxury-glow">
+                        <div class="kpi-title">Room Revenue (24h)</div>
+                        <div class="kpi-value" id="kpi-room-revenue">₹ 0</div>
+                    </div>
+                    <div class="kpi-card glass-panel luxury-glow">
+                        <div class="kpi-title">Restaurant Revenue</div>
+                        <div class="kpi-value" id="kpi-rest-revenue">₹ 0</div>
+                    </div>
+                    <div class="kpi-card glass-panel luxury-glow">
+                        <div class="kpi-title">EBITDA (Est.)</div>
+                        <div class="kpi-value" id="kpi-ebitda">₹ 0</div>
                     </div>
                 </div>
-
-                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                    <button class="btn btn-outline" style="flex: 1;" onclick="app.qpBackToVariant()">← Back</button>
-                    <button class="btn btn-primary" style="flex: 2; font-size: 1.1rem;"
-                        onclick="app.submitItemQuantity()">Add to Cart</button>
-                </div>
-            </div>
-
-        </div>
+            </section>
+        </main>
     </div>
 
-    <div id="availability-modal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.85); justify-content: center; align-items: center;">
-        <div class="security-box" style="padding: 2.5rem 2rem; width: 500px; max-height: 80vh; display: flex; flex-direction: column; position:relative;">
-            <button onclick="document.getElementById('availability-modal').style.display='none'" style="position:absolute; top:1rem; right:1rem; background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">✕</button>
-            <div class="security-header mb-4">
-                <h2 style="color: var(--gold-primary);">🚫 Food Availability Manager</h2>
-                <p class="text-gray">Toggle items ON/OFF. Changes apply instantly to all portals.</p>
-            </div>
-            <div id="availability-list" style="flex: 1; overflow-y: auto; margin-bottom: 20px;">
-                <!-- Populated dynamically -->
-            </div>
-            <button class="btn btn-primary" onclick="document.getElementById('availability-modal').style.display='none'">Close Manager</button>
-        </div>
-    </div>
-
-    <style>
-        .menu-category-header {
-            background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, transparent 100%);
-            padding: 10px;
-            border-radius: 4px;
-        }
-        /* Toggle Switch */
-        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--color-green-400); }
-        input:checked + .slider:before { transform: translateX(22px); }
-    </style>
-    <script>
-        function openAvailabilityModal() {
-            const m = document.getElementById('availability-modal');
-            if (m) { m.style.display = 'flex'; }
-            if (window.app) app.renderAvailabilityTool();
-        }
-    </script>
-
-    <!-- Room Reservation Modal -->
+    <!-- Modals -->
     <div id="reserve-modal" class="modal-overlay" style="display: none; z-index: 10008;">
-        <div class="glass-panel" style="width: 100%; max-width: 500px; padding: 2rem; animation: modalIn 0.3s ease-out;">
+        <div class="glass-panel" style="width: 100%; max-width: 500px; padding: 2rem;">
             <h2 class="mb-6" style="color: #a855f7;">Reserve Room <span id="reserve-room-num">--</span></h2>
-            
-            <div style="display: flex; gap: 1rem;">
-                <div class="form-group mb-4" style="flex: 1;">
-                    <label>Salutation</label>
-                    <select id="res-salutation" class="form-control">
-                        <option value="Mr.">Mr.</option>
-                        <option value="Mrs.">Mrs.</option>
-                        <option value="Ms.">Ms.</option>
-                    </select>
-                </div>
-                <div class="form-group mb-4" style="flex: 3;">
-                    <label>Guest Full Name</label>
-                    <input type="text" id="res-name" class="form-control" placeholder="John Doe">
-                </div>
-            </div>
-
             <div class="form-group mb-4">
-                <label>Contact Phone</label>
-                <input type="tel" id="res-phone" class="form-control" placeholder="+91 ...">
+                <label>Guest Name</label>
+                <input type="text" id="res-name" class="form-control" placeholder="John Doe">
             </div>
-
-            <div class="form-group mb-6">
-                <label>Expected Arrival Date & Time</label>
+            <div class="form-group mb-4">
+                <label>Arrival Time</label>
                 <input type="datetime-local" id="res-arrival" class="form-control">
             </div>
-
             <div class="d-flex gap-4">
                 <button class="btn btn-outline flex-1" onclick="document.getElementById('reserve-modal').style.display='none'">Cancel</button>
-                <button class="btn btn-primary flex-1" style="background: #a855f7; border: none;" onclick="app.submitReservation()">Confirm Reservation</button>
+                <button class="btn btn-primary flex-1" style="background: #a855f7; border: none;" onclick="app.submitReservation()">Confirm</button>
             </div>
         </div>
     </div>
 
-    <!-- Smart Checkin Flow Overlay -->
-    <div id="smart-checkin-modal" class="modal-overlay" style="display: none; z-index: 20000; background: var(--color-bg);">
-        <div class="smart-checkin-container" style="width: 100%; height: 100%; display: flex; flex-direction: column; padding: 2rem;">
-            <div class="smart-checkin-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; margin-bottom: 2rem;">
-                <h1 style="color: var(--gold-primary); font-family: 'Outfit', serif;">Sequential Guest Onboarding</h1>
-                <button class="btn btn-outline" onclick="app.closeSmartCheckin()">&times; Exit</button>
+    <div id="smart-checkin-modal" class="modal-overlay" style="display: none; z-index: 20000; background: #050B1A;">
+        <div style="width: 100%; height: 100%; display: flex; flex-direction: column; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+                <h1 style="color: var(--gold-primary);">Guest Onboarding</h1>
+                <button class="btn btn-outline" onclick="app.closeSmartCheckin()">Exit</button>
             </div>
-
-            <div class="smart-checkin-stepper" style="display: flex; gap: 1rem; margin-bottom: 3rem; justify-content: center;">
-                <div class="step-indicator active" id="ci-step-1">1. Identity</div>
-                <div class="step-line"></div>
-                <div class="step-indicator" id="ci-step-2">2. ID Scan</div>
-                <div class="step-line"></div>
-                <div class="step-indicator" id="ci-step-3">3. Finance</div>
-                <div class="step-line"></div>
-                <div class="step-indicator" id="ci-step-4">4. Confirm</div>
-                <div class="step-line"></div>
-                <div class="step-indicator" id="ci-step-5">5. Success</div>
-            </div>
-
-            <div class="smart-checkin-body" style="flex: 1; display: flex; align-items: center; justify-content: center;">
-                <!-- Step 1: Identity -->
-                <div class="ci-view active" id="ci-view-1" style="width: 100%; max-width: 500px;">
-                    <div style="display: flex; gap: 1rem;">
-                        <div class="form-group mb-4" style="flex: 1;">
-                            <label>Salutation</label>
-                            <select id="sci-salutation" class="form-control" style="padding: 1.5rem; font-size: 1.2rem;">
-                                <option value="Mr.">Mr.</option>
-                                <option value="Mrs.">Mrs.</option>
-                                <option value="Ms.">Ms.</option>
-                            </select>
-                        </div>
-                        <div class="form-group mb-4" style="flex: 3;">
-                            <label>Full Name (as per ID)</label>
-                            <input type="text" id="sci-name" class="form-control" placeholder="John Doe" style="padding: 1.5rem; font-size: 1.2rem;">
-                        </div>
-                    </div>
-                    <div class="form-group mb-4">
-                        <label>Age</label>
-                        <input type="number" id="sci-age" class="form-control" placeholder="25" style="padding: 1.5rem; font-size: 1.2rem;">
-                    </div>
-                    <div class="form-group mb-4">
-                        <label>Phone Number</label>
-                        <input type="tel" id="sci-phone" class="form-control" placeholder="+91 ..." style="padding: 1.5rem; font-size: 1.2rem;">
-                    </div>
-                    <div class="mt-8 d-flex gap-4">
-                        <button class="btn btn-outline" onclick="app.closeSmartCheckin()">Back</button>
-                        <button class="btn btn-primary flex-1" onclick="app.sciNext(2)">Proceed to ID Scanner &rarr;</button>
-                    </div>
-                </div>
-
-                <!-- Step 2: Scanner -->
-                <div class="ci-view" id="ci-view-2" style="display:none; width: 100%; max-width: 600px; text-align: center;">
-                    <h2 class="mb-4">Document Compliance</h2>
-                    
-                    <!-- Tab Switcher -->
-                    <div class="d-flex justify-content: center; gap: 4px; margin-bottom: 2rem; background: var(--glass-bg); padding: 4px; border-radius: 12px;">
-                        <button class="btn btn-outline flex-1 sci-tab active" id="tab-btn-cam" onclick="app.sciSwitchTab('cam')">Live Camera</button>
-                        <button class="btn btn-outline flex-1 sci-tab" id="tab-btn-browse" onclick="app.sciSwitchTab('browse')">Browse Document</button>
-                    </div>
-
-                    <!-- Live Camera Tab content -->
-                    <div id="sci-content-cam">
-                        <p class="text-gray mb-4">Center the ID document in the frame and click 'Capture'.</p>
-                        <div class="camera-container" style="position: relative; width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 1.5rem;">
-                            <video id="sci-video" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
-                            <canvas id="sci-canvas" style="display: none;"></canvas>
-                            <div id="sci-focus-guide" style="position: absolute; top: 15%; left: 10%; right: 10%; bottom: 15%; border: 2px dashed rgba(212, 175, 55, 0.5); border-radius: 8px; pointer-events: none;"></div>
-                        </div>
-                        <button id="sci-start-cam" class="btn btn-outline mb-4" onclick="app.startScanner()">Open Camera</button>
-                        <button id="sci-capture-btn" class="btn btn-primary mb-4" onclick="app.captureId()" style="display: none;">📷 Capture Photo</button>
-                    </div>
-
-                    <!-- Browse Tab content -->
-                    <div id="sci-content-browse" style="display: none;">
-                        <p class="text-gray mb-4">Drag & drop your ID document or browse from files.</p>
-                        <div id="sci-drop-zone" 
-                             style="width: 100%; aspect-ratio: 4/2; border: 2px dashed var(--glass-border); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.3s;"
-                             onclick="document.getElementById('sci-id-file').click()"
-                             ondragover="event.preventDefault(); this.style.borderColor='var(--gold-primary)';"
-                             ondragleave="this.style.borderColor='var(--glass-border)';"
-                             ondrop="app.sciHandleDrop(event)">
-                            <div style="font-size: 2.5rem; margin-bottom: 1rem;">📁</div>
-                            <div style="color: var(--text-gray);">Drag files here or click to browse</div>
-                            <input type="file" id="sci-id-file" accept="image/*" style="display:none;" onchange="app.sciHandleIdFile(this)">
-                        </div>
-                    </div>
-
-                    <div id="sci-scan-status" class="color-success mt-4" style="display:none; font-weight: bold; font-size: 1.1rem;">✓ ID Captured Successfully</div>
-
-                    <div class="mt-8 d-flex gap-4">
-                        <button class="btn btn-outline" onclick="app.sciNext(1)">Back</button>
-                        <button class="btn btn-primary flex-1" onclick="app.sciNext(3)">Next: Financials &rarr;</button>
-                    </div>
-                </div>
-
-                <!-- Step 3: Finance -->
-                <div class="ci-view" id="ci-view-3" style="display:none; width: 100%; max-width: 500px;">
-                    <h2 class="mb-4">Financial Ledger Setup</h2>
-                    <div class="form-group mb-4">
-                        <label>Room Tariff (Per Night)</label>
-                        <input type="number" id="sci-tariff" class="form-control" value="2500" style="padding: 1.5rem; font-size: 1.2rem;">
-                    </div>
-                    <div class="form-group mb-4">
-                        <label>Advance Payment Paid (₹)</label>
-                        <input type="number" id="sci-advance" class="form-control" value="0" style="padding: 1.5rem; font-size: 1.2rem;">
-                    </div>
-                    <div class="mt-8 d-flex gap-4">
-                        <button class="btn btn-outline" onclick="app.sciNext(2)">Back</button>
-                        <button class="btn btn-primary flex-1" onclick="app.sciNext(4)">Review & Finalize</button>
-                    </div>
-                </div>
-
-                <!-- Step 4: Confirm -->
-                <div class="ci-view" id="ci-view-4" style="display:none; width: 100%; max-width: 500px; text-align: center;">
-                    <h2 class="mb-4">Ready to Check-in?</h2>
-                    <div class="glass-panel" style="padding: 2rem; text-align: left; margin-bottom: 2rem;">
-                        <div class="mb-2"><strong>Guest:</strong> <span id="summary-name">--</span></div>
-                        <div class="mb-2"><strong>Phone:</strong> <span id="summary-phone">--</span></div>
-                        <div class="mb-2"><strong>Room:</strong> <span id="summary-room">--</span></div>
-                        <div class="mb-2"><strong>Tariff:</strong> ₹<span id="summary-tariff">--</span></div>
-                        <div><strong>Advance:</strong> ₹<span id="summary-advance">--</span></div>
-                    </div>
-                    <button class="btn btn-success btn-block" style="padding: 2rem; font-size: 1.5rem;" onclick="app.confirmSmartCheckin()">CONFIRM & OPEN DOOR</button>
-                    <button class="btn btn-outline btn-block mt-4" onclick="app.sciNext(3)">Back to Finance</button>
-                </div>
-
-                <!-- Step 5: Success -->
-                <div class="ci-view" id="ci-view-5" style="display:none; width: 100%; max-width: 500px; text-align: center;">
-                    <div style="font-size: 5rem; color: var(--color-success); margin-bottom: 2rem;">✓</div>
-                    <h2 class="mb-4">Check-in Internal Success!</h2>
-                    <p class="mb-8" style="color: var(--color-slate-400);">Cloud synchronization complete. Guest record and compliance logs generated.</p>
-                    <button class="btn btn-primary btn-block" onclick="app.closeSmartCheckin()">Close Onboarding Flow</button>
+            <div id="sci-body" style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                <div class="glass-panel" style="padding: 2rem; width: 100%; max-width: 500px;">
+                    <h2 id="sci-step-title" class="mb-4">Guest Details</h2>
+                    <input type="text" id="sci-name" class="form-control mb-4" placeholder="Name">
+                    <input type="tel" id="sci-phone" class="form-control mb-4" placeholder="Phone">
+                    <input type="number" id="sci-advance" class="form-control mb-6" placeholder="Advance Payment">
+                    <button class="btn btn-primary btn-block" onclick="app.submitCheckIn()">COMPLETE CHECK-IN</button>
                 </div>
             </div>
         </div>
     </div>
-
-    <style>
-        .step-indicator { padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid var(--glass-border); color: var(--color-slate-400); font-size: 0.9rem; }
-        .step-indicator.active { border-color: var(--gold-primary); color: var(--gold-primary); font-weight: bold; }
-        .step-line { flex: 1; height: 1px; background: var(--glass-border); align-self: center; max-width: 50px; }
-    </style>
 
     <script src="app.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(registration => {
-                    console.log('SW registered: ', registration);
-                }).catch(registrationError => {
-                    console.log('SW registration failed: ', registrationError);
-                });
-            });
-        }
-    </script>
 </body>
-
 </html>

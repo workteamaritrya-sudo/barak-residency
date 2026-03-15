@@ -11,6 +11,7 @@ class CentralDatabase {
         this.activePickups = JSON.parse(localStorage.getItem('yukt_active_pickups')) || [];
         this.roomLedger = JSON.parse(localStorage.getItem('br_room_ledger')) || {};
         this.lastOrderId = parseInt(localStorage.getItem('yukt_last_order_id')) || 0;
+        this.rooms = {}; // Bullet-proof initialization
 
         // RESTORE CORE STATE
         const savedTables = localStorage.getItem('yukt_rest_tables');
@@ -491,6 +492,9 @@ class PMSApp {
         this.revenueChart = null;
         this.profitabilityChart = null;
         this.selectedRoomId = null;
+        this.isGuestMode = false;
+        this.isolatedView = false;
+        this.currentPortal = 'reception'; // Map hub to legacy reception logic
 
         // Offline Support
         this.isOnline = navigator.onLine;
@@ -912,7 +916,7 @@ class PMSApp {
         if (this.isGuestMode) return;
 
         // Sync Reception
-        if (!this.isolatedView && this.currentPortal === 'reception') {
+        if (!this.isolatedView && (this.currentPortal === 'reception' || this.currentTab === 'dashboard')) {
             this.renderRoomGrid();
             this.renderRoomOrderPanel(); // Mission Sync: Ensure orders show in Desk
             if (this.selectedRoomId) this.updateCommandCenter();
