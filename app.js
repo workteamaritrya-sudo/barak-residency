@@ -3122,59 +3122,75 @@ class PMSApp {
 
     generateKOT(orderObj) {
         const copies = [
-            { id: 'Kitchen', type: 'KITCHEN KOT' },
-            { id: 'Reception', type: 'RECEPTION KOT' },
-            { id: 'Room', type: 'GUEST COPY' }
+            { label: '👨‍🍳  CHEF COPY', color: '#c0392b' },
+            { label: '🛎️  WAITER COPY', color: '#1a237e' },
+            { label: '📋  LEDGER COPY', color: '#1b5e20' }
         ];
 
         const printArea = document.getElementById('print-area');
         if (!printArea) return;
         printArea.innerHTML = '';
 
-        const pDate = this.db.timeOnlyIST ? this.db.timeOnlyIST(orderObj.timestamp) : new Date(orderObj.timestamp).toLocaleTimeString();
-        const roomNum = orderObj.roomNumber || orderObj.roomId;
+        const timestamp = orderObj.timestamp
+            ? (typeof orderObj.timestamp === 'object' && orderObj.timestamp.seconds
+                ? new Date(orderObj.timestamp.seconds * 1000)
+                : new Date(orderObj.timestamp))
+            : new Date();
+        const pDate = timestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const pFullDate = timestamp.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+        const roomNum = orderObj.roomNumber || orderObj.roomId || '—';
+        const guestName = (() => {
+            const r = this.db ? (this.db.rooms[roomNum] || this.db.rooms[String(roomNum)]) : null;
+            return r ? `${r.salutation || ''} ${r.guestName || ''}`.trim() : 'Guest';
+        })();
 
         copies.forEach(copy => {
-            const html = `
-                <div class="kot-print-block" style="font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 10px; border-bottom: 2px dashed #000; margin-bottom: 40px; color: black; background: white;">
-                    <div style="text-align:center; font-weight:bold; font-size: 1.4rem;">${copy.type}</div>
-                    <div style="text-align:center; font-size: 0.9rem; margin-bottom: 10px;">BARAK RESIDENCY</div>
-                    <div style="border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 5px 0; margin-bottom: 10px;">
-                        <strong>ROOM: ${roomNum}</strong><br>
-                        <strong>ID: ${orderObj.order_id || orderObj.id}</strong><br>
-                        <strong>TIME: ${pDate}</strong>
+            const itemsHtml = (orderObj.items || []).map(item => {
+                const name = typeof item === 'object' ? (item.name || 'Item') : item;
+                const qty = typeof item === 'object' ? (item.qty || item.quantity || 1) : 1;
+                const variant = item.variant && item.variant !== 'Full' && item.variant !== 'Standard' ? ` [${item.variant}]` : '';
+                const addons = item.specialInstructions ? `<tr><td colspan="3" style="padding:2px 6px; font-size:0.75rem; color:#c0392b; font-weight:bold;">  ↳ ${item.specialInstructions}</td></tr>` : '';
+                return `<tr style="border-bottom:1px dotted #ccc;">
+                    <td style="padding:5px 6px; font-size:0.95rem;">• ${name}${variant}</td>
+                    <td style="padding:5px 6px; text-align:center; font-weight:900;">${qty}</td>
+                    <td style="padding:5px 6px; text-align:right;">₹${(item.price||0)*qty}</td>
+                </tr>${addons}`;
+            }).join('');
+
+            const total = (orderObj.items || []).reduce((s, i) => s + ((i.price||0)*(i.qty||1)), 0);
+
+            printArea.innerHTML += `
+                <div style="font-family:'Courier New',monospace; width:80mm; padding:10px; margin:0 auto 30px; border:2px solid ${copy.color}; color:#000; background:#fff; page-break-after:always;">
+                    <div style="text-align:center; background:${copy.color}; color:#fff; padding:6px 0; font-weight:bold; letter-spacing:2px; font-size:1rem; margin-bottom:8px;">${copy.label}</div>
+                    <div style="text-align:center; font-size:1.2rem; font-weight:900; margin-bottom:2px;">BARAK RESIDENCY</div>
+                    <div style="text-align:center; font-size:0.7rem; margin-bottom:8px;">Luxury Hotel • Silchar, Assam</div>
+                    <div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:5px 0; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between;"><b>ROOM:</b> <b>${roomNum}</b></div>
+                        <div style="display:flex; justify-content:space-between;"><b>GUEST:</b> <span>${guestName}</span></div>
+                        <div style="display:flex; justify-content:space-between;"><b>ORDER ID:</b> <span>${orderObj.order_id || orderObj.id}</span></div>
+                        <div style="display:flex; justify-content:space-between;"><b>DATE:</b> <span>${pFullDate}</span></div>
+                        <div style="display:flex; justify-content:space-between;"><b>TIME:</b> <span>${pDate}</span></div>
                     </div>
-                    <table style="width:100%; border-collapse: collapse;">
-                        <tr style="border-bottom: 1px solid #000;">
-                            <th style="text-align:left;">Item</th>
-                            <th style="text-align:right;">Qty</th>
+                    <table style="width:100%; border-collapse:collapse;">
+                        <tr style="border-bottom:2px solid #000; font-size:0.8rem;">
+                            <th style="text-align:left; padding:3px 6px;">ITEM</th>
+                            <th style="text-align:center; padding:3px 6px;">QTY</th>
+                            <th style="text-align:right; padding:3px 6px;">AMT</th>
                         </tr>
-                        ${orderObj.items.map(item => {
-                            const name = typeof item === 'object' ? item.name : item;
-                            const qty = typeof item === 'object' ? (item.qty || item.quantity || 1) : 1;
-                            const variant = item.variant && item.variant !== 'Full' && item.variant !== 'Standard' ? ` (${item.variant})` : '';
-                            return `
-                                <tr>
-                                    <td style="padding: 4px 0; font-size: 1.1rem;">• ${name}${variant}</td>
-                                    <td style="text-align:right; font-weight:bold;">${qty}</td>
-                                </tr>
-                                ${item.specialInstructions ? `<tr><td colspan="2" style="font-size: 0.8rem; color: #000; font-weight: bold; padding-bottom: 5px;">>> ${item.specialInstructions}</td></tr>` : ''}
-                            `;
-                        }).join('')}
+                        ${itemsHtml}
+                        <tr style="border-top:2px solid #000; font-weight:900; font-size:1rem;">
+                            <td colspan="2" style="padding:6px; text-align:right;">TOTAL:</td>
+                            <td style="padding:6px; text-align:right;">₹${total}</td>
+                        </tr>
                     </table>
-                    <div style="margin-top: 20px; text-align:center; font-size: 0.7rem; border-top: 1px dashed #ccc; padding-top: 5px;">
-                        ${copy.id} Copy - Instant Sync System
-                    </div>
-                </div>
-            `;
-            printArea.innerHTML += html;
+                    <div style="text-align:center; margin-top:8px; font-size:0.7rem; border-top:1px dashed #ccc; padding-top:5px;">Thank you! • ${new Date().toLocaleTimeString()}</div>
+                </div>`;
         });
 
-        // Trigger native print dialog (can be automated via browser settings for silent print)
         window.print();
-
         if (this.currentPortal === 'reception') {
-            this.showToast(`KOT Printed (3 Copies) for Room ${roomNum}`, "success");
+            this.showToast(`KOT Printed: Room ${roomNum} — 3 Copies`, 'success');
         }
     }
 
@@ -3191,16 +3207,26 @@ class PMSApp {
         const guest = room.guest;
         const guestId = guest.cloudId || room.currentGuestId;
 
-        // 2. Itemized Billing Logic: Fetch orders from Cloud
+        // 2. Itemized Billing Logic: Build from billSummary first, then fallback to orders collection
         let orders = [];
         if (window.FirebaseSync && window.firebaseFS) {
             const { collection, query, where, getDocs } = window.firebaseHooks;
-            const ordersRef = collection(window.firebaseFS, 'orders');
-            const q = query(ordersRef, where('roomId', '==', roomNum.toString()));
-            const snap = await getDocs(q);
-            snap.forEach(d => orders.push(d.data()));
+            // Primary: billSummary array already stored in guest document
+            const billSummary = guest.billSummary || [];
+            if (billSummary.length > 0) {
+                orders = billSummary;
+            } else {
+                // Fallback: query the orders collection
+                const ordersRef = collection(window.firebaseFS, 'orders');
+                const q = query(ordersRef, where('roomNumber', '==', roomNum.toString()));
+                const snap = await getDocs(q);
+                snap.forEach(d => {
+                    const o = d.data();
+                    if (o.status === 'Delivered' || o.status === 'delivered') orders.push(o);
+                });
+            }
         } else {
-            orders = guest.foodOrders || [];
+            orders = guest.billSummary || guest.foodOrders || [];
         }
 
         // 3. Advanced GST Calculator
@@ -3215,7 +3241,7 @@ class PMSApp {
         else if (tariff > 1000) roomGSTPerc = 12;
         const roomGSTValue = (roomSubtotal * roomGSTPerc) / 100;
 
-        const foodSubtotal = orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+        const foodSubtotal = orders.reduce((sum, o) => sum + (Number(o.total_price || o.total_amount || o.total) || 0), 0);
         const foodGSTPerc = 5;
         const foodGSTValue = (foodSubtotal * foodGSTPerc) / 100;
 
@@ -3291,13 +3317,37 @@ class PMSApp {
                                 <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${roomGSTPerc}%</td>
                                 <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${(roomSubtotal + roomGSTValue).toFixed(2)}</td>
                             </tr>
-                            <tr>
-                                <td style="padding: 12px; border: 1px solid #eee;">Food & Beverage Services</td>
-                                <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${orders.length} Orders</td>
-                                <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${foodSubtotal.toFixed(2)}</td>
-                                <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${foodGSTPerc}%</td>
-                                <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${(foodSubtotal + foodGSTValue).toFixed(2)}</td>
+                            ${orders.length > 0 ? `
+                            <tr style="background:#fffbf0;">
+                                <td colspan="5" style="padding: 8px 12px; border: 1px solid #eee; font-weight:900; color:#D4AF37;">FOOD & BEVERAGE — ITEMIZED (${orders.length} Order${orders.length>1?'s':''})</td>
                             </tr>
+                            ${orders.map((o, idx) => {
+                                const oTotal = Number(o.total_price || o.total_amount || o.total) || 0;
+                                const oTime = o.timestamp ? new Date(o.timestamp.seconds ? o.timestamp.seconds*1000 : o.timestamp).toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '—';
+                                const itemsDetail = (o.items || []).map(i => {
+                                    const name = typeof i === 'object' ? i.name : i;
+                                    const qty = typeof i === 'object' ? (i.qty||1) : 1;
+                                    const v = i.variant && i.variant !== 'Full' && i.variant !== 'Standard' ? ` (${i.variant})` : '';
+                                    return `<span style='margin-right:8px;'>${name}${v} ×${qty}</span>`;
+                                }).join('');
+                                return `<tr style="background:${idx%2===0?'#fff':'#fffef8'}">
+                                    <td style="padding:8px 12px; border:1px solid #eee; font-size:0.85rem;">
+                                        <div style='font-weight:600;'>Order #${idx+1}: ${oTime}</div>
+                                        <div style='color:#555; font-size:0.8rem; margin-top:2px;'>${itemsDetail}</div>
+                                    </td>
+                                    <td style="padding:8px 12px; text-align:center; border:1px solid #eee;">1</td>
+                                    <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${oTotal.toFixed(2)}</td>
+                                    <td style="padding:8px 12px; text-align:center; border:1px solid #eee;">5%</td>
+                                    <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${(oTotal*1.05).toFixed(2)}</td>
+                                </tr>`;
+                            }).join('')}
+                            ` : `<tr>
+                                <td style="padding: 12px; border: 1px solid #eee;">Food & Beverage Services</td>
+                                <td style="padding: 12px; text-align: center; border: 1px solid #eee;">—</td>
+                                <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹0.00</td>
+                                <td style="padding: 12px; text-align: center; border: 1px solid #eee;">5%</td>
+                                <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹0.00</td>
+                            </tr>`}
                         </tbody>
                         <tfoot>
                             <tr style="background: #f9f9f9; font-weight: bold;">
@@ -3554,23 +3604,37 @@ class PMSApp {
     async markOrderDelivered(orderId) {
         const order = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
         if (order) {
-            order.status = 'delivered';
-            if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, 'delivered');
+            order.status = 'Delivered';
+            if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, 'Delivered');
             this.db.persistKitchenSync();
 
-            // Atomic Bill Update in Firestore
-            if (window.FirebaseSync && order.roomNumber) {
-                const { doc, updateDoc, increment, arrayUnion } = window.firebaseHooks;
-                const roomRef = doc(window.firebaseFS, 'rooms', order.roomNumber.toString());
-                
-                await updateDoc(roomRef, {
-                    'guest.foodTotal': increment(Number(order.total_price || order.total || 0)),
-                    'guest.foodOrders': arrayUnion(order)
-                });
+            // Atomic Bill Update in Firestore — write to billSummary array AND increment foodTotal
+            if (window.firebaseFS && order.roomNumber) {
+                try {
+                    const { doc, updateDoc, increment, arrayUnion } = window.firebaseHooks;
+                    const roomRef = doc(window.firebaseFS, 'rooms', order.roomNumber.toString());
+                    const billEntry = {
+                        order_id: order.order_id || order.id,
+                        items: order.items || [],
+                        total_price: Number(order.total_price || order.total || 0),
+                        total_amount: Number(order.total_price || order.total || 0),
+                        timestamp: Date.now(),
+                        deliveredAt: Date.now()
+                    };
+                    await updateDoc(roomRef, {
+                        'guest.billSummary': arrayUnion(billEntry),
+                        'guest.foodTotal': increment(billEntry.total_price)
+                    });
+                    console.log('[Bill] Delivered order synced to guest billSummary:', billEntry.order_id);
+                } catch(err) {
+                    console.error('[Bill] Failed to update billSummary:', err);
+                }
             }
 
+            // Play sound at Reception
+            new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
             this.syncState();
-            this.showToast(`Order ${orderId} Marked as Delivered & Bill Updated`, "success");
+            this.showToast(`Order ${orderId} Delivered — Bill Updated ✓`, 'success');
             localStorage.setItem('yukt_pms_sync', Date.now());
         }
     }
@@ -3640,95 +3704,86 @@ class PMSApp {
         if (!container) return;
         container.innerHTML = '';
 
-        // Filter strictly for Room Orders (notification type 'order' and message contains Room)
-        const roomOrders = this.db.notifications
-            .filter(n => n.target === 'reception' && n.data && n.data.type === 'room')
-            .slice(0, 30);
+        // Source of truth: kitchenOrders for room type orders
+        const roomOrders = this.db.kitchenOrders
+            .filter(o => o.orderType === 'Room' || o.roomNumber)
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+            .slice(0, 20);
 
         if (roomOrders.length === 0) {
             container.innerHTML = '<div class="text-gray" style="text-align: center; margin-top: 2rem;">No active room orders</div>';
-            countBadge.innerText = '0';
+            if (countBadge) countBadge.innerText = '0';
             return;
         }
 
-        countBadge.innerText = roomOrders.length;
+        const active = roomOrders.filter(o => o.status !== 'Delivered' && o.status !== 'delivered');
+        if (countBadge) countBadge.innerText = active.length || roomOrders.length;
 
-        roomOrders.forEach(n => {
-            const orderId = n.data.orderId;
-            const roomNumber = n.data.roomNumber;
+        const STATUS_INFO = {
+            'Pending':    { color: '#D4AF37', label: '⏳ Pending',       stage: 1 },
+            'Kitchen':    { color: '#F97316', label: '👨‍🍳 In Kitchen',   stage: 2 },
+            'preparing':  { color: '#F97316', label: '👨‍🍳 In Kitchen',   stage: 2 },
+            'Served':     { color: '#22C55E', label: '✅ Ready',         stage: 3 },
+            'ready':      { color: '#22C55E', label: '✅ Ready',         stage: 3 },
+            'On the Way': { color: '#3B82F6', label: '🛵 On the Way',    stage: 3 },
+            'ontheway':   { color: '#3B82F6', label: '🛵 On the Way',    stage: 3 },
+            'Delivered':  { color: '#6B7280', label: '✔ Delivered',      stage: 4 },
+            'delivered':  { color: '#6B7280', label: '✔ Delivered',      stage: 4 },
+        };
 
-            // Find the base order and all its addons to show the Full Running List
-            const room = this.db.rooms[roomNumber];
-            let fullItems = [];
-            let statusText = 'Preparing';
-            let isReady = false;
-            let isDelivered = false;
+        roomOrders.forEach(order => {
+            const orderId = order.order_id || order.id;
+            const roomNumber = order.roomNumber;
+            const st = STATUS_INFO[order.status] || STATUS_INFO['Pending'];
+            const isDelivered = st.stage === 4;
+            const isReady = order.status === 'Served' || order.status === 'ready';
 
-            if (room) {
-                // First: try to find a matching kdsOrder by orderId
-                const kdsOrder = this.db.kitchenOrders.find(o => o.id === orderId || o.id === `ADDON ${orderId}`);
-                if (kdsOrder) {
-                    fullItems = kdsOrder.items;
-                    isReady = kdsOrder.status === 'ready';
-                    isDelivered = kdsOrder.status === 'delivered';
-                    statusText = isDelivered ? 'Delivered' : (isReady ? 'Ready' : 'Preparing');
-                }
-            }
-            // Fallback: use items embedded in the notification data itself
-            if (fullItems.length === 0 && n.data && n.data.items) {
-                fullItems = n.data.items;
-            }
+            const room = this.db.rooms[roomNumber] || this.db.rooms[String(roomNumber)];
+            const guestLabel = room ? `${room.salutation||''} ${room.guestName||'Occupied'}`.trim() : 'Occupied';
 
-            // Mission Fix: Format KOT items correctly x quantity + Bold Red Addons
-            const itemStrings = fullItems.map(i => {
+            const itemStrings = (order.items || []).map(i => {
                 if (typeof i === 'object') {
-                    let str = `${i.name || 'Unknown Item'} x ${i.qty || i.quantity || 1}${i.variant && i.variant !== 'Full' ? ` (${i.variant})` : ''}`;
-                    if (i.specialInstructions || i.instructions) {
-                        str += ` <span style="color:#EF4444; font-weight:900; text-transform:uppercase;">[${i.specialInstructions || i.instructions}]</span>`;
-                    }
+                    let str = `${i.name||'Item'} × ${i.qty||1}`;
+                    if (i.variant && i.variant !== 'Full' && i.variant !== 'Standard') str += ` (${i.variant})`;
+                    if (i.specialInstructions) str += ` <span style="color:#EF4444;font-weight:900;">[${i.specialInstructions}]</span>`;
                     return str;
                 }
-                return i; // Fallback if string
+                return i;
             });
+
+            const total = (order.items||[]).reduce((s, i) => s + ((i.price||0)*(i.qty||1)), 0);
+            const orderTime = order.timestamp ? new Date(typeof order.timestamp === 'object' && order.timestamp.seconds ? order.timestamp.seconds*1000 : order.timestamp).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', hour12:true}) : '—';
 
             const div = document.createElement('div');
             div.className = 'room-order-notification';
-            if (isDelivered) {
-                div.style.background = '#000';
-                div.style.border = '1px solid #222';
-                div.style.opacity = '0.5';
-                div.style.filter = 'grayscale(100%)';
-            }
+            if (isDelivered) { div.style.opacity = '0.45'; div.style.filter = 'grayscale(0.8)'; }
 
             div.innerHTML = `
-            <div class="room-order-header">
-                <div>Room <span style="font-weight:900;">${roomNumber}</span></div>
-                <div class="room-order-badge">${orderId}</div>
-            </div>
-            <div class="room-order-guest">
-                ${this.db.rooms[roomNumber]?.salutation || ''} ${this.db.rooms[roomNumber]?.guestName || 'Occupied'}
-            </div>
-            <div style="font-size: 0.8rem; color: ${isReady ? 'var(--color-green-400)' : 'var(--color-gold-primary)'}; font-weight: 700;">
-                Status: <span style="text-transform: uppercase;">${statusText}</span>
-            </div>
-            <div class="mt-2" style="max-height: 200px; overflow-y: auto;">
-                <div style="padding: 0.5rem; background: rgba(212,175,55,0.05); border-left: 2px solid var(--gold-primary); border-radius: 4px; font-size: 0.8rem;">
-                    ${itemStrings.map(i => `<div style="margin-bottom:2px;">• ${i}</div>`).join('')}
+                <div class="room-order-header">
+                    <div>Room <span style="font-weight:900;">${roomNumber}</span></div>
+                    <div class="room-order-badge">${orderId}</div>
                 </div>
-            </div>
-            <div class="room-order-actions" style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                <button class="btn btn-primary" style="font-size:0.7rem; padding:0.3rem;" onclick="app.printQuickKOT('${n.id}', '${orderId}', '${roomNumber}')">PRINT KOT</button>
-                ${isReady && !isDelivered && statusText !== 'Delivered' ? `
-                    <button class="btn btn-warning" style="font-size:0.7rem; padding:0.3rem;" onclick="app.markOrderOnTheWay('${orderId}')">ON THE WAY</button>
-                ` : ''}
-                ${!isDelivered && statusText !== 'Delivered' ? `
-                    <button class="btn btn-success" style="font-size:0.7rem; padding:0.3rem; grid-column: span 2;" onclick="app.markOrderDelivered('${orderId}')">MARK DELIVERED</button>
-                ` : ''}
-            </div>
-        `;
+                <div class="room-order-guest">${guestLabel}</div>
+                <div style="font-size:0.75rem; color:${st.color}; font-weight:800; margin:4px 0;">Status: ${st.label} &nbsp;•&nbsp; ${orderTime}</div>
+                <div style="padding:6px 8px; background:rgba(212,175,55,0.06); border-left:3px solid ${st.color}; border-radius:4px; font-size:0.78rem; margin:6px 0; max-height:140px; overflow-y:auto;">
+                    ${itemStrings.map(i => `<div>• ${i}</div>`).join('')}
+                    <div style="margin-top:5px; font-weight:800; color:var(--gold-primary);">Total: ₹${total}</div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:6px;">
+                    <button class="btn btn-primary" style="font-size:0.7rem; padding:0.3rem;" onclick="app.kotFromOrder('${orderId}','${roomNumber}')">🖨 PRINT KOT</button>
+                    ${isReady && !isDelivered ? `<button class="btn btn-warning" style="font-size:0.7rem; padding:0.3rem;" onclick="app.markOrderOnTheWay('${orderId}')">🛵 ON THE WAY</button>` : '<div></div>'}
+                    ${!isDelivered ? `<button class="btn btn-success" style="font-size:0.7rem; padding:0.3rem; grid-column:span 2;" onclick="app.markOrderDelivered('${orderId}')">✔ MARK DELIVERED</button>` : ''}
+                </div>
+            `;
             container.appendChild(div);
         });
     }
+
+    kotFromOrder(orderId, roomNumber) {
+        const order = this.db.kitchenOrders.find(o => (o.order_id || o.id) === orderId);
+        if (order) this.generateKOT({...order, roomNumber: roomNumber || order.roomNumber});
+    }
+
 
     renderFullNotificationTab() {
         const container = document.getElementById('reception-sidebar-notifications');

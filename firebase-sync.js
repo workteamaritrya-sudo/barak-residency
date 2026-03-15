@@ -177,8 +177,13 @@ class FirebaseSyncEngine {
                 const order = change.doc.data();
                 const status = order.status;
                 
-                if (change.type === "modified" && status === 'Served') {
+                if (change.type === "modified" && (status === 'Served' || status === 'ready')) {
                     this.playWaiterAlert();
+                    // Also alert Reception: food is ready for pickup
+                    if (window.app && window.app.currentPortal === 'reception') {
+                        new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
+                        window.app.showToast(`✅ Order READY for Room ${order.roomNumber || ''}!`, 'success');
+                    }
                 } else if (change.type === "added" || change.type === "modified") {
                     const isNewPending = change.type === "added" && (status === 'Pending' || status === 'Kitchen');
                     
@@ -406,8 +411,9 @@ class FirebaseSyncEngine {
             const snap = await getDocs(q);
             
             let cloudStatus = status;
-            if (status === 'ready' || status === 'Ready') cloudStatus = 'Served'; // 'Served' maps to tracker stage 3
+            if (status === 'ready' || status === 'Ready') cloudStatus = 'Served';
             if (status === 'ontheway' || status === 'On the Way') cloudStatus = 'On the Way';
+            if (status === 'Delivered' || status === 'delivered') cloudStatus = 'Delivered';
 
             snap.forEach(async (d) => {
                 await updateDoc(d.ref, { status: cloudStatus });
