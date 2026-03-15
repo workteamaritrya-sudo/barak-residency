@@ -704,6 +704,116 @@ class PMSApp {
         window.location.href = 'login.html';
     }
 
+    async systemReset() {
+        if (!confirm("🚨 CRITICAL: This will PERMANENTLY delete all active orders, guests, and service requests to fix 'object Object' bugs. Proceed?")) return;
+        
+        try {
+            const { collection, getDocs, deleteDoc, updateDoc } = window.firebaseHooks;
+            const db = window.firebaseFS;
+            
+            this.showToast("Initiating System Reset...", "info");
+            
+            // 1. Clear Collections
+            const collectionsToClear = ['orders', 'guests', 'serviceRequests', 'ledger', 'billing'];
+            for (const collName of collectionsToClear) {
+                const snap = await getDocs(collection(db, collName));
+                await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+            }
+            
+            // 2. Reset Rooms using direct collection access to ensure all rooms are covered
+            const roomsSnap = await getDocs(collection(db, 'rooms'));
+            await Promise.all(roomsSnap.docs.map(d => updateDoc(d.ref, {
+                status: 'available',
+                guest: null,
+                currentGuestId: null,
+                guestName: null,
+                guestPhone: null,
+                orderSerial: 0,
+                billGenerated: false,
+                last_updated: new Date()
+            })));
+            
+            this.showToast("System Reset Successful. refreshing...", "success");
+            setTimeout(() => window.location.reload(), 1500);
+            
+        } catch (err) {
+            console.error("System Reset Failed:", err);
+            this.showToast("Reset failed: " + err.message, "error");
+        }
+    }
+
+    async toggleOrderHistory() {
+        if (!this.selectedRoomId) return;
+        const room = this.db.rooms[this.selectedRoomId];
+        const guest = room.guest;
+        if (!guest) {
+            this.showToast("No active guest in this room.", "warning");
+            return;
+        }
+
+        const phone = guest.guestPhone || guest.phone;
+        if (!phone) {
+            this.showToast("Guest phone number missing.", "warning");
+            return;
+        }
+
+        const modal = document.getElementById('history-modal');
+        const content = document.getElementById('history-content');
+        if (!modal || !content) {
+             this.showToast("History modal missing in DOM", "error");
+             return;
+        }
+
+        modal.style.display = 'flex';
+        content.innerHTML = `<div class="text-center py-4 text-gray">Searching records for ${phone}...</div>`;
+
+        try {
+            const { collection, query, where, getDocs, orderBy } = window.firebaseHooks;
+            const db = window.firebaseFS;
+            
+            const q = query(
+                collection(db, 'ledger'), 
+                where('guestPhone', '==', phone),
+                orderBy('timestamp', 'desc')
+            );
+            
+            const snap = await getDocs(q);
+            if (snap.empty) {
+                content.innerHTML = `<div class="text-center py-6">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+                    No previous stay records found for <b>${phone}</b>.
+                </div>`;
+                return;
+            }
+
+            let html = '';
+            snap.forEach(d => {
+                const data = d.data();
+                const ts = data.timestamp;
+                const date = ts && ts.seconds ? new Date(ts.seconds * 1000).toLocaleDateString() : (data.timestamp ? new Date(data.timestamp).toLocaleDateString() : 'N/A');
+                const total = data.totals?.grandTotal || 0;
+                html += `
+                    <div class="glass-panel mb-3" style="padding:1.25rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03);">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span style="color: var(--gold-primary); font-weight: 800; font-size: 1.1rem;">Stay: ${date}</span>
+                            <span style="color: #4ade80; font-weight: 900; font-size: 1.1rem;">₹${total.toLocaleString()}</span>
+                        </div>
+                        <div class="text-xs text-gray">
+                            <strong>Room:</strong> ${data.roomNum} | 
+                            <strong>Guest:</strong> ${data.guestName} |
+                            <strong>Settled:</strong> ${data.totals?.balancePayable === 0 ? 'Fully Paid' : 'Credit'}
+                        </div>
+                    </div>
+                `;
+            });
+            content.innerHTML = html;
+
+        } catch (err) {
+            console.error("History Error:", err);
+            content.innerHTML = `<div class="text-red-400 p-4 bg-red-900/20 rounded">Failed to search ledger: ${err.message}</div>`;
+        }
+    }
+
     handleStorageSync(e) {
         if (e.key === 'kds_sync' && e.newValue) {
             if (this.currentTab === 'kitchen') this.renderKDS();
@@ -1119,7 +1229,7 @@ class PMSApp {
         Object.values(this.db.rooms).forEach(room => {
             const card = document.createElement('div');
             card.className = `room-card ${this.selectedRoomId === room.number ? 'active' : ''}`;
-            card.onclick = () => this.selectRoom(room.number);
+            card.onclick = () => this.openRoomSidebar(room.number);
 
             const isOccupied = room.status === 'occupied';
             const isReserved = room.status === 'reserved';
@@ -1149,6 +1259,10 @@ class PMSApp {
             if (room.floor === 1) floor1.appendChild(card);
             else floor2.appendChild(card);
         });
+    }
+
+    openRoomSidebar(roomNumber) {
+        this.selectRoom(roomNumber);
     }
 
     selectRoom(roomNumber) {
@@ -1661,10 +1775,19 @@ class PMSApp {
         const advanceEl = document.getElementById('cc-advance-amt');
         if (advanceEl) advanceEl.innerText = advance.toLocaleString();
 
+        const balance = (Number(tariff)*Number(daysBilled) || 0) + (Number(foodTotal) || 0) - (Number(advance) || 0);
         const balanceEl = document.getElementById('cc-total-bill');
         if (balanceEl) {
             balanceEl.innerText = `₹${balance.toLocaleString()}`;
-            balanceEl.style.color = balance > 0 ? '#f43f5e' : '#4ade80'; // Red if money owed, Green if settled/excess
+            balanceEl.style.color = balance > 0 ? '#f43f5e' : '#4ade80';
+        }
+
+        // Toggle Finalize button opacity based on billGenerated flag
+        const finalizeBtn = document.getElementById('cc-finalize-btn');
+        if (finalizeBtn) {
+            const isBillGen = room.billGenerated || false;
+            finalizeBtn.style.opacity = isBillGen ? "1" : "0.5";
+            finalizeBtn.style.cursor = isBillGen ? "pointer" : "not-allowed";
         }
 
         // Render Itemized Food Orders
@@ -3408,13 +3531,22 @@ class PMSApp {
         this.finalInvoiceData = {
             roomNum,
             guestId,
+            guestName: guest.guestName || guest.name || 'Guest',
+            guestPhone: guest.guestPhone || guest.phone || '0000000000',
             totals: { roomSubtotal, roomGSTValue, foodSubtotal, foodGSTValue, grandTotal, advance, balancePayable },
             timestamp: Date.now()
         };
+        
+        // Mark room as bill generated (User requested flag)
+        room.billGenerated = true;
+        this.db.persistRoom(roomNum);
+        
+        // Refresh Command Center to enable Finalize button UI
+        this.updateCommandCenter();
     }
 
     async finalizePayAndCheckout() {
-        if (!this.finalInvoiceData) {
+        if (!this.finalInvoiceData || !this.db.rooms[this.selectedRoomId]?.billGenerated) {
             this.showToast("Please generate the Final Bill first.", "warning");
             return;
         }
@@ -4889,7 +5021,7 @@ class PMSApp {
             // Trigger re-renders
             if (this.currentPortal === 'rest-desk') this.renderRestDesk();
             if (this.currentPortal.includes('waiter')) this.renderWaiterMenu(this.currentPortal);
-            
+
         } catch (err) {
             console.error("Manual sync failed", err);
             alert('Warning: Settings saved locally but menu fetching failed.');
@@ -4921,60 +5053,6 @@ class PMSApp {
         };
 
         await window.FirebaseSync.pushBillingToCloud(billObj);
-    }
-
-    async resetSystemFresh() {
-        if (!confirm("⚠️ CRITICAL: This will PERMANENTLY delete ALL current guests, orders, and ledger. Start Fresh from Billing #1?")) return;
-        
-        this.showToast("Initiating Global Cloud Purge...", "info");
-        
-        try {
-            const { collection, getDocs, deleteDoc, doc, updateDoc, serverTimestamp } = window.firebaseHooks;
-            const db = window.firebaseFS;
-
-            // 1. Clear Active Guests
-            const guestSnap = await getDocs(collection(db, 'guests'));
-            for (const d of guestSnap.docs) { await deleteDoc(d.ref); }
-
-            // 2. Clear Active Orders
-            const orderSnap = await getDocs(collection(db, 'orders'));
-            for (const d of orderSnap.docs) { await deleteDoc(d.ref); }
-
-            // 3. Clear Ledger and Billing
-            const ledgerSnap = await getDocs(collection(db, 'ledger'));
-            for (const d of ledgerSnap.docs) { await deleteDoc(d.ref); }
-            
-            const billingSnap = await getDocs(collection(db, 'billing'));
-            for (const d of billingSnap.docs) { await deleteDoc(d.ref); }
-
-            // 4. Reset Rooms to Available
-            const roomSnap = await getDocs(collection(db, 'rooms'));
-            for (const d of roomSnap.docs) {
-                await updateDoc(d.ref, {
-                    status: 'available',
-                    guestName: null,
-                    guestPhone: null,
-                    currentGuestId: null,
-                    orderSerial: 0,
-                    last_updated: serverTimestamp()
-                });
-            }
-
-            // 5. Local Hard Reset (Storage + IDB)
-            localStorage.clear();
-            if (this.db.idb) {
-                const stores = ['rooms', 'kitchenOrders', 'salesHistory'];
-                const tx = this.db.idb.transaction(stores, 'readwrite');
-                stores.forEach(s => tx.objectStore(s).clear());
-            }
-            
-            this.showToast("Cloud Wipe Complete. System Restarting...", "success");
-            setTimeout(() => window.location.reload(), 2000);
-
-        } catch (err) {
-            console.error("Purge Error:", err);
-            this.showToast("Reset failed. Check console permissions.", "error");
-        }
     }
 }
 

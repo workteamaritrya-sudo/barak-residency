@@ -258,6 +258,8 @@ class GuestPortal {
         );
         onSnapshot(roomOrdersQuery, (snap) => {
             if (snap.empty) {
+                const tbox = document.querySelector('.tracker-box');
+                if (tbox) tbox.style.display = 'none';
                 this.renderSessionHistory([]);
                 return;
             }
@@ -283,15 +285,28 @@ class GuestPortal {
                 const tid = document.getElementById('order-id-display');
                 if (tid) tid.innerText = `ID: #${this.activeOrderId}`;
                 
+                const tbox = document.querySelector('.tracker-box');
+                if (tbox) tbox.style.display = 'block';
+
                 this.updateTrackingUI(latest.status);
                 this.updateActivePreview(true);
             } else {
-                // All orders delivered — clear tracker after delay
-                setTimeout(() => {
+                // All orders delivered or none active — clear tracker
+                const clearTracker = () => {
                     this.activeOrderId = null;
                     localStorage.removeItem(`br_active_order_${this.roomNumber}`);
+                    const tbox = document.querySelector('.tracker-box');
+                    if (tbox) tbox.style.display = 'none';
                     this.updateActivePreview(false);
-                }, 5000);
+                };
+
+                // Only delay hiding if we transition FROM an active order (so they see 'Delivered')
+                const wasActive = localStorage.getItem(`br_active_order_${this.roomNumber}`);
+                if (wasActive) {
+                    setTimeout(clearTracker, 5000);
+                } else {
+                    clearTracker();
+                }
             }
         });
     }
