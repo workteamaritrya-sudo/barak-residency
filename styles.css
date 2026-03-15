@@ -837,7 +837,7 @@ body.isolated-mode .portal-content {
 .success-icon { font-size: 4rem; margin-bottom: 1rem; }
 
 /* Print View */
-#print-area { display: none; }
+#print-area { visibility: hidden; height: 0; overflow: hidden; }
 @media print {
     body * { visibility: hidden; }
     #print-area, #print-area * { visibility: visible; }
