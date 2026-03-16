@@ -576,6 +576,9 @@ body.isolated-mode .portal-content {
     margin-bottom: 1rem;
     border-top: 3px solid var(--gold-primary);
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    position: relative;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
 }
 
 .room-order-header {
@@ -797,7 +800,17 @@ body.isolated-mode .portal-content {
 
 .kds-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
 .kds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
-.kds-ticket { background: rgba(30, 41, 59, 0.8); border: 2px solid var(--color-slate-700); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: all 0.3s; }
+.kds-ticket { 
+    background: rgba(30, 41, 59, 0.8); 
+    border: 2px solid var(--color-slate-700); 
+    border-radius: 12px; 
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column; 
+    transition: transform 0.2s; 
+    will-change: transform;
+    backface-visibility: hidden;
+}
 .kds-ticket-table { border-color: #52ffae; box-shadow: 0 0 10px rgba(82, 255, 174, 0.2); }
 .kds-ticket-room { border-color: var(--color-indigo-500); box-shadow: 0 0 10px rgba(99, 102, 241, 0.2); }
 .kds-ticket.urgent { animation: blinkUrgent 2s infinite; }

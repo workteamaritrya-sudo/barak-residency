@@ -350,24 +350,51 @@ class FirebaseSyncEngine {
 
     async pushOrderToCloud(orderObj) {
         try {
+            const { collection, doc, setDoc, updateDoc, serverTimestamp, increment, arrayUnion } = window.firebaseHooks;
             const ordersRef = collection(window.firebaseFS, 'orders');
-            // Use order_id (not orderObj.id which is undefined) as the document key
+            
+            // 1. Identify Order ID
             const oid = orderObj.order_id || orderObj.id || `room-${orderObj.roomNumber}-${Date.now()}`;
             const orderDocRef = doc(window.firebaseFS, 'orders', String(oid));
 
+            // Status Normalization
             let cloudStatus = orderObj.status || 'Pending';
             if (cloudStatus === 'preparing') cloudStatus = 'Kitchen';
             if (cloudStatus === 'ready')     cloudStatus = 'Served';
             if (cloudStatus === 'ontheway')  cloudStatus = 'On the Way';
 
-            await setDoc(orderDocRef, {
+            const finalOrderData = {
                 ...orderObj,
                 order_id: oid,
                 id: oid,
                 status: cloudStatus,
                 timestamp: serverTimestamp()
-            });
+            };
+
+            await setDoc(orderDocRef, finalOrderData);
             console.log('[Order] Written to Firestore with id:', oid);
+
+            // 2. MISSION: Atomically Inject Detail into Guest Document
+            if (orderObj.guestId && orderObj.roomNumber) {
+                const guestRef = doc(window.firebaseFS, 'guests', orderObj.guestId);
+                
+                // Format items for the master ledger
+                const itemsToAppend = (orderObj.items || []).map(i => ({
+                    name: i.name,
+                    qty: i.qty,
+                    price: i.price,
+                    variant: i.variant || 'Full',
+                    orderId: oid,
+                    timestamp: Date.now()
+                }));
+
+                await updateDoc(guestRef, {
+                    foodTotal: increment(orderObj.total || 0),
+                    current_bill: increment(orderObj.total || 0),
+                    billItems: arrayUnion(...itemsToAppend) 
+                });
+                console.log('[Ledger] Guest record updated with itemized orders.');
+            }
         } catch(e) { console.error("Cloud Order Push Failed", e); }
     }
 

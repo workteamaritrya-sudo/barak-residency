@@ -1477,22 +1477,95 @@ class PMSApp {
     }
 
     sciNext(step) {
-        document.querySelectorAll('.step-indicator').forEach(el => el.classList.remove('active'));
-        const indicator = document.getElementById(`ci-step-${step}`);
-        if (indicator) indicator.classList.add('active');
-
-        document.querySelectorAll('.ci-view').forEach(el => el.style.display = 'none');
-        document.getElementById(`ci-view-${step}`).style.display = 'block';
-
-        if (step === 4) {
-            document.getElementById('summary-name').innerText = document.getElementById('sci-name').value;
-            document.getElementById('summary-room-view').innerText = this.currentRoom || '--';
-            document.getElementById('summary-tariff').innerText = document.getElementById('sci-tariff').value;
-            document.getElementById('summary-advance').innerText = document.getElementById('sci-advance').value;
+        // Toggle indicators
+        for (let i = 1; i <= 5; i++) {
+            const ind = document.getElementById(`ci-step-${i}`);
+            if (ind) ind.classList.toggle('active', i === step);
+            const view = document.getElementById(`ci-view-${i}`);
+            if (view) {
+                view.style.display = (i === step) ? 'block' : 'none';
+                if (i === step) view.classList.add('active'); else view.classList.remove('active');
+            }
         }
 
-        if (step !== 2) {
-            this.stopScanner();
+        // Summary Binding
+        if (step === 5) {
+            document.getElementById('summary-name').innerText = document.getElementById('sci-name').value || '---';
+            document.getElementById('summary-phone').innerText = document.getElementById('sci-phone').value || '---';
+            document.getElementById('summary-room-view').innerText = this.currentRoom || '---';
+            document.getElementById('summary-tariff').innerText = document.getElementById('sci-tariff').value || '0';
+            document.getElementById('summary-advance').innerText = document.getElementById('sci-advance').value || '0';
+        }
+
+        // Webcam Management
+        if (step === 2) this.startWebcam();
+        else this.stopWebcam();
+    }
+
+    async startWebcam() {
+        try {
+            const video = document.getElementById('sci-video');
+            if (!video) return;
+            this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            video.srcObject = this.stream;
+            video.style.display = 'block';
+            document.getElementById('sci-photo-preview').style.display = 'none';
+        } catch (e) {
+            console.warn("Webcam blocked or missing", e);
+            this.showToast("Webcam access failed. Use Browse instead.", "warning");
+        }
+    }
+
+    stopWebcam() {
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+    }
+
+    captureLivePhoto() {
+        const video = document.getElementById('sci-video');
+        const canvas = document.getElementById('sci-canvas');
+        const preview = document.getElementById('sci-photo-preview');
+        const status = document.getElementById('sci-photo-status');
+        
+        if (!video || !canvas) return;
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        canvas.toBlob(blob => {
+            this.capturedGuestPhoto = new File([blob], `guest_photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            preview.src = URL.createObjectURL(blob);
+            preview.style.display = 'block';
+            video.style.display = 'none';
+            status.style.display = 'block';
+            this.showToast("Photo captured!", "success");
+        }, 'image/jpeg');
+    }
+
+    handlePhotoUpload(input) {
+        if (input.files && input.files[0]) {
+            this.capturedGuestPhoto = input.files[0];
+            const preview = document.getElementById('sci-photo-preview');
+            const video = document.getElementById('sci-video');
+            const status = document.getElementById('sci-photo-status');
+            
+            preview.src = URL.createObjectURL(input.files[0]);
+            preview.style.display = 'block';
+            video.style.display = 'none';
+            status.style.display = 'block';
+            this.showToast("Photo uploaded!", "success");
+        }
+    }
+
+    handleMultiIdUpload(input) {
+        if (input.files) {
+            this.capturedIdFiles = Array.from(input.files);
+            const list = document.getElementById('sci-id-list');
+            list.innerHTML = this.capturedIdFiles.map(f => `<div style="background:rgba(255,255,255,0.1); padding:5px 10px; border-radius:4px; font-size:0.8rem;">📄 ${f.name}</div>`).join('');
+            this.showToast(`${this.capturedIdFiles.length} ID files attached.`, "success");
         }
     }
 
@@ -1596,14 +1669,21 @@ class PMSApp {
         const roomNum = this.currentRoom;
         this.showToast("Executing Atomic Check-in Transaction...", "info");
 
-        let idUrl = "";
+        // Upload Guest Photo & IDs
+        let photoUrl = "";
+        let idUrls = [];
         try {
-            if (this.capturedIdFile && window.FirebaseSync) {
-                idUrl = await window.FirebaseSync.uploadIdFile(this.capturedIdFile, phone);
+            if (window.FirebaseSync) {
+                if (this.capturedGuestPhoto) {
+                    photoUrl = await window.FirebaseSync.uploadIdFile(this.capturedGuestPhoto, phone + "_photo");
+                }
+                if (this.capturedIdFiles && this.capturedIdFiles.length > 0) {
+                    const uploads = this.capturedIdFiles.map(f => window.FirebaseSync.uploadIdFile(f, phone + "_id_" + Math.random().toString(36).substr(2,4)));
+                    idUrls = await Promise.all(uploads);
+                }
             }
         } catch (e) {
-            console.error("ID upload failed", e);
-            this.showToast("Compliance Warning: ID upload failed.", "warning");
+            console.error("File upload failed", e);
         }
 
         const guestData = {
@@ -1613,16 +1693,19 @@ class PMSApp {
             guestPhone: phone || "---",
             phoneNumber: phone || "---",
             age: parseInt(age) || 0,
-            idProofUrl: idUrl || null,
-            idImageUrl: idUrl || null,
+            photoUrl: photoUrl || null,
+            idUrls: idUrls || [],
+            idProofUrl: idUrls[0] || null, // Primary ID for legacy compatibility
             advance: Number(advance) || 0,
             advancePaid: Number(advance) || 0,
+            paymentMethod: document.getElementById('sci-payment-method').value || 'Cash',
             room: roomNum,
             roomNumber: roomNum,
             tariff: Number(tariff) || 0,
             checkInDate: (window.firebaseHooks && window.firebaseHooks.Timestamp) ? window.firebaseHooks.Timestamp.now() : new Date().toISOString(),
             checkInTimestamp: Date.now(),
             foodOrders: [],
+            billItems: [],
             foodSync: "active",
             status: "active"
         };
@@ -3360,27 +3443,19 @@ class PMSApp {
         const guest = room.guest;
         const guestId = guest.cloudId || room.currentGuestId;
 
-        // 1. Calculate Timings & Days
+        // 1. Precise Itemized Ledger (Source of Truth)
+        const itemizedFood = guest.billItems || [];
+        const foodSubtotal = itemizedFood.reduce((sum, item) => sum + (Number(item.price) * Number(item.qty || 1)), 0);
+        
+        // 2. Timings & Stay Details
         const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : (guest.checkInTime || guest.check_in_date || Date.now()));
         const days = this.calculateBilledDays(checkInTimeValue);
         
-        // 2. Aggregate Food Orders (Itemized)
-        let orders = this.db.kitchenOrders.filter(o => {
-            const oTime = o.timestamp && typeof o.timestamp === 'object' && o.timestamp.seconds ? o.timestamp.seconds * 1000 : (Number(o.timestamp) || 0);
-            return (o.roomNumber == roomNum || o.roomId == roomNum) && 
-                   oTime >= (checkInTimeValue - 300000) && // 5 min buffer
-                   o.status !== 'Cancelled' && o.status !== 'cancelled';
-        });
-
-        if (orders.length === 0 && guest.billSummary) orders = guest.billSummary;
-
-        // 3. GST & Totals
         const tariff = Number(guest.tariff) || Number(room.tariff) || 0;
         const roomSubtotal = days * tariff;
         let roomGSTPerc = (tariff > 7500) ? 18 : ((tariff > 1000) ? 12 : 0);
         const roomGSTValue = (roomSubtotal * roomGSTPerc) / 100;
 
-        const foodSubtotal = orders.reduce((sum, o) => sum + (Number(o.total_price || o.total || o.total_amount || 0)), 0);
         const foodGSTPerc = 5;
         const foodGSTValue = (foodSubtotal * foodGSTPerc) / 100;
 
@@ -3461,28 +3536,31 @@ class PMSApp {
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td style="padding: 12px; border: 1px solid #eee;">Luxury Room Accommodation</td>
+                                        <td style="padding: 12px; border: 1px solid #eee;">Luxury Room Accommodation <br><small>${tariff} x ${days} Nights</small></td>
                                         <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${days}</td>
                                         <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${roomSubtotal.toFixed(2)}</td>
                                         <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${roomGSTPerc}%</td>
                                         <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${(roomSubtotal + roomGSTValue).toFixed(2)}</td>
                                     </tr>
-                                    ${orders.length > 0 ? `
+
+                                    ${itemizedFood.length > 0 ? `
                                     <tr style="background:#f8faff;">
-                                        <td colspan="5" style="padding: 8px 12px; border: 1px solid #eee; font-weight:bold; color:#1a237e;">Food & Beverage Summary</td>
+                                        <td colspan="5" style="padding: 8px 12px; border: 1px solid #eee; font-weight:bold; color:#1a237e;">All Food & Services Ledger</td>
                                     </tr>
-                                    ${orders.map((o, idx) => {
-                                        const total = Number(o.total_price || o.total || o.total_amount || 0);
-                                        const items = (o.items || []).map(i => typeof i === 'object' ? `${i.name} x${i.qty||1}` : i).join(', ');
+                                    ${itemizedFood.map((item, idx) => {
+                                        const price = Number(item.price || 0);
+                                        const qty = Number(item.qty || 1);
+                                        const rate = price;
+                                        const amount = price * qty;
                                         return `
                                         <tr>
-                                            <td style="padding:8px 12px; border:1px solid #eee; font-size:0.8rem;">
-                                                Order #${o.orderSerial || o.id || (idx+1)}<br><small>${items}</small>
+                                            <td style="padding:8px 12px; border:1px solid #eee; font-size:0.85rem;">
+                                                ${item.name} ${item.variant && item.variant !== 'Full' ? `(${item.variant})` : ''}
                                             </td>
-                                            <td style="padding:8px 12px; text-align:center; border:1px solid #eee;">1</td>
-                                            <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${total.toFixed(2)}</td>
+                                            <td style="padding:8px 12px; text-align:center; border:1px solid #eee;">${qty}</td>
+                                            <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${rate.toFixed(2)}</td>
                                             <td style="padding:8px 12px; text-align:center; border:1px solid #eee;">5%</td>
-                                            <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${(total * 1.05).toFixed(2)}</td>
+                                            <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${(amount * 1.05).toFixed(2)}</td>
                                         </tr>`;
                                     }).join('')}
                                     ` : ''}
@@ -3931,9 +4009,18 @@ class PMSApp {
 
             const div = document.createElement('div');
             div.className = 'room-order-notification';
-            if (isDelivered) { div.style.opacity = '0.45'; div.style.filter = 'grayscale(0.8)'; }
+            if (isDelivered) { 
+                div.style.opacity = '0.45'; 
+                div.style.filter = 'grayscale(1)'; 
+                div.style.background = '#000';
+            }
+
+            const deliveredStamp = isDelivered ? `
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); border: 4px solid #4ade80; color: #4ade80; padding: 5px 15px; font-size: 1.5rem; font-weight: 900; border-radius: 8px; z-index: 5; background: rgba(0,0,0,0.6); pointer-events: none; letter-spacing: 2px;">DELIVERED</div>
+            ` : '';
 
             div.innerHTML = `
+                ${deliveredStamp}
                 <div class="room-order-header">
                     <div>Room <span style="font-weight:900;">${roomNumber}</span></div>
                     <div class="room-order-badge">${orderId}</div>

@@ -301,16 +301,19 @@
             <div class="smart-checkin-stepper" style="display: flex; gap: 1rem; margin-bottom: 3rem; justify-content: center;">
                 <div class="step-indicator active" id="ci-step-1">1. Identity</div>
                 <div class="step-line"></div>
-                <div class="step-indicator" id="ci-step-2">2. ID Scan</div>
+                <div class="step-indicator" id="ci-step-2">2. Photo</div>
                 <div class="step-line"></div>
-                <div class="step-indicator" id="ci-step-3">3. Finance</div>
+                <div class="step-indicator" id="ci-step-3">3. ID Proofs</div>
                 <div class="step-line"></div>
-                <div class="step-indicator" id="ci-step-4">4. Summary</div>
+                <div class="step-indicator" id="ci-step-4">4. Finance</div>
+                <div class="step-line"></div>
+                <div class="step-indicator" id="ci-step-5">5. Review</div>
             </div>
 
             <div id="sci-body" style="flex: 1; display: flex; align-items: center; justify-content: center;">
                 <!-- Step 1: Details -->
                 <div class="ci-view active" id="ci-view-1" style="width: 100%; max-width: 500px;">
+                    <h3 style="color:white; margin-bottom:1.5rem;">Personal Details</h3>
                     <div class="form-group mb-4">
                         <label>Title</label>
                         <select id="sci-salutation" class="form-control">
@@ -332,39 +335,72 @@
                         <label>Age</label>
                         <input type="number" id="sci-age" class="form-control" placeholder="25">
                     </div>
-                    <button class="btn btn-primary btn-block mt-4" onclick="app.sciNext(2)">Continue to ID Scan</button>
+                    <button class="btn btn-primary btn-block mt-4" onclick="app.sciNext(2)">Next: Photo Capture</button>
                 </div>
 
-                <!-- Step 2: ID Scan -->
+                <!-- Step 2: Guest Photo -->
                 <div class="ci-view" id="ci-view-2" style="width: 100%; max-width: 500px; text-align: center;">
-                    <div id="sci-reader" style="width: 100%; background: #000; border-radius: 12px; aspect-ratio: 4/3; margin-bottom: 1rem;"></div>
-                    <div id="sci-scan-status" style="display: none; color: #4ade80; margin-bottom: 1rem;">✅ ID Captured</div>
-                    <button class="btn btn-outline btn-block mb-3" onclick="app.startIdScan()">Camera Scan</button>
-                    <button class="btn btn-primary btn-block" onclick="app.sciNext(3)">Skip/Next</button>
+                    <h3 style="color:white; margin-bottom:1.5rem;">Guest Photo</h3>
+                    <div id="sci-photo-container" style="width: 100%; background: #000; border-radius: 12px; aspect-ratio: 4/3; margin-bottom: 1rem; overflow: hidden; position: relative; border: 2px solid var(--glass-border);">
+                        <video id="sci-video" autoplay playsinline style="width:100%; height:100%; object-fit: cover;"></video>
+                        <canvas id="sci-canvas" style="display:none; width:100%; height:100%;"></canvas>
+                        <img id="sci-photo-preview" style="display:none; width:100%; height:100%; object-fit: cover;">
+                    </div>
+                    <div id="sci-photo-status" style="display: none; color: #4ade80; margin-bottom: 1rem; font-weight: bold;">Captured!</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <button class="btn btn-outline" onclick="app.captureLivePhoto()">Capture Now</button>
+                        <button class="btn btn-outline" onclick="document.getElementById('sci-photo-upload').click()">Browse File</button>
+                        <input type="file" id="sci-photo-upload" style="display:none" accept="image/*" onchange="app.handlePhotoUpload(this)">
+                    </div>
+                    <button class="btn btn-primary btn-block mt-6" onclick="app.sciNext(3)">Next: ID Upload</button>
                 </div>
 
-                <!-- Step 3: Finance -->
-                <div class="ci-view" id="ci-view-3" style="width: 100%; max-width: 500px;">
+                <!-- Step 3: ID Documents -->
+                <div class="ci-view" id="ci-view-3" style="width: 100%; max-width: 500px; text-align: center;">
+                    <h3 style="color:white; margin-bottom:1.5rem;">Multiple ID Proofs</h3>
+                    <div id="sci-id-list" style="background: rgba(255,255,255,0.05); min-height: 150px; border-radius: 12px; border: 2px dashed var(--glass-border); padding: 1.5rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; justify-content: center; align-items: center;">
+                        <span id="id-placeholder-text" style="color: var(--color-slate-400);">No files attached</span>
+                    </div>
+                    <button class="btn btn-outline btn-block mb-3" onclick="document.getElementById('sci-id-upload').click()">+ Upload ID Files</button>
+                    <input type="file" id="sci-id-upload" style="display:none" accept="image/*,application/pdf" multiple onchange="app.handleMultiIdUpload(this)">
+                    <button class="btn btn-primary btn-block" onclick="app.sciNext(4)">Next: Finance</button>
+                </div>
+
+                <!-- Step 4: Finance -->
+                <div class="ci-view" id="ci-view-4" style="width: 100%; max-width: 500px;">
+                    <h3 style="color:white; margin-bottom:1.5rem;">Financial Details</h3>
                     <div class="form-group mb-4">
                         <label>Room Tariff (per night)</label>
                         <input type="number" id="sci-tariff" class="form-control" value="2500">
                     </div>
-                    <div class="form-group mb-6">
+                    <div class="form-group mb-4">
                         <label>Advance Payment</label>
                         <input type="number" id="sci-advance" class="form-control" value="0">
                     </div>
-                    <button class="btn btn-primary btn-block" onclick="app.sciNext(4)">Review Summary</button>
+                    <div class="form-group mb-6">
+                        <label>Payment Method</label>
+                        <select id="sci-payment-method" class="form-control">
+                            <option value="Cash">Cash</option>
+                            <option value="UPI / QR">UPI / QR</option>
+                            <option value="Card">Card</option>
+                            <option value="Credit">Credit</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="app.sciNext(5)">Review & Summary</button>
                 </div>
 
-                <!-- Step 4: Summary -->
-                <div class="ci-view" id="ci-view-4" style="width: 100%; max-width: 500px;">
-                    <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 2rem;">
-                        <p><strong>Guest:</strong> <span id="summary-name">--</span></p>
-                        <p><strong>Room:</strong> <span id="summary-room-view">--</span></p>
-                        <p><strong>Tariff:</strong> ₹<span id="summary-tariff">--</span></p>
-                        <p><strong>Advance:</strong> ₹<span id="summary-advance">--</span></p>
+                <!-- Step 5: Final Review -->
+                <div class="ci-view" id="ci-view-5" style="width: 100%; max-width: 500px;">
+                    <h3 style="color:white; margin-bottom:1.5rem;">Confirm Onboarding</h3>
+                    <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 2rem; border: 1px solid var(--gold-primary);">
+                        <p style="margin-bottom:0.5rem;"><strong>Guest:</strong> <span id="summary-name" style="color: var(--gold-primary);">--</span></p>
+                        <p style="margin-bottom:0.5rem;"><strong>Contact:</strong> <span id="summary-phone">--</span></p>
+                        <p style="margin-bottom:0.5rem;"><strong>Room:</strong> <span id="summary-room-view">--</span></p>
+                        <p style="margin-bottom:0.5rem;"><strong>Stay Total:</strong> ₹<span id="summary-tariff">--</span> / night</p>
+                        <p><strong>Advance:</strong> ₹<span id="summary-advance" style="color: #4ade80;">--</span></p>
                     </div>
-                    <button class="btn btn-primary btn-block" onclick="app.submitCheckIn()">CONFIRM CHECK-IN</button>
+                    <button class="btn btn-primary btn-block" style="padding:1.5rem; font-size:1.2rem;" onclick="app.submitCheckIn()">CONFIRM CHECK-IN</button>
+                    <button class="btn btn-outline btn-block mt-3" onclick="app.sciNext(1)">Go Back</button>
                 </div>
             </div>
         </div>
