@@ -594,49 +594,92 @@ class PMSApp {
         });
     }
 
-    async initManagementHub() {
-        if (this.userProfile) {
-            document.getElementById('user-display-name').innerText = this.userProfile.name || "Staff";
-            document.getElementById('user-display-role').innerText = this.userProfile.role || "Reception";
-            document.getElementById('user-avatar').innerText = (this.userProfile.name || "?").charAt(0).toUpperCase();
-
-            const sidebar = document.querySelector('.sidebar');
-            const hub = document.querySelector('.management-hub');
-            const role = this.userProfile.role || "Reception";
-
-            // Role-based Navigation mapping
-            const roleTabs = {
-                'Admin': 'dashboard',
-                'Reception': 'dashboard',
-                'Kitchen': 'kitchen',
-                'HotelWaiter': 'dashboard', // or hotel-waiter tab if exists
-                'RestWaiter': 'kitchen',    // or rest-waiter
-                'RestDesk': 'financials'
-            };
-
-            if (role !== 'Admin') {
-                if (hub) hub.classList.add('no-sidebar');
-                if (sidebar) sidebar.style.display = 'none';
-
-                // Force visibility of the user's relevant tab
-                if (roleTabs[role]) {
-                    this.switchTab(roleTabs[role]);
-                }
-
-                const headerLogout = document.getElementById('header-logout');
-                if (headerLogout) headerLogout.style.display = 'block';
-            } else {
-                if (hub) hub.classList.remove('no-sidebar');
-                if (sidebar) sidebar.style.display = 'flex';
-            }
+    async initializeSession() {
+        // Mission: Browser Audio Unlock via User Gesture
+        const silentAudio = new Audio('receptionnotificationalert.mp3.mpeg');
+        silentAudio.volume = 0;
+        try {
+            await silentAudio.play();
+            window.FirebaseSync.audioUnlocked = true;
+            console.log("[System] Audio alerts unlocked via session initialization.");
+        } catch (e) {
+            console.warn("[System] Audio unlock failed. interaction required.", e);
         }
 
+        const overlay = document.getElementById('system-init-overlay');
+        if (overlay) {
+            overlay.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            overlay.style.opacity = '0';
+            overlay.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 600);
+        }
+    }
+
+    async initManagementHub() {
+        // Step 1: Load DB data first
         await this.db.initDB();
         this.startLiveClock();
-        this.syncState();
         this.observeMenuRealtime();
-        
-        // Auto-refresh KDS if in kitchen tab
+
+        // Step 2: Apply role-based UI AFTER data loads (so syncState can't override it)
+        const profile = this.userProfile;
+
+        if (profile) {
+            document.getElementById('user-display-name').innerText = profile.name || "Staff";
+            document.getElementById('user-display-role').innerText = profile.role || "Reception";
+            document.getElementById('user-avatar').innerText = (profile.name || "?").charAt(0).toUpperCase();
+        }
+
+        const role = ((profile && profile.role) || "Reception").trim();
+        const roleKey = role.toLowerCase();
+
+        console.log(`[Auth] Logged in role: "${role}" (key: "${roleKey}")`);
+
+        const roleTabs = {
+            'admin': 'dashboard',
+            'reception': 'dashboard',
+            'front desk': 'dashboard',
+            'kitchen': 'kitchen',
+            'hotel waiter': 'ordering',
+            'hotelwaiter': 'ordering',
+            'rest waiter': 'ordering',
+            'restwaiter': 'ordering',
+            'rest desk': 'rest-desk',
+            'restdesk': 'rest-desk',
+            'restaurant desk': 'rest-desk',
+            'waiter': 'ordering'
+        };
+
+        const targetTab = roleTabs[roleKey] || (roleKey.includes('waiter') ? 'ordering' : (roleKey.includes('desk') ? 'rest-desk' : 'dashboard'));
+
+        if (roleKey !== 'admin') {
+            // Lock sidebar: hide everything except this role's tab
+            document.querySelectorAll('.side-item').forEach(item => {
+                const itemId = item.id.replace('side-', '');
+                item.style.display = (itemId === targetTab) ? 'flex' : 'none';
+            });
+
+            // Force switch to the role's panel
+            this.switchTab(targetTab);
+
+            // Store the locked tab so syncState doesn't wander
+            this._lockedTab = targetTab;
+
+            const headerLogout = document.getElementById('header-logout');
+            if (headerLogout) headerLogout.style.display = 'block';
+        } else {
+            // Admin: show everything
+            document.querySelector('.sidebar').style.display = 'flex';
+            document.querySelectorAll('.side-item').forEach(item => item.style.display = 'flex');
+            this.switchTab('dashboard');
+            this._lockedTab = null;
+        }
+
+        // Step 3: Now sync state (role UI is already locked, syncState only refreshes content)
+        this.syncState();
+
         setInterval(() => {
             if (this.currentTab === 'kitchen') this.renderKDS();
             this.check12PMLogic();
@@ -644,13 +687,21 @@ class PMSApp {
     }
 
     switchTab(tabId) {
+        // Role-lock: if a tab is locked for this user, ignore any attempt to switch to a different one
+        if (this._lockedTab && tabId !== this._lockedTab) {
+            console.warn(`[Auth] Tab switch to '${tabId}' blocked — role locked to '${this._lockedTab}'`);
+            return;
+        }
+
         this.currentTab = tabId;
         
         // Mission Sync: Ensure currentPortal matches for sound/logic triggers
         if (tabId === 'dashboard' || tabId === 'reception') this.currentPortal = 'reception';
-        if (tabId === 'kitchen') this.currentPortal = 'kitchen';
-        if (tabId === 'inventory') this.currentPortal = 'owner';
-        if (tabId === 'financials') this.currentPortal = 'owner';
+        else if (tabId === 'kitchen') this.currentPortal = 'kitchen';
+        else if (tabId === 'inventory') this.currentPortal = 'owner';
+        else if (tabId === 'financials') this.currentPortal = 'owner';
+        else if (tabId === 'ordering') this.currentPortal = 'hotel-waiter';
+        else if (tabId === 'rest-desk') this.currentPortal = 'rest-desk';
 
         document.querySelectorAll('.side-item').forEach(el => el.classList.remove('active'));
         const activeItem = document.getElementById(`side-${tabId}`);
@@ -663,6 +714,8 @@ class PMSApp {
         if (tabId === 'kitchen') this.renderKDS();
         if (tabId === 'financials') this.renderOwnerHub();
         if (tabId === 'inventory') this.renderInventoryManagement();
+        if (tabId === 'ordering') this.renderWaiterPortal();
+        if (tabId === 'rest-desk') this.renderRestDesk();
     }
 
     observeMenuRealtime() {
@@ -1176,8 +1229,9 @@ class PMSApp {
         }
 
         // Sync Waiter (Hotel)
-        if (this.currentPortal === 'hotel-waiter') {
-            this.renderHotelWaiterSidebar();
+        if (this.currentPortal === 'hotel-waiter' || this.currentTab === 'ordering') {
+            this.populateWaiterRoomSelect();
+            if (this.currentTab === 'ordering') this.renderWaiterPortal();
         }
 
         // Sync Waiter (Rest)
@@ -1425,132 +1479,10 @@ class PMSApp {
         }
     }
 
-    // --- WAITER / DESK ADD-ON ORDERING ---
-    initiateRoomOrder() {
-        if (!this.selectedRoomId) return;
-        const room = this.db.rooms[this.selectedRoomId];
-        if (!room || room.status !== 'occupied') {
-            this.showToast("Can only add orders to occupied rooms.", "warning");
-            return;
-        }
-
-        this.currentOrderingRoomNum = room.number;
-        const roomEl = document.getElementById('ordering-room-num');
-        if (roomEl) roomEl.innerText = room.number;
-
-        this.cart = [];
-        this.switchTab('ordering');
-        this.renderOrderingPortal();
-    }
-
-    renderOrderingPortal() {
-        const categories = [...new Set(this.db.menu.map(i => i.category || 'Other'))];
-        const catContainer = document.getElementById('order-categories');
-        if (catContainer) {
-            catContainer.innerHTML = categories.map(cat => `
-                <button class="btn btn-outline btn-sm" onclick="app.filterOrderMenu('${cat}')">${cat}</button>
-            `).join('') || 'No menu loaded';
-        }
-        this.filterOrderMenu(categories[0] || 'Other');
-        this.updateWaiterCartUI();
-    }
-
-    filterOrderMenu(category) {
-        const grid = document.getElementById('order-menu-grid');
-        if (!grid) return;
-        
-        const items = this.db.menu.filter(i => (i.category || 'Other') === category);
-        grid.innerHTML = items.map(item => `
-            <div class="glass-panel" style="padding: 0.75rem; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(212,175,55,0.1);">
-                <div style="font-weight: 700; font-size: 0.9rem;">${item.name}</div>
-                <div style="font-size: 0.75rem; color: var(--gold-primary); margin: 0.25rem 0;">₹${item.price}</div>
-                <button class="btn btn-primary btn-sm" onclick="app.addToWaiterCart('${item.name}', ${item.price})">ADD</button>
-            </div>
-        `).join('');
-    }
-
-    addToWaiterCart(name, price) {
-        const existing = this.cart.find(c => c.name === name);
-        if (existing) {
-            existing.qty++;
-        } else {
-            this.cart.push({ name, price, qty: 1 });
-        }
-        this.updateWaiterCartUI();
-    }
-
-    removeFromWaiterCart(index) {
-        this.cart.splice(index, 1);
-        this.updateWaiterCartUI();
-    }
-
-    updateWaiterCartUI() {
-        const container = document.getElementById('waiter-cart-items');
-        const totalEl = document.getElementById('waiter-cart-total');
-        if (!container) return;
-
-        let total = 0;
-        container.innerHTML = this.cart.map((item, idx) => {
-            total += item.price * item.qty;
-            return `
-                <div style="display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem;">
-                    <span>${item.name} x ${item.qty}</span>
-                    <div>
-                        <span>₹${item.price * item.qty}</span>
-                        <button style="background: none; border: none; color: #ef4444; margin-left: 10px; cursor: pointer;" onclick="app.removeFromWaiterCart(${idx})">✕</button>
-                    </div>
-                </div>
-            `;
-        }).join('') || '<div style="opacity: 0.5; padding: 1rem; text-align: center;">Cart is empty</div>';
-
-        if (totalEl) totalEl.innerText = `₹ ${total}`;
-    }
-
-    async placeWaiterOrder() {
-        if (this.cart.length === 0) {
-            this.showToast("Cart is empty!", "error");
-            return;
-        }
-
-        const roomNum = this.currentOrderingRoomNum;
-        const room = this.db.rooms[roomNum];
-        if (!room || room.status !== 'occupied') return;
-
-        this.showToast("Placing Add-on Order...", "info");
-
-        try {
-            const { doc, setDoc, serverTimestamp } = window.firebaseHooks;
-            const db = window.firebaseFS;
-
-            // Mission: Perpetual Serial ID Logic
-            const nextId = await window.FirebaseSync.getNextOrderSerial(roomNum);
-
-            const orderObj = {
-                id: nextId,
-                order_id: nextId,
-                roomNumber: roomNum,
-                guestName: room.guestName || 'Occupied',
-                items: this.cart,
-                total_price: this.cart.reduce((s, i) => s + (i.price * i.qty), 0),
-                status: 'Kitchen',
-                orderType: 'Room',
-                stayID: room.currentStayId || 'legacy_stay',
-                timestamp: serverTimestamp(),
-                placedVia: 'Reception/Waiter'
-            };
-
-            await setDoc(doc(db, 'orders', nextId), orderObj);
-
-            this.cart = [];
-            this.updateWaiterCartUI();
-            this.switchTab('dashboard');
-            this.showToast(`Order ${nextId} sent to Kitchen!`, "success");
-        } catch (e) {
-            console.error("Waiter Order Failed", e);
-            this.showToast("Coudn't place order. Check connection.", "error");
-        }
-    }
-
+    // --- WAITER ADD-ON ORDERING (REMOVED FROM RECEPTION DASHBOARD) ---
+    // Note: Reception order entry has been disabled to solidify order integrity. 
+    // Waiters use the Waiter Portal or QR.
+    
     async convertResToCheckin() {
         const room = this.db.rooms[this.selectedRoomId];
         if (!room) return;
@@ -4022,67 +3954,79 @@ class PMSApp {
             if (isGroupReady) {
                 card.style.background = 'rgba(34, 197, 94, 0.1)';
                 card.style.border = '2px solid #22C55E';
-                card.style.boxShadow = '0 0 15px rgba(34, 197, 94, 0.2)';
+                card.style.boxShadow = '0 10px 30px rgba(34, 197, 94, 0.2)';
             }
 
             const freezeOverlay = isGroupReady ? `
-            <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 10; border-radius: 12px;">
-                <div style="background: var(--color-mint-400); color: black; font-weight: bold; padding: 0.5rem 1rem; border-radius: 5px; transform: rotate(-15deg); border: 2px solid black; box-shadow: 0 0 15px rgba(0,0,0,0.5);">FULL SESSION READY</div>
+            <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(5, 11, 26, 0.4); display: flex; align-items: center; justify-content: center; z-index: 10; border-radius: 12px; pointer-events: none;">
+                <div style="background: #22C55E; color: white; font-weight: 900; padding: 0.5rem 1rem; border-radius: 5px; transform: rotate(-10deg); border: 2px solid white; box-shadow: 0 0 20px rgba(0,0,0,0.5); letter-spacing: 2px;">READY FOR DISPATCH</div>
             </div>` : '';
 
             let itemsHtml = '';
             group.orders.forEach(o => {
-                const isAddon = o.id.startsWith('ADDON');
+                const isAddon = o.id.toString().startsWith('ADDON');
                 const isKitchen = o.status === 'Kitchen' || o.status === 'Pending';
                 const isPreparing = o.status === 'preparing';
                 const itemReady = o.status === 'ready' || o.status === 'Served';
 
                 itemsHtml += `
-                <div style="margin-bottom: 0.75rem; border-left: 2px solid ${isAddon ? '#EF4444' : 'var(--gold-primary)'}; padding-left: 0.75rem; position: relative;">
+                <div style="margin-bottom: 0.75rem; border-left: 3px solid ${isAddon ? '#EF4444' : 'var(--gold-primary)'}; padding-left: 0.75rem; position: relative;">
                     <div style="font-size: 0.65rem; color: ${isAddon ? '#EF4444' : 'var(--text-gray)'}; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">${o.id}</div>
                     ${o.items.map(item => {
-                    const name = typeof item === 'object' ? item.name : item;
-                    const qty = typeof item === 'object' ? item.qty : '';
-                    const variant = item.variant && item.variant !== 'Full' ? `[${item.variant}]` : '';
-                    const instructions = (item.specialInstructions || item.instructions) ? `<div style="margin-left:1rem; color: #EF4444; font-weight: 900; font-size: 0.85rem; text-transform: uppercase;">⚠️ ${item.specialInstructions || item.instructions}</div>` : '';
-                    return `
-                            <div style="padding: 2px 0; font-size: 1.1rem; color: white;">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span>• ${name} x ${qty || 1} ${variant}</span> 
-                                    ${itemReady ? '✅' : ''}
-                                </div>
-                                ${instructions}
-                            </div>`;
-                }).join('')}
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        const name = typeof item === 'object' ? item.name : item;
+                        const qty = typeof item === 'object' ? item.qty : '1';
+                        const variant = item.variant && item.variant !== 'Full' ? `[${item.variant}]` : '';
+                        const instructions = (item.specialInstructions || item.instructions) ? `<div style="margin-left:1rem; color: #EF4444; font-weight: 900; font-size: 0.85rem; text-transform: uppercase;">⚠️ ${item.specialInstructions || item.instructions}</div>` : '';
+                        return `
+                            <div style="padding: 2px 0; font-size: 1.1rem; color: white; display: flex; justify-content: space-between;">
+                                <span>${name} ${variant}</span>
+                                <span style="font-weight: 700;">x${qty}</span>
+                            </div>
+                            ${instructions}
+                        `;
+                    }).join('')}
+                    <div style="display: flex; gap: 8px; margin-top: 8px; position: relative; z-index: 20;">
                         ${isKitchen ? `
-                            <button class="btn btn-primary" style="flex: 1; height: 32px; font-size: 0.7rem; font-weight: 800;" onclick="app.updateCloudOrderStatus('${o.id}', 'preparing')">PREPARING</button>
+                            <button class="btn btn-primary" style="flex: 1; height: 35px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;" onclick="app.updateCloudOrderStatus('${o.id}', 'preparing')">PREPARE</button>
                         ` : ''}
                         ${!itemReady ? `
-                            <button class="btn btn-success" style="flex: 1; height: 32px; font-size: 0.7rem; font-weight: 800;" onclick="app.updateCloudOrderStatus('${o.id}', 'ready')">READY</button>
+                            <button class="btn btn-success" style="flex: 1; height: 35px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;" onclick="app.updateCloudOrderStatus('${o.id}', 'ready')">READY</button>
                         ` : `
-                            <button class="btn btn-outline" style="flex: 1; height: 32px; font-size: 0.7rem; font-weight: 800; border-color: #22C55E; color: #22C55E;" onclick="app.updateCloudOrderStatus('${o.id}', 'completed')">HANDOVER</button>
+                            <button class="btn btn-outline" style="flex: 1; height: 35px; font-size: 0.75rem; font-weight: 800; border-color: #22C55E; color: #22C55E; letter-spacing: 1px;" onclick="app.updateCloudOrderStatus('${o.id}', 'completed')">DISPATCH</button>
                         `}
                     </div>
-                </div>
-            `;
+                </div>`;
             });
 
             card.innerHTML = `
-            ${freezeOverlay}
-            <div class="kds-top">
-                <div class="kds-room" style="font-size: 2.2rem; font-weight: 900; color: white;">${group.id}</div>
-                <div class="kds-time ${isUrgent ? 'urgent' : ''}">${isGroupReady ? 'READY' : minsElapsed + 'm'}</div>
-            </div>
-            <div class="kds-info" style="padding: 0 1rem; font-size: 0.8rem; color: var(--color-slate-400); margin-bottom: 0.5rem;">
-                ${group.roomId ? 'Room ' + group.roomId : 'Table ' + group.tableId}
-            </div>
-            <div class="kds-items" style="flex: 1; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; overflow-y: auto;">
-                ${itemsHtml}
-            </div>
-        `;
+                ${freezeOverlay}
+                <div class="kds-ticket-header mb-2" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div style="font-size: 1.4rem; font-weight: 900; color: var(--gold-primary);">${group.roomNumber ? `ROOM ${group.roomNumber}` : (group.tableId ? `TABLE ${group.tableId}` : (group.id.startsWith('Table') ? group.id : 'WALK-IN'))}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-gray); letter-spacing: 1px;">ELAPSED: ${minsElapsed} MINS</div>
+                    </div>
+                    <div>
+                        <span class="badge ${isGroupReady ? 'badge-success' : 'badge-warning'}">${group.status.toUpperCase()}</span>
+                    </div>
+                </div>
+                <div class="kds-ticket-items" style="flex: 1; overflow-y: auto; margin-bottom: 0.5rem;">
+                    ${itemsHtml}
+                </div>
+                ${isGroupReady ? `
+                    <button class="btn btn-success btn-block" style="height: 50px; font-weight: 900; letter-spacing: 2px; box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4);" onclick="app.dispatchKDSGroup('${group.id}')">DISPATCH ALL</button>
+                ` : ''}
+            `;
             grid.appendChild(card);
         });
+    }
+
+    async dispatchKDSGroup(groupId) {
+        // Group orders by shared prefix
+        const orders = this.db.kitchenOrders.filter(o => o.id.toString().replace('ADDON ', '') === groupId);
+        for (const o of orders) {
+            await this.updateCloudOrderStatus(o.id, 'completed');
+        }
+        this.renderKDS();
     }
 
     updateCloudOrderStatus(orderId, status) {
@@ -5315,27 +5259,176 @@ class PMSApp {
         const guest = room.guest;
         if (!guest || !window.FirebaseSync) return;
 
-        const days = this.calculateBilledDays(guest.checkInTime);
-        const roomBill = days * guest.tariff;
-        const totalBill = roomBill + guest.foodTotal;
-        const balance = totalBill - guest.advance;
+        const days = this.calculateBilledDays(guest.checkInTimestamp || guest.checkInTime);
+        const roomBill = days * (guest.tariff || room.tariff || 0);
+        const totalBill = roomBill + (guest.foodTotal || 0);
+        const balance = totalBill - (guest.advance || 0);
 
         const billObj = {
             roomNumber: room.number,
-            guestName: guest.name,
-            phone: guest.phone,
+            guestName: guest.guestName || guest.name,
+            phone: guest.guestPhone || guest.phone,
             daysStayed: days,
-            roomTariff: guest.tariff,
+            roomTariff: guest.tariff || room.tariff || 0,
             roomTotal: roomBill,
-            foodTotal: guest.foodTotal,
-            advance: guest.advance,
+            foodTotal: guest.foodTotal || 0,
+            advance: guest.advance || 0,
             totalBill: totalBill,
             balance: balance,
-            checkInTime: guest.checkInTime,
+            checkInTime: guest.checkInTimestamp || guest.checkInTime,
             type: 'order_update'
         };
 
         await window.FirebaseSync.pushBillingToCloud(billObj);
+    }
+
+    // --- WAITER PORTAL LOGIC ---
+    populateWaiterRoomSelect() {
+        const select = document.getElementById('waiter-room-select');
+        if (!select) return;
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">Choose Room...</option>';
+        
+        Object.values(this.db.rooms).filter(r => r.status === 'occupied').forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.number;
+            opt.innerText = `Room ${r.number} - ${r.guestName || 'Active'}`;
+            select.appendChild(opt);
+        });
+        
+        if (currentVal) select.value = currentVal;
+    }
+
+    async selectWaiterRoom(roomNum) {
+        this.selectedWaiterRoom = roomNum;
+        const display = document.getElementById('ordering-room-display');
+        const btn = document.getElementById('waiter-place-btn');
+        if (display) display.innerText = roomNum ? `ROOM ${roomNum}` : 'SELECT ROOM';
+        if (btn) btn.disabled = !roomNum;
+        
+        this.waiterCart = [];
+        this.updateWaiterCartUI();
+    }
+
+    renderWaiterPortal(categoryFilter = 'All') {
+        const grid = document.getElementById('order-menu-grid');
+        const pills = document.getElementById('order-categories');
+        if (!grid || !pills) return;
+
+        // Render Categories
+        const cats = ['All', ...new Set(this.db.menu.map(i => i.category))];
+        pills.innerHTML = cats.map(c => `
+            <div class="category-pill ${categoryFilter === c ? 'active' : ''}" onclick="app.renderWaiterPortal('${c}')">${c}</div>
+        `).join('');
+
+        // Render Menu
+        const items = categoryFilter === 'All' ? this.db.menu : this.db.menu.filter(i => i.category === categoryFilter);
+        grid.innerHTML = items.map(i => `
+            <div class="glass-panel menu-card-mini" style="padding: 0.5rem; text-align: center; cursor: pointer; border: 1px solid var(--glass-border);" onclick="app.addToWaiterCart('${i.id}')">
+                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">${i.icon || '🍽️'}</div>
+                <div style="font-size: 0.8rem; font-weight: bold; color: white;">${i.name}</div>
+                <div style="font-size: 0.75rem; color: var(--gold-primary);">₹${i.price}</div>
+            </div>
+        `).join('');
+    }
+
+    addToWaiterCart(itemId) {
+        if (!this.selectedWaiterRoom) {
+            this.showToast("Please select a room first!", "warning");
+            return;
+        }
+        const item = this.db.menu.find(i => i.id === itemId);
+        if (item) {
+            const existing = this.waiterCart.find(c => c.id === itemId);
+            if (existing) {
+                existing.qty++;
+            } else {
+                this.waiterCart.push({ ...item, qty: 1 });
+            }
+            this.updateWaiterCartUI();
+        }
+    }
+
+    removeFromWaiterCart(itemId) {
+        const idx = this.waiterCart.findIndex(c => c.id === itemId);
+        if (idx !== -1) {
+            if (this.waiterCart[idx].qty > 1) this.waiterCart[idx].qty--;
+            else this.waiterCart.splice(idx, 1);
+            this.updateWaiterCartUI();
+        }
+    }
+
+    updateWaiterCartUI() {
+        const container = document.getElementById('waiter-cart-items');
+        const totalEl = document.getElementById('waiter-total-amt');
+        if (!container) return;
+
+        let total = 0;
+        container.innerHTML = this.waiterCart.map(item => {
+            total += item.price * item.qty;
+            return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid var(--glass-border);">
+                    <div style="flex: 1;">
+                        <div style="font-size: 0.9rem; color: white;">${item.name}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-gray);">₹${item.price} x ${item.qty}</div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-sm btn-outline" style="padding: 2px 8px;" onclick="app.removeFromWaiterCart('${item.id}')">-</button>
+                        <button class="btn btn-sm btn-outline" style="padding: 2px 8px;" onclick="app.addToWaiterCart('${item.id}')">+</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        if (totalEl) totalEl.innerText = total;
+        
+        const btn = document.getElementById('waiter-place-btn');
+        if (btn) btn.disabled = !this.selectedWaiterRoom || this.waiterCart.length === 0;
+    }
+
+    async placeWaiterOrder() {
+        if (this.waiterCart.length === 0 || !this.selectedWaiterRoom) return;
+
+        const btn = document.getElementById('waiter-place-btn');
+        btn.disabled = true;
+        btn.innerText = 'PROCESSING...';
+
+        try {
+            const roomNum = this.selectedWaiterRoom;
+            const room = this.db.rooms[roomNum];
+            const orderId = await window.FirebaseSync.getNextOrderSerial(roomNum);
+            
+            const total = this.waiterCart.reduce((s, i) => s + (i.price * i.qty), 0);
+            
+            const orderObj = {
+                order_id: orderId,
+                id: orderId,
+                roomNumber: String(roomNum),
+                roomId: String(roomNum),
+                stayID: room.currentStayId || '',
+                guestName: room.guestName || 'Guest',
+                items: this.waiterCart,
+                total_price: total,
+                status: 'Pending',
+                timestamp: window.firebaseHooks.serverTimestamp(),
+                orderType: 'Room'
+            };
+
+            await window.FirebaseSync.pushOrderToCloud(orderObj);
+            
+            this.showToast(`Order ${orderId} placed successfully!`, "success");
+            this.waiterCart = [];
+            this.updateWaiterCartUI();
+            
+            // Ding at reception is handled by the cloud listener
+            
+        } catch (err) {
+            console.error("Waiter order failed", err);
+            this.showToast("Order failed. Check console.", "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = '🚀 PLACE ORDER';
+        }
     }
 }
 

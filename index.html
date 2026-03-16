@@ -26,6 +26,16 @@
     </script>
 </head>
 <body>
+    <div id="system-init-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-bg); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px);">
+        <div class="glass-panel" style="padding: 3rem; text-align: center; border: 1px solid var(--glass-border); max-width: 500px; width: 90%;">
+            <img src="br.png" alt="Logo" style="height: 80px; margin-bottom: 2rem; filter: drop-shadow(0 0 15px var(--gold-glow));">
+            <h1 class="golden-brand" style="font-size: 1.8rem; margin-bottom: 1rem;">BARAK RESIDENCY</h1>
+            <p style="color: var(--color-slate-400); margin-bottom: 2rem; font-size: 0.9rem; letter-spacing: 1px;">MANAGEMENT CONTROL SYSTEM v2.0</p>
+            <button class="btn btn-primary btn-block" onclick="app.initializeSession()" style="height: 60px; font-weight: 700; font-size: 1.1rem; letter-spacing: 2px;">START SESSION</button>
+            <p style="margin-top: 1.5rem; font-size: 0.7rem; color: var(--gold-primary); opacity: 0.6;">SYSTEM READY • ALL SYSTEMS NORMAL</p>
+        </div>
+    </div>
+
     <div class="management-hub" id="app-container" style="display: none;">
         <aside class="sidebar">
             <div class="sidebar-logo">
@@ -49,6 +59,12 @@
                 <div class="side-item" id="side-financials" onclick="app.switchTab('financials')">
                     <span>📊</span> Financial Analytics
                 </div>
+                <div class="side-item" id="side-ordering" onclick="app.switchTab('ordering')">
+                    <span>🛒</span> Waiter Portal
+                </div>
+                <div class="side-item" id="side-rest-desk" onclick="app.switchTab('rest-desk')">
+                    <span>🍽️</span> Restaurant Desk
+                </div>
             </div>
 
             <div class="sidebar-footer">
@@ -71,7 +87,6 @@
                 <div class="luxury-portal-header">
                     <div class="luxury-identity golden-brand">EXECUTIVE ROOM DASHBOARD</div>
                     <div style="display: flex; align-items: center; gap: 1rem;">
-                        <button class="btn btn-outline btn-sm" id="audio-unlock-btn" onclick="app.unlockAudio()" style="border-color: var(--gold-primary); color: var(--gold-primary); font-size: 0.7rem;">🔊 ENABLE ALERTS</button>
                         <div class="portal-time-luxury" id="live-clock">--:-- --</div>
                         <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" id="header-logout" style="display: none; border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
                     </div>
@@ -161,7 +176,6 @@
                             </div>
                             <div class="cc-actions mt-4" style="border-top: 1px solid var(--glass-border); padding-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                                 <button class="btn btn-outline" style="flex:1" onclick="app.toggleOrderHistory()">History</button>
-                                <button class="btn btn-warning" style="flex:1; background: #D4AF37; color: black; border: none;" onclick="app.initiateRoomOrder()">ADD ORDER</button>
                                 <button class="btn btn-primary" style="flex:1" onclick="app.generateInvoice()">Print Bill</button>
                                 <button id="cc-finalize-btn" class="btn btn-success" style="flex:1; opacity: 0.5;" onclick="app.finalizePayAndCheckout()">Finalize Checkout</button>
                             </div>
@@ -227,10 +241,12 @@
             <!-- 5. WAITER ORDERING PORTAL -->
             <section id="tab-ordering" class="portal-content">
                 <div class="luxury-portal-header">
-                    <div class="luxury-identity golden-brand">ORDERING PORTAL — ROOM <span id="ordering-room-num">--</span></div>
+                    <div class="luxury-identity golden-brand">WAITER SERVICE • <span id="ordering-room-display">SELECT ROOM</span></div>
                     <div style="display: flex; gap: 1rem;">
-                        <button class="btn btn-outline btn-sm" onclick="app.switchTab('dashboard')">BACK TO DESK</button>
-                        <button class="btn btn-success btn-sm" onclick="app.placeWaiterOrder()">🚀 PLACE ORDER</button>
+                        <select id="waiter-room-select" class="form-control" style="width: 200px; height: 38px;" onchange="app.selectWaiterRoom(this.value)">
+                            <option value="">Choose Room...</option>
+                        </select>
+                        <button class="btn btn-success btn-sm" onclick="app.placeWaiterOrder()" id="waiter-place-btn" disabled>🚀 PLACE ORDER</button>
                     </div>
                 </div>
                 <div style="padding: 1.5rem; display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; height: calc(100vh - 120px); overflow: hidden;">
@@ -250,14 +266,38 @@
                         <div style="border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1rem;">
                             <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.2rem; color: var(--gold-primary);">
                                 <span>TOTAL</span>
-                                <span id="waiter-cart-total">₹ 0</span>
+                                <span>₹ <span id="waiter-total-amt">0</span></span>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
             
-            <!-- 4. FINANCIALS / OWNER HUB TAB -->
+            <!-- 6. RESTAURANT DESK PORTAL -->
+            <section id="tab-rest-desk" class="portal-content">
+                <div class="luxury-portal-header">
+                    <div class="luxury-identity golden-brand">RESTAURANT DESK • LIVE TABLES</div>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <button class="btn btn-outline btn-sm" onclick="app.renderRestDesk()">🔄 REFRESH</button>
+                        <div id="desk-revenue-display" class="luxury-pill" style="min-width: 150px; text-align: center;">₹ ****</div>
+                    </div>
+                </div>
+                <div style="padding: 1.5rem; display: grid; grid-template-columns: 3fr 1fr; gap: 1.5rem; height: calc(100vh - 120px); overflow: hidden;">
+                    <div class="glass-panel" style="padding: 1.2rem; overflow-y: auto;">
+                        <div id="rest-desk-table-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.2rem;">
+                            <!-- Tables injected here -->
+                        </div>
+                    </div>
+                    <div class="glass-panel" style="padding: 1.2rem; display: flex; flex-direction: column;">
+                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem; font-size: 1rem; letter-spacing: 1px;">ACTIVE PICKUPS</h3>
+                        <div id="rest-desk-pickup-list" style="flex: 1; overflow-y: auto;">
+                            <!-- Pickups injected here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 7. FINANCIAL ANALYTICS -->
             <section id="tab-financials" class="portal-content">
                 <div class="luxury-portal-header">
                     <div class="luxury-identity golden-brand">OWNER HUB — LIVE OPERATIONS</div>
