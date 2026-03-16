@@ -108,7 +108,7 @@ function startListeners() {
     onSnapshot(doc(db, 'settings', 'availability'), (snap) => {
         if (snap.exists() && snap.data().unavailableItems) {
             unavailableItems = snap.data().unavailableItems;
-            if (activeTableId) renderMenu('');
+            renderMenu(document.getElementById('rest-waiter-menu-search')?.value || '');
         }
     });
 
@@ -116,7 +116,7 @@ function startListeners() {
         const newMenu = [];
         snap.forEach(d => {
             const data = d.data();
-            if (data.name) newMenu.push({ id: d.id, ...data });
+            if (data.name && data.name.trim().length > 0) newMenu.push({ id: d.id, ...data });
         });
         if (newMenu.length > 0) {
             menu = newMenu.filter(i => i.isAvailable !== false);
@@ -149,8 +149,11 @@ async function loadInitialData() {
     const menuSnap = await getDocs(collection(db, 'menuItems'));
     if (!menuSnap.empty) {
         const cloudMenu = [];
-        menuSnap.forEach(d => cloudMenu.push({ id: d.id, ...d.data() }));
-        menu = cloudMenu.filter(i => (i.name && i.isAvailable !== false));
+        menuSnap.forEach(d => {
+            const data = d.data();
+            if (data.name && data.name.trim().length > 0) cloudMenu.push({ id: d.id, ...data });
+        });
+        menu = cloudMenu.filter(i => i.isAvailable !== false);
         console.log('[Menu] Loaded from Cloud:', menu.length);
     } 
     
