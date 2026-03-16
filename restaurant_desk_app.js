@@ -282,7 +282,7 @@ function renderRestDesk() {
                     const linkedTag = b.colorIndex === 5 ? `🔗 ${b.linkGroupId || 'L'}:` : '';
                     guestDivs += `<div onclick="event.stopPropagation();window.deskApp.selectDeskCheckout('${table.id}','${b.billID}')"
                         style="color:${c};font-weight:bold;margin-bottom:0.3rem;cursor:pointer;padding:0.2rem;border-radius:4px;border:1px solid ${b.colorIndex===5?'#A020F0':'transparent'};">
-                        ${linkedTag} ${b.billID} | ${b.guestName} <span style="color:#4ADE80;">&#8377;${billTotal}</span></div>`;
+                        ${linkedTag} ${b.billID} | ${b.guestName} <span style="color:#4ADE80;">₹${billTotal}</span></div>`;
                 });
             } else {
                 guestDivs = `<div onclick="event.stopPropagation();window.deskApp.selectDeskCheckout('${table.id}')" style="cursor:pointer;">${table.guestName || 'Occupied'}</div>`;
@@ -318,7 +318,7 @@ function renderRestDesk() {
                     <div class="chair-row">${cHtml[2]||''}${cHtml[3]||''}</div>
                 </div></div>
                 <div class="text-sm mt-3 text-center text-gray">${table.pax || 0} / 4 Seats Occupied</div>
-                <div class="text-xl font-bold mt-2 text-center color-primary">&#8377;${table.total || 0}</div>`;
+                <div class="text-xl font-bold mt-2 text-center color-primary">₹${table.total || 0}</div>`;
             grid.appendChild(card);
         } else {
             const chars = table.chairs || [];
@@ -370,7 +370,7 @@ function selectDeskCheckout(tableId, billId = null) {
             });
             billsHtml += `</div>`;
         });
-        billsHtml += `<div style="margin-top:0.75rem;font-weight:bold;font-size:1.1rem;color:#4ADE80;">Total: &#8377;${total}</div></div>`;
+        billsHtml += `<div style="margin-top:0.75rem;font-weight:bold;font-size:1.1rem;color:#4ADE80;">Total: ₹${total}</div></div>`;
         document.getElementById('checkout-modal-title').innerText = `Bill ${billId} — ${bill?.guestName || 'Guest'}`;
     } else {
         ab.forEach(b => {
@@ -385,14 +385,14 @@ function selectDeskCheckout(tableId, billId = null) {
                 });
                 billsHtml += `</div>`;
             });
-            billsHtml += `<div style="margin-top:0.5rem;font-weight:bold;color:#4ADE80;">Subtotal: &#8377;${total}</div></div>`;
+            billsHtml += `<div style="margin-top:0.5rem;font-weight:bold;color:#4ADE80;">Subtotal: ₹${total}</div></div>`;
         });
         document.getElementById('checkout-modal-title').innerText = `Table ${tableId} — Full Checkout`;
     }
 
     const grandTotal = (table.orders || []).reduce((s, o) => s + (o.total || o.total_price || 0), 0);
     billsHtml += `<div style="font-size:1.3rem;font-weight:bold;margin-top:1rem;padding-top:1rem;border-top:2px solid var(--gold-primary);display:flex;justify-content:space-between;">
-        <span>Grand Total</span><span style="color:var(--gold-primary);">&#8377;${grandTotal}</span></div>`;
+        <span>Grand Total</span><span style="color:var(--gold-primary);">₹${grandTotal}</span></div>`;
 
     document.getElementById('checkout-modal-content').innerHTML = billsHtml;
     // Store for print
@@ -425,12 +425,12 @@ async function printAndCloseTable() {
     table.activeBills = []; table.orders = []; table.total = 0;
     (table.chairs || []).forEach(c => c.status = 'available');
     await pushTableToCloud(table);
-    await pushNotification('checkout', `Table ${tableId} closed — &#8377;${grandTotal} received`, 'desk');
+    await pushNotification('checkout', `Table ${tableId} closed — ₹${grandTotal} received`, 'desk');
 
     modal.style.display = 'none';
     updateRevDisplay();
     printBill(tableId, grandTotal);
-    showToast(`Table ${tableId} closed. &#8377;${grandTotal} collected.`, 'success');
+    showToast(`Table ${tableId} closed. ₹${grandTotal} collected.`, 'success');
 }
 
 function printBill(tableId, total) {
@@ -439,7 +439,7 @@ function printBill(tableId, total) {
         <div style="text-align:center;font-weight:bold;font-size:1.5rem;border-bottom:2px solid black;padding-bottom:1rem;margin-bottom:1rem;">BARAK RESIDENCY</div>
         <div style="margin-bottom:1rem;"><strong>Table:</strong> ${tableId}<br>
         <strong>Date:</strong> ${new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}</div>
-        <div style="font-size:1.3rem;font-weight:bold;border-top:2px solid black;padding-top:1rem;margin-top:1rem;">Grand Total: &#8377;${total}</div>
+        <div style="font-size:1.3rem;font-weight:bold;border-top:2px solid black;padding-top:1rem;margin-top:1rem;">Grand Total: ₹${total}</div>
         <div style="text-align:center;margin-top:1rem;font-size:0.9rem;">Thank you for dining with us!</div>
     </div>`;
     window.print();
@@ -474,7 +474,7 @@ function renderPickupList() {
                 <span class="text-gray" style="font-size:0.75rem;margin-left:0.5rem;">${timeOnlyIST(p.timestamp)}</span>
             </div>
             <div style="display:flex;align-items:center;gap:0.75rem;">
-                <span style="font-weight:bold;color:#4ADE80;">&#8377;${p.total}</span>
+                <span style="font-weight:bold;color:#4ADE80;">₹${p.total}</span>
                 ${!isPaid?`<button class="btn btn-success" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.deskApp.markPickupPaid('${p.id}')">PAY</button>`:''}
                 ${isPaid?`<button class="btn btn-primary" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.deskApp.markPickupDelivered('${p.id}')">DELIVERED</button>`:''}
             </div>`;
@@ -582,17 +582,17 @@ function toggleRevVisibility(btn) {
     if (display.classList.contains('revealed')) {
         display.classList.remove('revealed');
         display.style.filter = 'blur(4px)';
-        display.innerText = '&#8377; ****';
+        display.innerText = '₹ ****';
     } else {
         display.classList.add('revealed');
         display.style.filter = 'none';
-        display.innerText = `&#8377; ${restaurantRevenue}`;
+        display.innerText = `₹ ${restaurantRevenue}`;
     }
 }
 
 function updateRevDisplay() {
     const el = document.getElementById('desk-revenue-display');
-    if (el && el.classList.contains('revealed')) el.innerText = `&#8377; ${restaurantRevenue}`;
+    if (el && el.classList.contains('revealed')) el.innerText = `₹ ${restaurantRevenue}`;
 }
 
 // ── Food Availability ─────────────────────────────────────
@@ -613,7 +613,7 @@ function renderAvailabilityTool() {
         row.innerHTML = `
             <div><span style="font-size:1.2rem;margin-right:0.5rem;">${item.icon || '🍽'}</span>
             <span>${item.name}</span>
-            <span style="color:var(--color-slate-400);margin-left:0.5rem;font-size:0.85rem;">&#8377;${item.price}</span></div>
+            <span style="color:var(--color-slate-400);margin-left:0.5rem;font-size:0.85rem;">₹${item.price}</span></div>
             <label class="switch"><input type="checkbox" ${!isUnavail ? 'checked' : ''}
                 onchange="window.deskApp.toggleItemAvailability('${item.id}',this.checked)">
             <span class="slider"></span></label>`;

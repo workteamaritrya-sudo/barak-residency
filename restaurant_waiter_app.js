@@ -487,21 +487,22 @@ function renderMenu(search = '') {
         h.className = 'menu-category-header'; h.innerText = cat.toUpperCase(); grid.appendChild(h);
         cats[cat].forEach(item => {
             const el = document.createElement('div'); el.className = 'menu-item';
-            const photo = item.imageUrl ? `<img src="${item.imageUrl}" style="width:100%;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;box-shadow:0 4px 8px rgba(0,0,0,0.3);">` : '';
+            const img = item.imageUrl || 'br.png';
+            const name = item.name || 'Unnamed Item';
+            const price = item.price || 0;
+            const desc = item.description || 'Special';
+
             el.innerHTML = `
-                ${photo}
-                <div style="display:flex;justify-content:space-between;align-items:center; width:100%;">
-                    <div class="menu-icon" style="font-size:1.5rem;">${item.icon || '🍽'}</div>
-                    <div class="menu-price" style="color:var(--gold-primary) !important; font-weight:800; font-size:1.1rem;">&#8377;${item.price || 0}</div>
+                <img src="${img}" onerror="this.src='br.png'">
+                <div class="menu-info">
+                    <div class="menu-name">${name}</div>
+                    <div class="menu-desc">${desc}</div>
+                    <div class="menu-price">₹${price}</div>
                 </div>
-                <div class="menu-name" style="color:#FFFFFF !important; font-size:1.1rem !important; font-weight:700 !important; display:block !important;">${item.name || 'Unnamed Item'}</div>
-                <div class="menu-desc" style="color:var(--color-slate-400) !important; font-size:0.8rem !important; display:block !important;">${item.description || 'No description provided.'}</div>
-                <div style="margin-top:auto; padding-top:10px;">
-                    <button class="menu-add-btn" style="position:static; width:100%; border-radius:8px; padding:0.6rem;" 
-                        onclick="window.waiterApp.promptVariant({id:'${item.id}',name:'${(item.name || '').replace(/'/g,"\\'")}',price:${item.price || 0}})">
-                        Add to Order
-                    </button>
-                </div>`;
+                <button class="menu-add-btn" 
+                    onclick="window.waiterApp.promptVariant({id:'${item.id}',name:'${name.replace(/'/g,"\\'")}',price:${price}})">
+                    ADD
+                </button>`;
             grid.appendChild(el);
         });
     });
@@ -557,14 +558,14 @@ function renderCart() {
     cart.forEach(c => {
         const it = c.qty * c.item.price; total += it;
         const d = document.createElement('div'); d.className = 'cart-item';
-        d.innerHTML = `<div><span class="cart-item-qty">${c.qty}x</span><span>${c.item.name}</span></div><span>&#8377;${it}</span>`;
+        d.innerHTML = `<div><span class="cart-item-qty">${c.qty}x</span><span>${c.item.name}</span></div><span>₹${it}</span>`;
         el.appendChild(d);
     });
     tot.innerText = total; btn.disabled = false;
     const info = document.getElementById('rest-waiter-table-info');
     if (info && info.innerText) {
         const base = info.innerText.split(' | Total:')[0];
-        info.innerHTML = `${base} <span style="color:var(--color-green-400);font-weight:bold;margin-left:0.5rem;">| Total: &#8377;${total}</span>`;
+        info.innerHTML = `${base} <span style="color:var(--color-green-400);font-weight:bold;margin-left:0.5rem;">| Total: ₹${total}</span>`;
     }
 }
 
@@ -579,8 +580,8 @@ function showOrderConfirm() {
     const billId = m ? m[1] : (editingOrderId || `${activeTableId}${table.lastSeqId || 1}`);
     document.getElementById('confirm-order-id').innerText = billId;
     document.getElementById('confirm-order-items').innerHTML =
-        cart.map(c => `<div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;"><span style="color:var(--color-slate-400)">${c.qty}x</span> <span>${c.item.name}</span> <span style="color:var(--color-indigo-400);">&#8377;${c.qty * c.item.price}</span></div>`).join('') +
-        `<div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed var(--glass-border);display:flex;justify-content:space-between;font-weight:bold;font-size:1.2rem;"><span>Total</span><span style="color:var(--color-green-400);">&#8377;${total}</span></div>`;
+        cart.map(c => `<div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;"><span style="color:var(--color-slate-400)">${c.qty}x</span> <span>${c.item.name}</span> <span style="color:var(--color-indigo-400);">₹${c.qty * c.item.price}</span></div>`).join('') +
+        `<div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed var(--glass-border);display:flex;justify-content:space-between;font-weight:bold;font-size:1.2rem;"><span>Total</span><span style="color:var(--color-green-400);">₹${total}</span></div>`;
     document.getElementById('order-confirm-modal').style.display = 'flex';
 }
 
@@ -683,7 +684,7 @@ function showSuccessOverlay(order, isAddon) {
         <div style="background:rgba(0,0,0,0.5);padding:1.5rem;border-radius:12px;max-width:400px;margin-top:1rem;font-family:monospace;max-height:200px;overflow-y:auto;">
             ${(order.items || []).map(i => `<div>• ${typeof i==='object'?`${i.qty}x ${i.name}`:i}</div>`).join('')}
         </div>
-        <div style="color:${col};font-weight:bold;margin-top:1rem;font-size:1.2rem;">Total: &#8377;${order.total_price || order.total}</div>`;
+        <div style="color:${col};font-weight:bold;margin-top:1rem;font-size:1.2rem;">Total: ₹${order.total_price || order.total}</div>`;
     ov.style.display = 'flex';
     try { document.getElementById('success-chime')?.play().catch(() => {}); } catch(e) {}
     setTimeout(() => {
