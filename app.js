@@ -1415,12 +1415,139 @@ class PMSApp {
                 arrivalDate: Timestamp.fromDate(arrivalDate),
                 last_updated: serverTimestamp()
             });
-
-            this.showToast(`Room ${roomNum} reserved for ${salutation} ${name}`, "success");
-            document.getElementById('reserve-modal').style.display = 'none';
+            
+            this.showToast(`Room ${roomNum} reserved for ${name}`, "success");
+            this.closeReserveModal();
+            this.updateCommandCenter();
         } catch (e) {
             console.error("Reservation failed", e);
             this.showToast("Reservation failed. Check console.", "error");
+        }
+    }
+
+    // --- WAITER / DESK ADD-ON ORDERING ---
+    initiateRoomOrder() {
+        if (!this.selectedRoomId) return;
+        const room = this.db.rooms[this.selectedRoomId];
+        if (!room || room.status !== 'occupied') {
+            this.showToast("Can only add orders to occupied rooms.", "warning");
+            return;
+        }
+
+        this.currentOrderingRoomNum = room.number;
+        const roomEl = document.getElementById('ordering-room-num');
+        if (roomEl) roomEl.innerText = room.number;
+
+        this.cart = [];
+        this.switchTab('ordering');
+        this.renderOrderingPortal();
+    }
+
+    renderOrderingPortal() {
+        const categories = [...new Set(this.db.menu.map(i => i.category || 'Other'))];
+        const catContainer = document.getElementById('order-categories');
+        if (catContainer) {
+            catContainer.innerHTML = categories.map(cat => `
+                <button class="btn btn-outline btn-sm" onclick="app.filterOrderMenu('${cat}')">${cat}</button>
+            `).join('') || 'No menu loaded';
+        }
+        this.filterOrderMenu(categories[0] || 'Other');
+        this.updateWaiterCartUI();
+    }
+
+    filterOrderMenu(category) {
+        const grid = document.getElementById('order-menu-grid');
+        if (!grid) return;
+        
+        const items = this.db.menu.filter(i => (i.category || 'Other') === category);
+        grid.innerHTML = items.map(item => `
+            <div class="glass-panel" style="padding: 0.75rem; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(212,175,55,0.1);">
+                <div style="font-weight: 700; font-size: 0.9rem;">${item.name}</div>
+                <div style="font-size: 0.75rem; color: var(--gold-primary); margin: 0.25rem 0;">₹${item.price}</div>
+                <button class="btn btn-primary btn-sm" onclick="app.addToWaiterCart('${item.name}', ${item.price})">ADD</button>
+            </div>
+        `).join('');
+    }
+
+    addToWaiterCart(name, price) {
+        const existing = this.cart.find(c => c.name === name);
+        if (existing) {
+            existing.qty++;
+        } else {
+            this.cart.push({ name, price, qty: 1 });
+        }
+        this.updateWaiterCartUI();
+    }
+
+    removeFromWaiterCart(index) {
+        this.cart.splice(index, 1);
+        this.updateWaiterCartUI();
+    }
+
+    updateWaiterCartUI() {
+        const container = document.getElementById('waiter-cart-items');
+        const totalEl = document.getElementById('waiter-cart-total');
+        if (!container) return;
+
+        let total = 0;
+        container.innerHTML = this.cart.map((item, idx) => {
+            total += item.price * item.qty;
+            return `
+                <div style="display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem;">
+                    <span>${item.name} x ${item.qty}</span>
+                    <div>
+                        <span>₹${item.price * item.qty}</span>
+                        <button style="background: none; border: none; color: #ef4444; margin-left: 10px; cursor: pointer;" onclick="app.removeFromWaiterCart(${idx})">✕</button>
+                    </div>
+                </div>
+            `;
+        }).join('') || '<div style="opacity: 0.5; padding: 1rem; text-align: center;">Cart is empty</div>';
+
+        if (totalEl) totalEl.innerText = `₹ ${total}`;
+    }
+
+    async placeWaiterOrder() {
+        if (this.cart.length === 0) {
+            this.showToast("Cart is empty!", "error");
+            return;
+        }
+
+        const roomNum = this.currentOrderingRoomNum;
+        const room = this.db.rooms[roomNum];
+        if (!room || room.status !== 'occupied') return;
+
+        this.showToast("Placing Add-on Order...", "info");
+
+        try {
+            const { doc, setDoc, serverTimestamp } = window.firebaseHooks;
+            const db = window.firebaseFS;
+
+            // Mission: Perpetual Serial ID Logic
+            const nextId = await window.FirebaseSync.getNextOrderSerial(roomNum);
+
+            const orderObj = {
+                id: nextId,
+                order_id: nextId,
+                roomNumber: roomNum,
+                guestName: room.guestName || 'Occupied',
+                items: this.cart,
+                total_price: this.cart.reduce((s, i) => s + (i.price * i.qty), 0),
+                status: 'Kitchen',
+                orderType: 'Room',
+                stayID: room.currentStayId || 'legacy_stay',
+                timestamp: serverTimestamp(),
+                placedVia: 'Reception/Waiter'
+            };
+
+            await setDoc(doc(db, 'orders', nextId), orderObj);
+
+            this.cart = [];
+            this.updateWaiterCartUI();
+            this.switchTab('dashboard');
+            this.showToast(`Order ${nextId} sent to Kitchen!`, "success");
+        } catch (e) {
+            console.error("Waiter Order Failed", e);
+            this.showToast("Coudn't place order. Check connection.", "error");
         }
     }
 
@@ -3543,14 +3670,30 @@ class PMSApp {
         // Fallback: build itemized list from kitchenOrders if billItems is empty
         if (itemizedFood.length === 0) {
             const checkInTs = guest.checkInTimestamp || 0;
-            const fallbackOrders = this.db.kitchenOrders.filter(o => 
-                (o.roomNumber == roomNum || o.roomId == roomNum) &&
-                o.status !== 'Cancelled' && o.status !== 'cancelled'
-            );
+            const stayID = room.currentStayId || guest.stayID;
+            
+            const fallbackOrders = this.db.kitchenOrders.filter(o => {
+                const oTime = o.timestamp?.seconds ? o.timestamp.seconds * 1000 : (Number(o.timestamp) || 0);
+                const matchesRoom = (String(o.roomNumber) === String(roomNum) || String(o.roomId) === String(roomNum));
+                const matchesStay = stayID ? (o.stayID === stayID) : (oTime >= checkInTs);
+                
+                return matchesRoom && 
+                       matchesStay && 
+                       o.status !== 'Cancelled' && 
+                       o.status !== 'cancelled';
+            });
+
             fallbackOrders.forEach(o => {
                 (o.items || []).forEach(i => {
                     if (typeof i === 'object') {
-                        itemizedFood.push({ name: i.name || 'Item', qty: i.qty || 1, price: i.price || 0, variant: i.variant || 'Full', orderId: o.id });
+                        itemizedFood.push({ 
+                            name: i.name || 'Item', 
+                            qty: i.qty || 1, 
+                            price: i.price || 0, 
+                            variant: i.variant || 'Full', 
+                            orderId: o.id,
+                            timestamp: o.timestamp 
+                        });
                     }
                 });
             });
@@ -3654,45 +3797,74 @@ class PMSApp {
                                         <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${(roomSubtotal + roomGSTValue).toFixed(2)}</td>
                                     </tr>
 
-                                    ${itemizedFood.length > 0 ? `
-                                    <tr style="background:#f8faff;">
-                                        <td colspan="5" style="padding: 8px 12px; border: 1px solid #eee; font-weight:bold; color:#1a237e;">All Food & Services Ledger</td>
-                                    </tr>
-                                    ${itemizedFood.map((item, idx) => {
-                                        const price = Number(item.price || 0);
-                                        const qty = Number(item.qty || 1);
-                                        const rate = price;
-                                        const amount = price * qty;
-                                        return `
-                                        <tr>
-                                            <td style="padding:8px 12px; border:1px solid #eee; font-size:0.85rem;">
-                                                ${item.name} ${item.variant && item.variant !== 'Full' ? `(${item.variant})` : ''}
-                                            </td>
-                                            <td style="padding:8px 12px; text-align:center; border:1px solid #eee;">${qty}</td>
-                                            <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${rate.toFixed(2)}</td>
-                                            <td style="padding:8px 12px; text-align:center; border:1px solid #eee;">5%</td>
-                                            <td style="padding:8px 12px; text-align:right; border:1px solid #eee;">₹${(amount * 1.05).toFixed(2)}</td>
-                                        </tr>`;
-                                    }).join('')}
-                                    ` : ''}
+                                    ${itemizedFood.length > 0 ? (() => {
+                                        // Mission: Professional Grouping by Order ID
+                                        const ordersMap = {};
+                                        itemizedFood.forEach(item => {
+                                            const oid = item.orderId || 'Direct / Walk-in';
+                                            if (!ordersMap[oid]) ordersMap[oid] = [];
+                                            ordersMap[oid].push(item);
+                                        });
+
+                                        return Object.entries(ordersMap).map(([oid, items]) => {
+                                            // Find a timestamp fallback if possible
+                                            const firstItem = items[0];
+                                            const orderDateStr = firstItem.timestamp ? this.db.timeOnlyIST(firstItem.timestamp) : '';
+                                            
+                                            return `
+                                                <tr style="background:#f8faff;">
+                                                    <td colspan="5" style="padding: 10px 12px; border: 1px solid #eee; font-weight:bold; color:#1a237e; font-size:0.9rem;">
+                                                        ORDER #${oid} <span style="float:right; font-weight:normal; font-size:0.75rem; color:#666;">${orderDateStr}</span>
+                                                    </td>
+                                                </tr>
+                                                ${items.map(item => {
+                                                    const price = Number(item.price || 0);
+                                                    const qty = Number(item.qty || 1);
+                                                    const amount = price * qty;
+                                                    return `
+                                                    <tr>
+                                                        <td style="padding:10px 12px; border:1px solid #eee; font-size:0.85rem;">
+                                                            • ${item.name} ${item.variant && item.variant !== 'Full' ? `(${item.variant})` : ''}
+                                                        </td>
+                                                        <td style="padding:10px 12px; text-align:center; border:1px solid #eee;">${qty}</td>
+                                                        <td style="padding:10px 12px; text-align:right; border:1px solid #eee;">₹${price.toFixed(2)}</td>
+                                                        <td style="padding:10px 12px; text-align:center; border:1px solid #eee;">5%</td>
+                                                        <td style="padding:10px 12px; text-align:right; border:1px solid #eee;">₹${(amount * 1.05).toFixed(2)}</td>
+                                                    </tr>`;
+                                                }).join('')}
+                                            `;
+                                        }).join('');
+                                    })() : ''}
                                 </tbody>
                                 <tfoot>
                                     <tr style="background: #fcfcfc;">
-                                        <td colspan="4" style="padding:12px; text-align:right; border:1px solid #eee; font-weight:bold;">Grand Total</td>
-                                        <td style="padding:12px; text-align:right; border:1px solid #eee; font-weight:bold; color:#1a237e;">₹${grandTotal.toFixed(2)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="4" style="padding:12px; text-align:right; border:1px solid #eee; color:#2e7d32;">Less: Advance Received</td>
-                                        <td style="padding:12px; text-align:right; border:1px solid #eee; color:#2e7d32;">- ₹${advance.toFixed(2)}</td>
-                                    </tr>
-                                    <tr style="background: #fff8e1; font-size: 1.2rem;">
-                                        <td colspan="4" style="padding:12px; text-align:right; border:1px solid #eee; font-weight:900;">Net Amount Payable</td>
-                                        <td style="padding:12px; text-align:right; border:1px solid #eee; font-weight:900; color:#c62828;">₹${safeBalance.toFixed(2)}</td>
+                                        <td colspan="5" style="padding:12px; height: 10px; border: none;"></td>
                                     </tr>
                                 </tfoot>
                             </table>
 
-                            <div style="margin-bottom: 30px; padding: 15px; border: 1px dashed #bbb; font-size: 0.85rem;">
+                            <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                                <div style="width: 350px; background: #fff8e1; border: 2px solid #D4AF37; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;">
+                                        <span>Subtotal:</span>
+                                        <span>₹${(roomSubtotal + foodSubtotal).toFixed(2)}</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #666;">
+                                        <span>Tax (GST):</span>
+                                        <span>₹${(roomGSTValue + foodGSTValue).toFixed(2)}</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #2e7d32;">
+                                        <span>Advance Paid:</span>
+                                        <span>- ₹${advance.toFixed(2)}</span>
+                                    </div>
+                                    <div style="border-top: 2px solid #D4AF37; margin-top: 12px; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-weight: 900; font-size: 1.1rem; color: #1a237e;">TOTAL AMOUNT</span>
+                                        <span style="font-weight: 900; font-size: 1.5rem; color: #c62828;">₹${safeBalance.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 30px; margin-bottom: 30px; padding: 15px; border: 1px dashed #bbb; font-size: 0.85rem; border-radius: 6px;">
                                 <strong>Amount in Words:</strong> ${numberToWords(safeBalance)}
                             </div>
 
@@ -3808,7 +3980,7 @@ class PMSApp {
                 groups[baseId] = {
                     id: baseId,
                     orders: [],
-                    status: 'ready',
+                    status: 'ready', // Default to ready, downgraded if any part is pending
                     timestamp: o.timestamp,
                     orderType: o.orderType,
                     roomNumber: o.roomNumber,
@@ -3816,9 +3988,13 @@ class PMSApp {
                 };
             }
             groups[baseId].orders.push(o);
-            // If any order in group is active, group carries that focus
+            
+            // If any order in group is pending/preparing, the whole group is 'Active'
             if (o.status === 'preparing' || o.status === 'Pending' || o.status === 'Kitchen') {
                 groups[baseId].status = 'Kitchen';
+            } else if (o.status === 'ready' || o.status === 'Served') {
+                // If it's already 'Kitchen', keep it 'Kitchen'. Otherwise 'ready'
+                if (groups[baseId].status !== 'Kitchen') groups[baseId].status = 'ready';
             }
             // Use earliest timestamp for sorting
             if (o.timestamp < groups[baseId].timestamp) groups[baseId].timestamp = o.timestamp;
@@ -3844,8 +4020,9 @@ class PMSApp {
             if (dynamicBorderColor) card.style.borderColor = dynamicBorderColor;
 
             if (isGroupReady) {
-                card.style.opacity = '0.6';
-                card.style.filter = 'grayscale(0.5)';
+                card.style.background = 'rgba(34, 197, 94, 0.1)';
+                card.style.border = '2px solid #22C55E';
+                card.style.boxShadow = '0 0 15px rgba(34, 197, 94, 0.2)';
             }
 
             const freezeOverlay = isGroupReady ? `
@@ -3883,7 +4060,9 @@ class PMSApp {
                         ` : ''}
                         ${!itemReady ? `
                             <button class="btn btn-success" style="flex: 1; height: 32px; font-size: 0.7rem; font-weight: 800;" onclick="app.updateCloudOrderStatus('${o.id}', 'ready')">READY</button>
-                        ` : ''}
+                        ` : `
+                            <button class="btn btn-outline" style="flex: 1; height: 32px; font-size: 0.7rem; font-weight: 800; border-color: #22C55E; color: #22C55E;" onclick="app.updateCloudOrderStatus('${o.id}', 'completed')">HANDOVER</button>
+                        `}
                     </div>
                 </div>
             `;
@@ -3934,6 +4113,10 @@ class PMSApp {
                     new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
                     this.showToast(`✅ Kitchen says READY: ${target}`, 'success');
                 }
+            }
+
+            if (status === 'completed') {
+                this.showToast(`Order ${orderId} handed over to waiter.`, 'success');
             }
             this.syncState();
         }

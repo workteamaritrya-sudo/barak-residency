@@ -161,6 +161,7 @@
                             </div>
                             <div class="cc-actions mt-4" style="border-top: 1px solid var(--glass-border); padding-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                                 <button class="btn btn-outline" style="flex:1" onclick="app.toggleOrderHistory()">History</button>
+                                <button class="btn btn-warning" style="flex:1; background: #D4AF37; color: black; border: none;" onclick="app.initiateRoomOrder()">ADD ORDER</button>
                                 <button class="btn btn-primary" style="flex:1" onclick="app.generateInvoice()">Print Bill</button>
                                 <button id="cc-finalize-btn" class="btn btn-success" style="flex:1; opacity: 0.5;" onclick="app.finalizePayAndCheckout()">Finalize Checkout</button>
                             </div>
@@ -222,7 +223,40 @@
                     </div>
                 </div>
             </section>
-
+            
+            <!-- 5. WAITER ORDERING PORTAL -->
+            <section id="tab-ordering" class="portal-content">
+                <div class="luxury-portal-header">
+                    <div class="luxury-identity golden-brand">ORDERING PORTAL — ROOM <span id="ordering-room-num">--</span></div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-outline btn-sm" onclick="app.switchTab('dashboard')">BACK TO DESK</button>
+                        <button class="btn btn-success btn-sm" onclick="app.placeWaiterOrder()">🚀 PLACE ORDER</button>
+                    </div>
+                </div>
+                <div style="padding: 1.5rem; display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; height: calc(100vh - 120px); overflow: hidden;">
+                    <div class="glass-panel" style="padding: 1rem; display: flex; flex-direction: column;">
+                        <div class="category-pills mb-4" id="order-categories" style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem;">
+                            <!-- Categories injected here -->
+                        </div>
+                        <div id="order-menu-grid" style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;">
+                            <!-- Menu items injected here -->
+                        </div>
+                    </div>
+                    <div class="glass-panel" style="padding: 1rem; display: flex; flex-direction: column;">
+                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">CART</h3>
+                        <div id="waiter-cart-items" style="flex: 1; overflow-y: auto;">
+                            <!-- Cart items here -->
+                        </div>
+                        <div style="border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1rem;">
+                            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.2rem; color: var(--gold-primary);">
+                                <span>TOTAL</span>
+                                <span id="waiter-cart-total">₹ 0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
             <!-- 4. FINANCIALS / OWNER HUB TAB -->
             <section id="tab-financials" class="portal-content">
                 <div class="luxury-portal-header">

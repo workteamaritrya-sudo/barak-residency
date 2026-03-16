@@ -185,7 +185,7 @@ class FirebaseSyncEngine {
                 const isReceptionPortal = app && (app.currentPortal === 'reception' || app.currentTab === 'dashboard' || app.currentTab === 'reception');
 
                 // ---------- NEW ORDER ARRIVED ----------
-                if (change.type === 'added' && (status === 'Pending' || status === 'Kitchen')) {
+                if (change.type === 'added' && (status === 'Pending' || status === 'Kitchen' || status === 'Placed')) {
                     // 1. Kitchen beep (Only in Kitchen tab)
                     if (isKitchenPortal) {
                         this.playKitchenAlert();
@@ -539,25 +539,21 @@ class FirebaseSyncEngine {
 
     async getNextOrderSerial(roomId) {
         try {
-            const { doc, runTransaction, increment } = window.firebaseHooks;
-            const counterRef = doc(window.firebaseFS, 'metadata', 'counters');
-            let nextGlobalId = 1000;
-            
+            const { doc, runTransaction } = window.firebaseHooks;
+            const roomRef = doc(window.firebaseFS, 'rooms', String(roomId));
+            let nextSerial = 1;
+
             await runTransaction(window.firebaseFS, async (tx) => {
-                const snap = await tx.get(counterRef);
-                if (!snap.exists()) {
-                    tx.set(counterRef, { lastOrderId: 1000 });
-                    nextGlobalId = 1001;
-                } else {
-                    nextGlobalId = (snap.data().lastOrderId || 1000) + 1;
-                }
-                tx.update(counterRef, { lastOrderId: nextGlobalId });
+                const snap = await tx.get(roomRef);
+                const current = snap.exists() ? (snap.data().lifetimeOrderCount || 0) : 0;
+                nextSerial = current + 1;
+                tx.update(roomRef, { lifetimeOrderCount: nextSerial });
             });
-            
-            return String(nextGlobalId);
+
+            return `${roomId}-${nextSerial}`;
         } catch(e) {
-            console.error("Global sequence failed", e);
-            return String(Date.now()).slice(-6);
+            console.error("Perpetual sequence failed", e);
+            return `${roomId}-${Date.now().toString().slice(-4)}`;
         }
     }
 
