@@ -1462,13 +1462,29 @@ class PMSApp {
 
     // --- SEQUENTIAL SMART CHECK-IN FLOW ---
     showCheckInForm() {
-        // Reset steps
-        document.getElementById('sci-name').value = '';
-        document.getElementById('sci-phone').value = '';
-        document.getElementById('sci-tariff').value = '2500';
-        document.getElementById('sci-advance').value = '0';
-        document.getElementById('sci-scan-status').style.display = 'none';
-        this.capturedIdFile = null;
+        // Reset steps & data
+        const nameInput = document.getElementById('sci-name');
+        const phoneInput = document.getElementById('sci-phone');
+        const ageInput = document.getElementById('sci-age');
+        const tariffInput = document.getElementById('sci-tariff');
+        const advanceInput = document.getElementById('sci-advance');
+        
+        if (nameInput) nameInput.value = '';
+        if (phoneInput) phoneInput.value = '';
+        if (ageInput) ageInput.value = '';
+        if (tariffInput) tariffInput.value = '2500';
+        if (advanceInput) advanceInput.value = '0';
+
+        this.capturedGuestPhoto = null;
+        this.capturedIdFiles = [];
+        
+        const preview = document.getElementById('sci-photo-preview');
+        const status = document.getElementById('sci-photo-status');
+        const idList = document.getElementById('sci-id-list');
+        
+        if (preview) preview.style.display = 'none';
+        if (status) status.style.display = 'none';
+        if (idList) idList.innerHTML = '<span id="id-placeholder-text" style="color: var(--color-slate-400);">No files attached</span>';
 
         document.getElementById('smart-checkin-modal').style.display = 'flex';
         this.sciNext(1);
@@ -1577,80 +1593,18 @@ class PMSApp {
         const video = document.getElementById('sci-video');
         if (video) video.srcObject = null;
 
-        document.getElementById('sci-start-cam').style.display = 'inline-block';
-        document.getElementById('sci-capture-btn').style.display = 'none';
+        // Guard legacy elements that may not exist in new flow
+        const startBtn = document.getElementById('sci-start-cam');
+        if (startBtn) startBtn.style.display = 'inline-block';
+        const captureBtn = document.getElementById('sci-capture-btn');
+        if (captureBtn) captureBtn.style.display = 'none';
     }
 
-    async startScanner() {
-        try {
-            const video = document.getElementById('sci-video');
-            this.cameraStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
-            });
-            video.srcObject = this.cameraStream;
-
-            document.getElementById('sci-start-cam').style.display = 'none';
-            document.getElementById('sci-capture-btn').style.display = 'inline-block';
-            document.getElementById('sci-scan-status').style.display = 'none';
-        } catch (err) {
-            console.error("Camera access failed", err);
-            this.showToast("Cannot access camera. Please use 'Browse File' instead.", "error");
-        }
-    }
-
-    captureId() {
-        const video = document.getElementById('sci-video');
-        const canvas = document.getElementById('sci-canvas');
-        if (!video || !this.cameraStream) return;
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        canvas.toBlob((blob) => {
-            this.capturedIdFile = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
-            document.getElementById('sci-scan-status').style.display = 'block';
-            this.showToast("Frame Captured!", "success");
-
-            // Auto-advance or wait for user to click next? Let's stay on screen to show success.
-            this.stopScanner();
-        }, 'image/jpeg', 0.8);
-    }
-
-    sciHandleIdFile(input) {
-        if (input.files && input.files[0]) {
-            this.capturedIdFile = input.files[0];
-            document.getElementById('sci-scan-status').style.display = 'block';
-            document.getElementById('sci-scan-status').innerText = "✓ ID Processed: " + this.capturedIdFile.name;
-            this.showToast("Document linked: " + this.capturedIdFile.name, "success");
-        }
-    }
-
-    sciHandleDrop(e) {
-        e.preventDefault();
-        document.getElementById('sci-drop-zone').style.borderColor = 'var(--glass-border)';
-        const files = e.dataTransfer.files;
-        if (files && files.length > 0) {
-            const input = document.getElementById('sci-id-file');
-            input.files = files;
-            this.sciHandleIdFile(input);
-        }
-    }
+    // Old scanner functions removed — replaced by startWebcam/captureLivePhoto/handlePhotoUpload
 
     sciSwitchTab(tab) {
-        // Toggle Buttons
-        document.querySelectorAll('.sci-tab').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`tab-btn-${tab}`).classList.add('active');
-
-        // Toggle Content
-        document.getElementById('sci-content-cam').style.display = (tab === 'cam') ? 'block' : 'none';
-        document.getElementById('sci-content-browse').style.display = (tab === 'browse') ? 'block' : 'none';
-
-        // Resource Management
-        if (tab !== 'cam') {
-            this.stopScanner();
-        }
+        // Legacy no-op — new 5-step flow handles its own tabs
+        console.log('[SCI] Tab switch ignored (legacy):', tab);
     }
 
     async submitCheckIn() {
@@ -1777,12 +1731,10 @@ class PMSApp {
             this.sciNext(5); 
             
             // Clear Form
-            document.getElementById('sci-name').value = "";
-            document.getElementById('sci-phone').value = "";
-            document.getElementById('sci-age').value = "";
-            document.getElementById('sci-advance').value = "0";
-            this.capturedIdFile = null;
-            document.getElementById('sci-scan-status').style.display = 'none';
+            ['sci-name','sci-phone','sci-age'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+            const adv = document.getElementById('sci-advance'); if(adv) adv.value = '0';
+            this.capturedGuestPhoto = null;
+            this.capturedIdFiles = [];
 
         } catch(err) {
             console.error("Check-in failed", err);
@@ -3443,9 +3395,26 @@ class PMSApp {
         const guest = room.guest;
         const guestId = guest.cloudId || room.currentGuestId;
 
-        // 1. Precise Itemized Ledger (Source of Truth)
-        const itemizedFood = guest.billItems || [];
-        const foodSubtotal = itemizedFood.reduce((sum, item) => sum + (Number(item.price) * Number(item.qty || 1)), 0);
+        // 1. Precise Itemized Ledger — use billItems if available, fall back to kitchenOrders
+        let itemizedFood = (guest.billItems && guest.billItems.length > 0) ? guest.billItems : [];
+        
+        // Fallback: build itemized list from kitchenOrders if billItems is empty
+        if (itemizedFood.length === 0) {
+            const checkInTs = guest.checkInTimestamp || 0;
+            const fallbackOrders = this.db.kitchenOrders.filter(o => 
+                (o.roomNumber == roomNum || o.roomId == roomNum) &&
+                o.status !== 'Cancelled' && o.status !== 'cancelled'
+            );
+            fallbackOrders.forEach(o => {
+                (o.items || []).forEach(i => {
+                    if (typeof i === 'object') {
+                        itemizedFood.push({ name: i.name || 'Item', qty: i.qty || 1, price: i.price || 0, variant: i.variant || 'Full', orderId: o.id });
+                    }
+                });
+            });
+        }
+
+        const foodSubtotal = itemizedFood.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.qty || 1)), 0);
         
         // 2. Timings & Stay Details
         const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : (guest.checkInTime || guest.check_in_date || Date.now()));
@@ -3594,7 +3563,7 @@ class PMSApp {
                     printArea.innerHTML += copyHTML;
                 });
                 
-                console.log("[Print] Bill generated. Total Items:", orders.length);
+                console.log("[Print] Bill generated. Total Items:", itemizedFood.length);
                 setTimeout(() => { window.print(); }, 800);
             }
         } catch (e) {
