@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -32,7 +32,7 @@
             <h1 class="golden-brand" style="font-size: 1.8rem; margin-bottom: 1rem;">BARAK RESIDENCY</h1>
             <p style="color: var(--color-slate-400); margin-bottom: 2rem; font-size: 0.9rem; letter-spacing: 1px;">MANAGEMENT CONTROL SYSTEM v2.0</p>
             <button class="btn btn-primary btn-block" onclick="app.initializeSession()" style="height: 60px; font-weight: 700; font-size: 1.1rem; letter-spacing: 2px;">START SESSION</button>
-            <p style="margin-top: 1.5rem; font-size: 0.7rem; color: var(--gold-primary); opacity: 0.6;">SYSTEM READY â€¢ ALL SYSTEMS NORMAL</p>
+            <p style="margin-top: 1.5rem; font-size: 0.7rem; color: var(--gold-primary); opacity: 0.6;">SYSTEM READY &#8226; ALL SYSTEMS NORMAL</p>
         </div>
     </div>
 
@@ -72,13 +72,13 @@
                     <span>ðŸ“Š</span> Financial Analytics
                 </div>
                 <div class="side-item" id="side-ordering" onclick="app.switchTab('ordering')">
-                    <span>ðŸ›’</span> Waiter Portal
+                    <span>&#128716;</span> Waiter Portal
                 </div>
                 <div class="side-item" id="side-rest-desk" onclick="app.switchTab('rest-desk')">
-                    <span>ðŸ½ï¸</span> Restaurant Desk
+                    <span>&#127861;</span> Restaurant Desk
                 </div>
                 <div class="side-item" id="side-rest-waiter" onclick="app.switchTab('rest-waiter')">
-                    <span>ðŸ§‘â€ðŸ³</span> Rest. Waiter
+                    <span>&#129489;&#8205;&#127859;</span> Rest. Waiter
                 </div>
             </div>
 
@@ -91,7 +91,7 @@
                     </div>
                 </div>
                 <button class="btn btn-outline btn-block text-sm" onclick="app.handleLogout()">
-                    ðŸšª LOGOUT
+                    &#128682; LOGOUT
                 </button>
             </div>
         </aside>
@@ -158,7 +158,7 @@
 
                         <div id="cc-content-occupied" style="display: none;">
                             <div class="cc-section">
-                                <h3>ðŸ‘¤ Guest Profile</h3>
+                                <h3>&#128100; Guest Profile</h3>
                                 <div class="metadata-grid">
                                     <div class="meta-item"><span class="meta-label">Name</span><span class="meta-value" id="cc-guest-name">--</span></div>
                                     <div class="meta-item"><span class="meta-label">Age</span><span class="meta-value" id="cc-guest-age">--</span></div>
@@ -167,14 +167,14 @@
                                 </div>
                             </div>
                             <div class="cc-section">
-                                <h3>ðŸ•™ Stay Details</h3>
+                                <h3>&#128337; Stay Details</h3>
                                 <div class="metadata-grid">
                                     <div class="meta-item"><span class="meta-label">Check-in</span><span class="meta-value" id="cc-checkin-datetime">--</span></div>
                                     <div class="meta-item"><span class="meta-label">Billed Days</span><span class="meta-value" id="cc-stay-days">0</span></div>
                                 </div>
                             </div>
                             <div class="cc-section">
-                                <h3>ðŸ’° Financial Ledger</h3>
+                                <h3>&#128184; Financial Ledger</h3>
                                 <div class="ledger-pill mb-3">
                                     <span>Base Tariff</span>
                                     <span id="cc-tariff">&#8377; 0</span>
@@ -198,7 +198,7 @@
 
                         <div id="cc-content-reserved" style="display: none;">
                             <div class="cc-section">
-                                <h3 style="color: #a855f7;">ðŸ“… Reservation Info</h3>
+                                <h3 style="color: #a855f7;">&#128197; Reservation Info</h3>
                                 <div class="metadata-grid">
                                     <div class="meta-item"><span class="meta-label">Guest</span><span class="meta-value" id="cc-res-name">--</span></div>
                                     <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-value" id="cc-res-phone">--</span></div>
@@ -246,7 +246,7 @@
                         </table>
                     </div>
                     <div id="menu-empty-state" style="display: none; text-align: center; padding: 3rem;">
-                        <span style="font-size: 3rem;">ðŸ“¦</span>
+                        <span style="font-size: 3rem;">&#128230;</span>
                         <h3>No menu items found.</h3>
                         <p>Upload a menu.csv file to get started.</p>
                     </div>
@@ -259,7 +259,7 @@
                 <!-- TOP BAR -->
                 <div class="waiter-topbar">
                     <div class="waiter-brand">
-                        <span style="font-size:1.4rem;">ðŸ›Žï¸</span>
+                        <span style="font-size:1.4rem;">&#128718;&#65039;</span>
                         <div>
                             <div class="waiter-brand-title">WAITER SERVICE</div>
                             <div id="ordering-room-display" class="waiter-brand-sub">SELECT A ROOM TO BEGIN</div>
@@ -267,19 +267,19 @@
                     </div>
                     <div class="waiter-topbar-right">
                         <select id="waiter-room-select" class="waiter-room-select" onchange="app.selectWaiterRoom(this.value)">
-                            <option value="">ðŸ“‹ Choose Room...</option>
+                            <option value="">&#128203; Choose Room...</option>
                         </select>
                         <div id="waiter-addon-badge" style="display:none; background:#EF4444; color:#fff; border-radius:8px; padding:0.4rem 0.8rem; font-size:0.75rem; font-weight:900; animation: addonPulse 1s infinite;">
-                            ðŸ”´ ADD-ON MODE: <span id="addon-target-id"></span>
+                            &#128308; ADD-ON MODE: <span id="addon-target-id"></span>
                         </div>
                         <button class="waiter-btn-new" onclick="app.newWaiterOrder()" id="waiter-new-btn" disabled>
-                            âž• NEW ORDER
+                            &#10133; NEW ORDER
                         </button>
                         <button class="waiter-btn-place" onclick="app.placeWaiterOrder()" id="waiter-place-btn" disabled>
-                            ðŸš€ PLACE ORDER
+                            &#128640; PLACE ORDER
                         </button>
                         <button onclick="app.handleLogout()" style="background:rgba(239,68,68,0.2);border:1px solid #EF4444;color:#FCA5A5;border-radius:10px;padding:0 1rem;height:44px;font-weight:700;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">
-                            ðŸšª LOGOUT
+                            &#128682; LOGOUT
                         </button>
                     </div>
                 </div>
@@ -297,7 +297,7 @@
 
                     <!-- CART PANEL -->
                     <div class="waiter-cart-panel">
-                        <div class="waiter-panel-header">ðŸ›’ CART</div>
+                        <div class="waiter-panel-header">&#128716; CART</div>
                         <div id="waiter-cart-items" class="waiter-cart-items">
                             <div style="color:var(--text-gray); text-align:center; padding:2rem; font-size:0.85rem;">Add items from the menu</div>
                         </div>
@@ -307,14 +307,14 @@
                                 <span class="waiter-total-amt">&#8377; <span id="waiter-total-amt">0</span></span>
                             </div>
                             <button class="waiter-btn-place w-full mt-2" onclick="app.placeWaiterOrder()" id="waiter-place-btn2" disabled>
-                                ðŸš€ CONFIRM ORDER
+                                &#128640; CONFIRM ORDER
                             </button>
                         </div>
                     </div>
 
                     <!-- LIVE ORDERS PANEL -->
                     <div class="waiter-live-panel">
-                        <div class="waiter-panel-header">ðŸ“‹ LIVE ORDERS</div>
+                        <div class="waiter-panel-header">&#128203; LIVE ORDERS</div>
                         <div id="waiter-live-orders" class="waiter-live-orders">
                             <div style="color:var(--text-gray); text-align:center; padding:2rem; font-size:0.85rem;">Select a room to see orders</div>
                         </div>
@@ -329,7 +329,7 @@
                 <!-- TOP BAR -->
                 <div class="waiter-topbar">
                     <div class="waiter-brand">
-                        <span style="font-size:1.4rem;">ðŸ§‘â€ðŸ³</span>
+                        <span style="font-size:1.4rem;">&#129489;&#8205;&#127859;</span>
                         <div>
                             <div class="waiter-brand-title">RESTAURANT WAITER</div>
                             <div id="rw-table-display" class="waiter-brand-sub">SELECT A TABLE TO BEGIN</div>
@@ -337,7 +337,7 @@
                     </div>
                     <div class="waiter-topbar-right">
                         <button onclick="app.handleLogout()" style="background:rgba(239,68,68,0.2);border:1px solid #EF4444;color:#FCA5A5;border-radius:10px;padding:0 1rem;height:44px;font-weight:700;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">
-                            ðŸšª LOGOUT
+                            &#128682; LOGOUT
                         </button>
                     </div>
                 </div>
@@ -361,7 +361,7 @@
 
                     <!-- CART PANEL -->
                     <div class="waiter-cart-panel">
-                        <div class="waiter-panel-header">ðŸ›’ CART</div>
+                        <div class="waiter-panel-header">&#128716; CART</div>
                         <div id="rw-cart-items" class="waiter-cart-items">
                             <div style="color:var(--text-gray); text-align:center; padding:2rem; font-size:0.85rem;">Select a table and add items</div>
                         </div>
@@ -371,7 +371,7 @@
                                 <span id="rw-cart-total">&#8377; 0</span>
                             </div>
                             <button class="waiter-btn-place" style="width:100%;margin-top:0.5rem;" onclick="app.placeRestWaiterOrder()" id="rw-place-btn" disabled>
-                                ðŸš€ PLACE ORDER
+                                &#128640; PLACE ORDER
                             </button>
                         </div>
                     </div>
@@ -382,11 +382,11 @@
             <!-- 6. RESTAURANT DESK PORTAL -->
             <section id="tab-rest-desk" class="portal-content">
                 <div class="luxury-portal-header">
-                    <div class="luxury-identity golden-brand">RESTAURANT DESK â€¢ LIVE TABLES</div>
+                    <div class="luxury-identity golden-brand">RESTAURANT DESK &#8226; LIVE TABLES</div>
                     <div style="display: flex; gap: 1rem; align-items: center;">
-                        <button class="btn btn-outline btn-sm" onclick="app.renderRestDesk()">ðŸ”„ REFRESH</button>
+                        <button class="btn btn-outline btn-sm" onclick="app.renderRestDesk()">&#128260; REFRESH</button>
                         <div id="desk-revenue-display" class="luxury-pill" style="min-width: 150px; text-align: center;">&#8377; ****</div>
-                        <button onclick="app.handleLogout()" style="background:rgba(239,68,68,0.2);border:1px solid #EF4444;color:#FCA5A5;border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.75rem;cursor:pointer;letter-spacing:1px;">ðŸšª LOGOUT</button>
+                        <button onclick="app.handleLogout()" style="background:rgba(239,68,68,0.2);border:1px solid #EF4444;color:#FCA5A5;border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.75rem;cursor:pointer;letter-spacing:1px;">&#128682; LOGOUT</button>
                     </div>
                 </div>
                 <div style="padding: 1.5rem; display: grid; grid-template-columns: 3fr 1fr; gap: 1.5rem; height: calc(100vh - 120px); overflow: hidden;">
@@ -407,7 +407,7 @@
             <!-- 7. FINANCIAL ANALYTICS -->
             <section id="tab-financials" class="portal-content">
                 <div class="luxury-portal-header">
-                    <div class="luxury-identity golden-brand">OWNER HUB â€” LIVE OPERATIONS</div>
+                    <div class="luxury-identity golden-brand">OWNER HUB &#8212; LIVE OPERATIONS</div>
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <div class="portal-time-luxury" style="font-size:0.8rem; opacity:0.7;" id="owner-clock"></div>
                         <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" style="border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
@@ -437,25 +437,25 @@
                 <!-- Live Room Grid -->
                 <div style="padding: 1.5rem; display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
                     <div>
-                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">ðŸ¨ Live Room Status</h3>
+                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">&#127976; Live Room Status</h3>
                         <div id="owner-room-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem;"></div>
                     </div>
                     <div>
-                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">âš™ï¸ Settings & Controls</h3>
+                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">&#9881;&#65039; Settings & Controls</h3>
                         <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
                             <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
                                 <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--gold-primary);">MENU SYNC</div>
-                                <button class="btn btn-outline btn-sm btn-block" style="margin-bottom:0.5rem;" onclick="app.triggerMenuSync()">ðŸ“‹ Sync From CSV</button>
-                                <button class="btn btn-outline btn-sm btn-block" onclick="app.syncMenuFromCloud()">â˜ï¸ Pull From Cloud</button>
+                                <button class="btn btn-outline btn-sm btn-block" style="margin-bottom:0.5rem;" onclick="app.triggerMenuSync()">&#128203; Sync From CSV</button>
+                                <button class="btn btn-outline btn-sm btn-block" onclick="app.syncMenuFromCloud()">&#9729;&#65039; Pull From Cloud</button>
                             </div>
                             <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
                                 <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem; color: #f59e0b;">BILLING RESET</div>
-                                <button class="btn btn-outline btn-sm btn-block" style="border-color:#f59e0b; color:#f59e0b;" onclick="app.systemReset()">ðŸ”„ System Reset (Orders Only)</button>
+                                <button class="btn btn-outline btn-sm btn-block" style="border-color:#f59e0b; color:#f59e0b;" onclick="app.systemReset()">&#128260; System Reset (Orders Only)</button>
                             </div>
                             <div>
                                 <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem; color: #f43f5e;">DANGER ZONE</div>
                                 <p style="font-size:0.75rem; color:var(--color-slate-400); margin-bottom:0.75rem;">Clears ALL guests, orders, reservations. Billing restarts from #1. Cannot be undone.</p>
-                                <button class="btn btn-sm btn-block" style="background:#f43f5e; border:none; font-weight:900; letter-spacing:1px;" onclick="app.hardReset()">ðŸ’£ HARD RESET â€” FULL WIPE</button>
+                                <button class="btn btn-sm btn-block" style="background:#f43f5e; border:none; font-weight:900; letter-spacing:1px;" onclick="app.hardReset()">&#128163; HARD RESET &#8212; FULL WIPE</button>
                             </div>
                         </div>
 
@@ -503,7 +503,7 @@
     <div id="history-modal" class="modal-overlay" style="display: none; z-index: 20000; background: rgba(0,0,0,0.85);">
         <div class="glass-panel" style="max-width: 600px; margin: 2rem auto; padding: 2rem; max-height: 80vh; overflow-y: auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
-                <h2 style="color: var(--gold-primary); margin-top: 0;">ðŸ“œ GUEST STAY HISTORY</h2>
+                <h2 style="color: var(--gold-primary); margin-top: 0;">&#128190; GUEST STAY HISTORY</h2>
                 <button style="background:none; border:none; color: white; font-size: 2.5rem; cursor:pointer;" onclick="document.getElementById('history-modal').style.display='none'">&times;</button>
             </div>
             <div id="history-content">

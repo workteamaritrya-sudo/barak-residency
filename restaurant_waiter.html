@@ -12,7 +12,10 @@
 <div class="page">
     <div class="luxury-portal-header">
         <div class="luxury-identity">BARAK RESIDENCY, SILCHAR</div>
-        <div class="portal-time-luxury" id="clock">--:-- --</div>
+        <div style="display:flex; gap:1rem; align-items:center;">
+            <div class="portal-time-luxury" id="clock">--:-- --</div>
+            <button onclick="window.location.href='login.html'" style="background:rgba(239,68,68,0.2);border:1px solid #EF4444;color:#FCA5A5;border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.75rem;cursor:pointer;letter-spacing:1px;">&#128682; LOGOUT</button>
+        </div>
     </div>
     <div class="portal-top-bar">
         <button class="btn btn-outline" onclick="window.close()">✕ Close</button>
