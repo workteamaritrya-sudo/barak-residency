@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Desk | Barak Residency</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="restaurant_portal.css">
+</head>
+<body>
+<div class="page">
+    <div class="luxury-portal-header">
+        <div class="luxury-identity">BARAK RESIDENCY — RESTAURANT DESK</div>
+        <div class="portal-time-luxury" id="clock">--:-- --</div>
+    </div>
+    <div class="portal-top-bar">
+        <div class="d-flex" style="gap:1rem;align-items:center;">
+            <span style="color:var(--color-slate-400);font-size:0.85rem;">Daily Revenue:</span>
+            <span id="revenue-display" class="revenue-display" onclick="toggleRevenue(this)">₹ ****</span>
+            <button class="btn btn-outline" style="padding:0.3rem 0.8rem;font-size:0.8rem;" onclick="toggleRevenue(document.getElementById('revenue-display'))">👁</button>
+        </div>
+        <div style="display:flex;gap:0.75rem;">
+            <button class="btn btn-primary" onclick="newPickupOrder()">🥡 New Pickup Order</button>
+            <button class="btn btn-outline" onclick="window.close()">✕ Close</button>
+        </div>
+    </div>
+
+    <div class="desk-outer">
+        <!-- Main: Table Grid + Pickup -->
+        <div class="desk-main">
+            <div class="kpi-grid">
+                <div class="kpi-card glass-panel">
+                    <div class="kpi-title">Active Tables</div>
+                    <div class="kpi-value" id="kpi-active-tables">0</div>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <div class="kpi-title">Seats Occupied</div>
+                    <div class="kpi-value" id="kpi-pax">0</div>
+                </div>
+            </div>
+            <div class="table-grid-wrap glass-panel">
+                <h3 style="margin-bottom:1rem;">Live Table Grid</h3>
+                <div class="table-grid" id="table-grid"></div>
+            </div>
+            <div class="pickup-section glass-panel">
+                <h3 style="margin-bottom:1rem;">🥡 Active Pickup Orders</h3>
+                <div id="pickup-list"><div class="text-gray" style="padding:1rem;text-align:center;">No active pickups</div></div>
+            </div>
+        </div>
+
+        <!-- Right: Checkout + Notifications -->
+        <div class="desk-right">
+            <div class="checkout-panel glass-panel">
+                <h3 id="checkout-title" style="margin-bottom:1rem;">Checkout</h3>
+                <div id="checkout-content"><div class="text-gray">Select an occupied table to generate final bill.</div></div>
+            </div>
+            <div class="notif-panel glass-panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid var(--glass-border);padding-bottom:1rem;">
+                    <h3>Notifications</h3>
+                    <button class="btn btn-outline" style="padding:0.3rem 0.8rem;font-size:0.75rem;" onclick="clearNotifs()">Clear</button>
+                </div>
+                <div id="notif-list" style="flex:1;overflow-y:auto;"></div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Checkout Modal -->
+<div id="checkout-modal" class="modal-overlay" style="display:none;z-index:10000;">
+    <div class="security-box" style="width:550px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+            <h3 id="checkout-modal-title" style="color:var(--gold-primary);">Final Bill</h3>
+            <button onclick="document.getElementById('checkout-modal').style.display='none'" style="background:none;border:none;color:var(--color-slate-400);font-size:1.5rem;cursor:pointer;">✖</button>
+        </div>
+        <div id="checkout-modal-content" style="color:white;max-height:400px;overflow-y:auto;margin-bottom:1.5rem;font-family:monospace;background:rgba(0,0,0,0.3);padding:1rem;border-radius:8px;"></div>
+        <div style="display:flex;gap:1rem;">
+            <button class="btn btn-success" style="flex:1;padding:1rem;font-size:1rem;" onclick="printAndCloseTable()">Print Bill & Close Table</button>
+            <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('checkout-modal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- Alert Modal -->
+<div id="alert-modal" class="modal-overlay" style="display:none;z-index:10005;">
+    <div class="security-box" style="padding:2rem;width:350px;">
+        <h3 style="color:var(--gold-primary);text-align:center;margin-bottom:1rem;">Notice</h3>
+        <p id="alert-msg" style="text-align:center;color:white;margin-bottom:1.5rem;"></p>
+        <button class="btn btn-primary btn-block" onclick="document.getElementById('alert-modal').style.display='none'">OK</button>
+    </div>
+</div>
+
+<div id="print-area"></div>
+<div id="sync-status" class="sync-ok">● Firebase Connected</div>
+
+<script type="module" src="restaurant_desk_app.js"></script>
+</body>
+</html>

@@ -79,7 +79,7 @@ class GuestPortal {
             document.getElementById('room-display').innerText = `Room ${this.roomNumber}`;
             this.activeOrderId = localStorage.getItem(`br_active_order_${this.roomNumber}`);
 
-            // Clear stale cached menu (might have old broken 'Dish/₹0' data)
+            // Clear stale cached menu (might have old broken 'Dish/&#8377;0' data)
             const cachedRaw = localStorage.getItem('br_menu');
             if (cachedRaw) {
                 try {
@@ -350,7 +350,7 @@ class GuestPortal {
                 <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); padding: 10px; border-radius: 12px; margin-bottom: 8px;">
                     <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; margin-bottom: 4px;">
                         <span>Order #${o.order_id || o.id}</span>
-                        <span>₹${total}</span>
+                        <span>&#8377;${total}</span>
                     </div>
                     <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 4px;">${itemsList}</div>
                     <div style="font-size: 0.75rem; color: ${statColor}; font-weight: bold;">Status: ${stat}</div>
@@ -417,7 +417,7 @@ class GuestPortal {
                     <div class="food-info">
                         <div class="food-name">${name}</div>
                         <div class="food-desc">${desc}</div>
-                        <div class="food-price">₹${price}</div>
+                        <div class="food-price">&#8377;${price}</div>
                     </div>
                     <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
                 `;
@@ -461,7 +461,7 @@ class GuestPortal {
                 <div class="food-info">
                     <div class="food-name">${name}</div>
                     <div class="food-desc">${desc}</div>
-                    <div class="food-price">₹${price}</div>
+                    <div class="food-price">&#8377;${price}</div>
                 </div>
                 <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
             `;
@@ -508,7 +508,7 @@ class GuestPortal {
                 const btn = document.createElement('button');
                 btn.className = 'reorder-btn tint-blur';
                 btn.style.marginBottom = '0.5rem';
-                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">&#8377;${opt.price}</span></div>`;
                 btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
                 container.appendChild(btn);
             });
@@ -534,7 +534,7 @@ class GuestPortal {
                 const btn = document.createElement('button');
                 btn.className = 'reorder-btn tint-blur';
                 btn.style.marginBottom = '0.5rem';
-                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">&#8377;${opt.price}</span></div>`;
                 btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
                 container.appendChild(btn);
             });
@@ -548,7 +548,7 @@ class GuestPortal {
                 const btn = document.createElement('button');
                 btn.className = 'reorder-btn tint-blur';
                 btn.style.marginBottom = '0.5rem';
-                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">&#8377;${opt.price}</span></div>`;
                 btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
                 container.appendChild(btn);
             });
@@ -581,11 +581,11 @@ class GuestPortal {
         addBtn.className = 'reorder-btn';
         addBtn.style.background = 'var(--gold-primary)';
         addBtn.style.color = '#000';
-        addBtn.innerText = `CONFIRM - ₹${price}`;
+        addBtn.innerText = `CONFIRM - &#8377;${price}`;
         container.appendChild(addBtn);
 
-        counter.querySelector('#q-dec').onclick = () => { qty = Math.max(1, qty-1); counter.querySelector('#q-val').innerText = qty; addBtn.innerText = `CONFIRM - ₹${price * qty}`; };
-        counter.querySelector('#q-inc').onclick = () => { qty++; counter.querySelector('#q-val').innerText = qty; addBtn.innerText = `CONFIRM - ₹${price * qty}`; };
+        counter.querySelector('#q-dec').onclick = () => { qty = Math.max(1, qty-1); counter.querySelector('#q-val').innerText = qty; addBtn.innerText = `CONFIRM - &#8377;${price * qty}`; };
+        counter.querySelector('#q-inc').onclick = () => { qty++; counter.querySelector('#q-val').innerText = qty; addBtn.innerText = `CONFIRM - &#8377;${price * qty}`; };
 
         addBtn.onclick = () => {
             this.executeAddToCart(item, variant, label, price, qty);
@@ -622,11 +622,42 @@ class GuestPortal {
 
         if (this.cart.length > 0) {
             const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            info.innerText = `${this.cart.length} Items | ₹${total}`;
+            info.innerText = `${this.cart.length} Items | &#8377;${total}`;
             bar.style.display = 'flex';
             bar.classList.add('active');
         } else {
             bar.style.display = 'none';
+        }
+    }
+
+    renderCartModal() {
+        const modal = document.getElementById('cart-modal');
+        const itemsList = document.getElementById('cart-modal-items');
+        const totalEl = document.getElementById('cart-modal-total');
+        if (!modal || !itemsList) return;
+        
+        itemsList.innerHTML = '';
+        const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
+        totalEl.innerHTML = '&#8377;' + total;
+        
+        this.cart.forEach((c, index) => {
+            itemsList.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.8rem;">
+                <div style="flex:1;">
+                    <div style="font-weight:bold;">${c.name}</div>
+                    <div style="color:var(--color-slate-400); font-size:0.9rem;">${c.qty} x &#8377;${c.price}</div>
+                </div>
+                <div style="font-weight:bold; color:var(--gold-primary); margin-right:1rem;">&#8377;${c.qty * c.price}</div>
+                <button onclick="portal.removeFromCart(${index})" style="background:transparent; border:none; color:var(--color-red-500); font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>`;
+        });
+    }
+
+    removeFromCart(index) {
+        this.cart.splice(index, 1);
+        this.updateCartBar();
+        this.renderCartModal();
+        if (this.cart.length === 0) {
+            document.getElementById('cart-modal').style.display = 'none';
         }
     }
 
@@ -641,35 +672,68 @@ class GuestPortal {
         const btn = document.querySelector('.cart-bar-btn, .place-order-btn');
         if (btn) { btn.disabled = true; btn.innerText = 'Sending...'; }
 
+        const modal = document.getElementById('cart-modal');
+        if(modal) modal.style.display = 'none';
+
         const releaseLock = () => {
             this._isOrdering = false;
             if (btn) { btn.disabled = false; btn.innerText = 'ORDER NOW'; }
         };
 
         try {
-        const orderId = await window.FirebaseSync.getNextOrderSerial(this.roomNumber);
-        this.activeOrderId = orderId;
-        localStorage.setItem(`br_active_order_${this.roomNumber}`, orderId);
-
         const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
-        const orderObj = {
-            order_id: orderId,
-            id: orderId,
-            roomNumber: String(this.roomNumber),
-            roomId: String(this.roomNumber),
-            stayID: this.stayID,
-            guestName: this.guestName || 'Guest',
-            salutation: this.salutation || '',
-            items: this.cart,
-            total_price: total,
-            status: 'Pending',
-            timestamp: window.firebaseHooks.serverTimestamp(),
-            orderType: 'Room'
-        };
+        let orderObj;
+        let isAddon = false;
+        let orderId = this.activeOrderId;
+
+        if (orderId) {
+            const { doc, getDoc } = window.firebaseHooks;
+            const existingRef = doc(window.firebaseFS, 'orders', String(orderId));
+            const existingSnap = await getDoc(existingRef);
+            if(existingSnap.exists()) {
+                const s = existingSnap.data().status.toLowerCase();
+                if(s === 'pending' || s === 'preparing' || s === 'kitchen') {
+                    isAddon = true;
+                    const eData = existingSnap.data();
+                    orderObj = {
+                        ...eData,
+                        items: [...(eData.items || []), ...this.cart],
+                        total_price: (eData.total_price || 0) + total
+                    };
+                }
+            }
+        }
+
+        if (!isAddon) {
+            orderId = await window.FirebaseSync.getNextOrderSerial(this.roomNumber);
+            this.activeOrderId = orderId;
+            localStorage.setItem(`br_active_order_${this.roomNumber}`, orderId);
+
+            orderObj = {
+                order_id: orderId,
+                id: orderId,
+                roomNumber: String(this.roomNumber),
+                roomId: String(this.roomNumber),
+                stayID: this.stayID,
+                guestName: this.guestName || 'Guest',
+                salutation: this.salutation || '',
+                items: this.cart,
+                total_price: total,
+                status: 'Pending',
+                timestamp: window.firebaseHooks.serverTimestamp(),
+                orderType: 'Room'
+            };
+        }
 
         if (window.FirebaseSync) {
-            await window.FirebaseSync.pushOrderToCloud(orderObj);
-            console.log('[Order] Placed:', orderId, 'for Room', this.roomNumber);
+            if (isAddon) {
+                const { doc, setDoc } = window.firebaseHooks;
+                await setDoc(doc(window.firebaseFS, 'orders', String(orderId)), orderObj, {merge: true});
+                console.log('[Order] ADDON appended to:', orderId);
+            } else {
+                await window.FirebaseSync.pushOrderToCloud(orderObj);
+                console.log('[Order] Placed:', orderId, 'for Room', this.roomNumber);
+            }
         }
 
         this.cart = [];

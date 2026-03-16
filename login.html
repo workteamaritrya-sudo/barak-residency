@@ -194,7 +194,16 @@
 
                 // 2. Sign in with discovered email
                 await firebaseHooks.signInWithEmailAndPassword(firebaseAuth, email, password);
-                window.location.href = 'index.html';
+                
+                // 3. Redirect based on role
+                const role = (userData.role || "").toLowerCase();
+                if (role.includes("rest") && role.includes("waiter")) {
+                    window.location.href = 'restaurant_waiter.html';
+                } else if (role.includes("rest") && role.includes("desk")) {
+                    window.location.href = 'restaurant_desk.html';
+                } else {
+                    window.location.href = 'index.html';
+                }
 
             } catch (error) {
                 console.error("Login failed:", error);
@@ -206,9 +215,28 @@
         });
 
         // Redirect if already logged in
-        firebaseHooks.onAuthStateChanged(firebaseAuth, (user) => {
+        firebaseHooks.onAuthStateChanged(firebaseAuth, async (user) => {
             if (user) {
-                window.location.href = 'index.html';
+                try {
+                    const usersRef = firebaseHooks.collection(firebaseFS, 'users');
+                    const q = firebaseHooks.query(usersRef, firebaseHooks.where('assignedEmail', '==', user.email));
+                    const snap = await firebaseHooks.getDocs(q);
+                    
+                    if (!snap.empty) {
+                        const userData = snap.docs[0].data();
+                        const role = (userData.role || "").toLowerCase();
+                        if (role.includes("rest") && role.includes("waiter")) {
+                            window.location.href = 'restaurant_waiter.html';
+                            return;
+                        } else if (role.includes("rest") && role.includes("desk")) {
+                            window.location.href = 'restaurant_desk.html';
+                            return;
+                        }
+                    }
+                    window.location.href = 'index.html';
+                } catch (e) {
+                    window.location.href = 'index.html';
+                }
             }
         });
     </script>

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Barak Residency Pro PMS
  * Central Shared Data State & Ecosystem Logic
  */
@@ -34,16 +34,8 @@ class CentralDatabase {
         this.restaurantRevenue = parseFloat(localStorage.getItem('yukt_rest_rev')) || 0;
         this.restaurantCustomersToday = parseInt(localStorage.getItem('yukt_rest_pax')) || 0;
 
-        this.menu = JSON.parse(localStorage.getItem('br_menu')) || [
-            { id: 'm1', name: 'Chicken Biryani', price: 350, icon: 'ðŸ¥˜', category: 'Main Course', description: 'Fragrant basmati rice cooked with tender chicken and spices.', imageUrl: '', isAvailable: true },
-            { id: 'm2', name: 'Veg Thali', price: 200, icon: 'ðŸ›', category: 'Main Course', description: 'A complete meal with rice, dal, subji, and roti.', imageUrl: '', isAvailable: true },
-            { id: 'm3', name: 'Paneer Chilli', price: 180, icon: 'ðŸ¥˜', category: 'Starters', description: 'Crispy paneer cubes tossed in spicy soy sauce.', imageUrl: '', isAvailable: true },
-            { id: 'm4', name: 'Spring Rolls', price: 120, icon: 'ðŸŒ¯', category: 'Starters', description: 'Crunchy vegetables wrapped in thin pastry.', imageUrl: '', isAvailable: true },
-            { id: 'm5', name: 'Mineral Water', price: 30, icon: 'ðŸ’§', category: 'Drinks', description: 'Purified drinking water.', imageUrl: '', isAvailable: true },
-            { id: 'm6', name: 'Masala Chai', price: 40, icon: 'â˜•', category: 'Drinks', description: 'Spiced Indian tea with milk.', imageUrl: '', isAvailable: true },
-            { id: 'm7', name: 'Gulab Jamun', price: 80, icon: 'ðŸ¨', category: 'Desserts', description: 'Soft milk-solid balls in sugar syrup.', imageUrl: '', isAvailable: true },
-            { id: 'm8', name: 'Vanilla Ice Cream', price: 60, icon: 'ðŸ¦', category: 'Desserts', description: 'Classic creamy vanilla flavor.', imageUrl: '', isAvailable: true }
-        ];
+        // BARAK_MENU set synchronously in constructor - always correct, never stale
+        this.menu = this.buildBarakMenu();
         this.unavailableItems = JSON.parse(localStorage.getItem('br_unavailable_items')) || [];
 
         // Carts configured for the current session (Waiter/Guest)
@@ -150,95 +142,76 @@ class CentralDatabase {
         });
     }
 
-    async loadMenu() {
-        // BARAK_MENU is the single source of truth â€” same as order.js
-        // It always has correct field names, real images, prices, portionType.
-        // Raw Firestore doc.data() can return mismatched casing (Name vs name),
-        // so we NEVER use Firestore as source for the menu structure.
-        const BARAK_MENU = [
-            {id:'m1-basmat',name:'Basmati Rice',category:'Main Course',price:80,priceHalf:50,description:'Premium long grain steamed rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m2-bhunak',name:'Bhuna Khichuri',category:'Main Course',price:180,priceHalf:100,description:'Ghee-laden yellow lentil rice',imageUrl:'https://images.unsplash.com/photo-1645177639578-56e89d924bb1?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m3-luchi',name:'Luchi (4 pcs)',category:'Starters',price:60,priceHalf:0,description:'Deep-fried puffed bread',imageUrl:'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m4-chola',name:'Cholar Dal',category:'Main Course',price:90,priceHalf:0,description:'Bengal gram dal with coconut',imageUrl:'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m5-begun',name:'Begun Bhaja',category:'Starters',price:40,priceHalf:0,description:'Fried eggplant slices',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m6-aloop',name:'Aloo Posto',category:'Main Course',price:150,priceHalf:80,description:'Potatoes in poppy seed paste',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m7-shukto',name:'Shukto',category:'Main Course',price:120,priceHalf:70,description:'Traditional bitter-sweet mixed veg',imageUrl:'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m8-mocha',name:'Mochar Ghonto',category:'Main Course',price:160,priceHalf:0,description:'Banana flower dry curry',imageUrl:'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m9-dhoka',name:'Dhokar Dalna',category:'Main Course',price:140,priceHalf:80,description:'Lentil cakes in spicy gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m10-chick',name:'Chicken Kosha',category:'Main Course',price:280,priceHalf:160,description:'Slow-cooked spicy chicken',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m11-mutt',name:'Mutton Kosha',category:'Main Course',price:450,priceHalf:250,description:'Traditional spicy mutton curry',imageUrl:'https://images.unsplash.com/photo-1545247181-516773cae754?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m12-ilish',name:'Ilish Bhapa',category:'Main Course',price:450,priceHalf:0,description:'Hilsa steamed in mustard paste',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m13-ruim',name:'Rui Macher Jhol',category:'Main Course',price:180,priceHalf:0,description:'Rohu fish in light cumin gravy',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m14-pabda',name:'Pabda Jhal',category:'Main Course',price:250,priceHalf:0,description:'Pabda fish in spicy mustard',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m15-ching',name:'Chingri Malaikari',category:'Main Course',price:380,priceHalf:0,description:'Prawns in coconut milk gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m16-bhet',name:'Bhetki Paturi',category:'Main Course',price:320,priceHalf:0,description:'Fish steamed in banana leaf',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m17-sorsh',name:'Sorshe Ilish',category:'Main Course',price:480,priceHalf:0,description:'Hilsa in pungent mustard gravy',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m18-katla',name:'Katla Kalia',category:'Main Course',price:220,priceHalf:0,description:'Rich Katla fish gravy',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m19-pomf',name:'Pomfret Masala',category:'Main Course',price:300,priceHalf:0,description:'Whole fried pomfret masala',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m20-chikb',name:'Chicken Biryani',category:'Main Course',price:320,priceHalf:180,description:'Kolkata style with potato',imageUrl:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m21-mutb',name:'Mutton Biryani',category:'Main Course',price:420,priceHalf:220,description:'Rich aromatic mutton rice',imageUrl:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m22-fishf',name:'Fish Finger (6pcs)',category:'Starters',price:220,priceHalf:0,description:'Crispy breaded fish strips',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m23-chikc',name:'Chicken Cutlet',category:'Starters',price:150,priceHalf:0,description:'Minced chicken deep fried',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m24-vegc',name:'Veg Chop (2pcs)',category:'Starters',price:40,priceHalf:0,description:'Beetroot and peanut croquettes',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m25-alood',name:'Aloo Dum',category:'Main Course',price:110,priceHalf:60,description:'Spicy baby potato curry',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m26-chann',name:'Channar Dalna',category:'Main Course',price:180,priceHalf:100,description:'Cottage cheese balls in gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m27-murig',name:'Muri Ghonto',category:'Main Course',price:200,priceHalf:0,description:'Fish head cooked with rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m28-lauch',name:'Lau Chingri',category:'Main Course',price:190,priceHalf:0,description:'Bottle gourd with small prawns',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m29-papad',name:'Papad Bhaja',category:'Starters',price:15,priceHalf:0,description:'Crispy fried papadum',imageUrl:'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m30-tomat',name:'Tomato Chutney',category:'Starters',price:40,priceHalf:0,description:'Sweet and tangy tomato relish',imageUrl:'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m31-mishti',name:'Mishti Doi',category:'Dessert',price:60,priceHalf:0,description:'Sweet fermented yogurt',imageUrl:'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m32-roso',name:'Rosogolla (2pcs)',category:'Dessert',price:40,priceHalf:0,description:'Sponge syrupy balls',imageUrl:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m33-gulab',name:'Gulab Jamun (2pcs)',category:'Dessert',price:50,priceHalf:0,description:'Fried milk solid balls',imageUrl:'https://images.unsplash.com/photo-1620660998677-f5a6c07db9bb?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m34-payesh',name:'Payesh',category:'Dessert',price:100,priceHalf:0,description:'Rice pudding with jaggery',imageUrl:'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m35-sand',name:'Sandesh (2pcs)',category:'Dessert',price:60,priceHalf:0,description:'Traditional dry milk sweet',imageUrl:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m36-mw1l',name:'Mineral Water 1L',category:'Drinks',price:20,priceHalf:0,description:'Chilled Bisleri',imageUrl:'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',portionType:'Bottle',isAvailable:true},
-            {id:'m37-mw500',name:'Mineral Water 500ml',category:'Drinks',price:10,priceHalf:0,description:'Travel size water',imageUrl:'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',portionType:'Bottle',isAvailable:true},
-            {id:'m38-milkt',name:'Milk Tea',category:'Drinks',price:25,priceHalf:0,description:'Strong Assam CTC Tea',imageUrl:'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=400',portionType:'Cup',isAvailable:true},
-            {id:'m39-blkt',name:'Black Tea',category:'Drinks',price:15,priceHalf:0,description:'Lemon and ginger tea',imageUrl:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',portionType:'Cup',isAvailable:true},
-            {id:'m40-coffee',name:'Coffee',category:'Drinks',price:40,priceHalf:0,description:'Instant milk coffee',imageUrl:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400',portionType:'Cup',isAvailable:true},
-            {id:'m41-lassi',name:'Sweet Lassi',category:'Drinks',price:80,priceHalf:0,description:'Thick yogurt drink',imageUrl:'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400',portionType:'Cup',isAvailable:true},
-            {id:'m42-limsod',name:'Fresh Lime Soda',category:'Drinks',price:60,priceHalf:0,description:'Sweet or Salted',imageUrl:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',portionType:'Cup',isAvailable:true},
-            {id:'m43-cola',name:'Coca Cola 500ml',category:'Drinks',price:45,priceHalf:0,description:'Pet bottle chilled',imageUrl:'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400',portionType:'Bottle',isAvailable:true},
-            {id:'m44-sprite',name:'Sprite 500ml',category:'Drinks',price:45,priceHalf:0,description:'Pet bottle chilled',imageUrl:'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400',portionType:'Bottle',isAvailable:true},
-            {id:'m45-eggc',name:'Egg Curry (2pcs)',category:'Main Course',price:120,priceHalf:0,description:'Boiled eggs in spicy gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m46-dakb',name:'Chicken Dak Bunglow',category:'Main Course',price:300,priceHalf:180,description:'Heritage chicken curry with egg',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m47-posto',name:'Posto Bora (4pcs)',category:'Starters',price:120,priceHalf:0,description:'Poppy seed fried fritters',imageUrl:'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m48-dachr',name:'Macher Matha Diye Dal',category:'Main Course',price:130,priceHalf:0,description:'Roasted Moong dal with fish head',imageUrl:'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m49-kanka',name:'Kancha Lanka Murgi',category:'Main Course',price:290,priceHalf:160,description:'Green chili chicken (spicy)',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m50-bhetf',name:'Bhetki Fry',category:'Starters',price:180,priceHalf:0,description:'Pure Bhetki fillet fry',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true}
-        ];
-
-        // Always start with the hardcoded authoritative menu
-        this.menu = BARAK_MENU;
-
-        // Apply any admin-set unavailability from localStorage
+    loadMenu() {
+        // Synchronous: immediately sets correct BARAK_MENU so portals render right away
+        this.menu = this.buildBarakMenu();
         const unavailable = JSON.parse(localStorage.getItem('br_unavailable_items') || '[]');
-        if (unavailable.length > 0) {
-            this.menu = this.menu.map(i => ({
-                ...i,
-                isAvailable: !unavailable.includes(i.id)
-            }));
-        }
+        if (unavailable.length > 0) this.menu = this.menu.map(i => ({ ...i, isAvailable: !unavailable.includes(i.id) }));
+        // Non-blocking Firestore seed
+        if (window.firebaseFS) this._seedMenuToFirestore(this.menu);
+    }
 
-        // Optionally sync to Firestore if empty (so admin panel sees items)
+    async _seedMenuToFirestore(menu) {
         try {
-            if (window.firebaseFS) {
-                const { collection, getDocs, doc, setDoc } = window.firebaseHooks;
-                const snapshot = await getDocs(collection(window.firebaseFS, 'menuItems'));
-                if (snapshot.empty) {
-                    // Seed Firestore so admin Inventory page works
-                    const writes = BARAK_MENU.map(item =>
-                        setDoc(doc(window.firebaseFS, 'menuItems', item.id), item)
-                    );
-                    await Promise.all(writes);
-                    console.log('[Menu] Seeded 50 items to Firestore.');
-                }
-            }
-        } catch(e) {
-            console.warn('[Menu] Firestore seed skipped:', e.message);
-        }
+            const { collection, getDocs, doc, setDoc } = window.firebaseHooks;
+            const snap = await getDocs(collection(window.firebaseFS, 'menuItems'));
+            if (snap.empty) { await Promise.all(menu.map(item => setDoc(doc(window.firebaseFS, 'menuItems', item.id), item))); console.log('[Menu] Seeded.'); }
+        } catch (e) { console.warn('[Menu] Seed skip:', e.message); }
+    }
 
-        console.log('[Menu] Loaded', this.menu.length, 'items from BARAK_MENU.');
+    buildBarakMenu() {
+        return [
+            { id: 'm1-basmat', name: 'Basmati Rice', category: 'Main Course', price: 80, priceHalf: 50, description: 'Premium long grain steamed rice', imageUrl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm2-bhunak', name: 'Bhuna Khichuri', category: 'Main Course', price: 180, priceHalf: 100, description: 'Ghee-laden yellow lentil rice', imageUrl: 'https://images.unsplash.com/photo-1645177639578-56e89d924bb1?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm3-luchi', name: 'Luchi (4 pcs)', category: 'Starters', price: 60, priceHalf: 0, description: 'Deep-fried puffed bread', imageUrl: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm4-chola', name: 'Cholar Dal', category: 'Main Course', price: 90, priceHalf: 0, description: 'Bengal gram dal with coconut', imageUrl: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm5-begun', name: 'Begun Bhaja', category: 'Starters', price: 40, priceHalf: 0, description: 'Fried eggplant slices', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm6-aloop', name: 'Aloo Posto', category: 'Main Course', price: 150, priceHalf: 80, description: 'Potatoes in poppy seed paste', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm7-shukto', name: 'Shukto', category: 'Main Course', price: 120, priceHalf: 70, description: 'Traditional bitter-sweet mixed veg', imageUrl: 'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm8-mocha', name: 'Mochar Ghonto', category: 'Main Course', price: 160, priceHalf: 0, description: 'Banana flower dry curry', imageUrl: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm9-dhoka', name: 'Dhokar Dalna', category: 'Main Course', price: 140, priceHalf: 80, description: 'Lentil cakes in spicy gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm10-chick', name: 'Chicken Kosha', category: 'Main Course', price: 280, priceHalf: 160, description: 'Slow-cooked spicy chicken', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm11-mutt', name: 'Mutton Kosha', category: 'Main Course', price: 450, priceHalf: 250, description: 'Traditional spicy mutton curry', imageUrl: 'https://images.unsplash.com/photo-1545247181-516773cae754?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm12-ilish', name: 'Ilish Bhapa', category: 'Main Course', price: 450, priceHalf: 0, description: 'Hilsa steamed in mustard paste', imageUrl: 'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm13-ruim', name: 'Rui Macher Jhol', category: 'Main Course', price: 180, priceHalf: 0, description: 'Rohu fish in light cumin gravy', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm14-pabda', name: 'Pabda Jhal', category: 'Main Course', price: 250, priceHalf: 0, description: 'Pabda fish in spicy mustard', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm15-ching', name: 'Chingri Malaikari', category: 'Main Course', price: 380, priceHalf: 0, description: 'Prawns in coconut milk gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm16-bhet', name: 'Bhetki Paturi', category: 'Main Course', price: 320, priceHalf: 0, description: 'Fish steamed in banana leaf', imageUrl: 'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm17-sorsh', name: 'Sorshe Ilish', category: 'Main Course', price: 480, priceHalf: 0, description: 'Hilsa in pungent mustard gravy', imageUrl: 'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm18-katla', name: 'Katla Kalia', category: 'Main Course', price: 220, priceHalf: 0, description: 'Rich Katla fish gravy', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm19-pomf', name: 'Pomfret Masala', category: 'Main Course', price: 300, priceHalf: 0, description: 'Whole fried pomfret masala', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm20-chikb', name: 'Chicken Biryani', category: 'Main Course', price: 320, priceHalf: 180, description: 'Kolkata style with potato', imageUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm21-mutb', name: 'Mutton Biryani', category: 'Main Course', price: 420, priceHalf: 220, description: 'Rich aromatic mutton rice', imageUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm22-fishf', name: 'Fish Finger (6pcs)', category: 'Starters', price: 220, priceHalf: 0, description: 'Crispy breaded fish strips', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm23-chikc', name: 'Chicken Cutlet', category: 'Starters', price: 150, priceHalf: 0, description: 'Minced chicken deep fried', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm24-vegc', name: 'Veg Chop (2pcs)', category: 'Starters', price: 40, priceHalf: 0, description: 'Beetroot and peanut croquettes', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm25-alood', name: 'Aloo Dum', category: 'Main Course', price: 110, priceHalf: 60, description: 'Spicy baby potato curry', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm26-chann', name: 'Channar Dalna', category: 'Main Course', price: 180, priceHalf: 100, description: 'Cottage cheese balls in gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm27-murig', name: 'Muri Ghonto', category: 'Main Course', price: 200, priceHalf: 0, description: 'Fish head cooked with rice', imageUrl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm28-lauch', name: 'Lau Chingri', category: 'Main Course', price: 190, priceHalf: 0, description: 'Bottle gourd with small prawns', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm29-papad', name: 'Papad Bhaja', category: 'Starters', price: 15, priceHalf: 0, description: 'Crispy fried papadum', imageUrl: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm30-tomat', name: 'Tomato Chutney', category: 'Starters', price: 40, priceHalf: 0, description: 'Sweet and tangy tomato relish', imageUrl: 'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm31-mishti', name: 'Mishti Doi', category: 'Dessert', price: 60, priceHalf: 0, description: 'Sweet fermented yogurt', imageUrl: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm32-roso', name: 'Rosogolla (2pcs)', category: 'Dessert', price: 40, priceHalf: 0, description: 'Sponge syrupy balls', imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm33-gulab', name: 'Gulab Jamun (2pcs)', category: 'Dessert', price: 50, priceHalf: 0, description: 'Fried milk solid balls', imageUrl: 'https://images.unsplash.com/photo-1620660998677-f5a6c07db9bb?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm34-payesh', name: 'Payesh', category: 'Dessert', price: 100, priceHalf: 0, description: 'Rice pudding with jaggery', imageUrl: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm35-sand', name: 'Sandesh (2pcs)', category: 'Dessert', price: 60, priceHalf: 0, description: 'Traditional dry milk sweet', imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm36-mw1l', name: 'Mineral Water 1L', category: 'Drinks', price: 20, priceHalf: 0, description: 'Chilled Bisleri', imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400', portionType: 'Bottle', isAvailable: true },
+            { id: 'm37-mw500', name: 'Mineral Water 500ml', category: 'Drinks', price: 10, priceHalf: 0, description: 'Travel size water', imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400', portionType: 'Bottle', isAvailable: true },
+            { id: 'm38-milkt', name: 'Milk Tea', category: 'Drinks', price: 25, priceHalf: 0, description: 'Strong Assam CTC Tea', imageUrl: 'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=400', portionType: 'Cup', isAvailable: true },
+            { id: 'm39-blkt', name: 'Black Tea', category: 'Drinks', price: 15, priceHalf: 0, description: 'Lemon and ginger tea', imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400', portionType: 'Cup', isAvailable: true },
+            { id: 'm40-coffee', name: 'Coffee', category: 'Drinks', price: 40, priceHalf: 0, description: 'Instant milk coffee', imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400', portionType: 'Cup', isAvailable: true },
+            { id: 'm41-lassi', name: 'Sweet Lassi', category: 'Drinks', price: 80, priceHalf: 0, description: 'Thick yogurt drink', imageUrl: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400', portionType: 'Cup', isAvailable: true },
+            { id: 'm42-limsod', name: 'Fresh Lime Soda', category: 'Drinks', price: 60, priceHalf: 0, description: 'Sweet or Salted', imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400', portionType: 'Cup', isAvailable: true },
+            { id: 'm43-cola', name: 'Coca Cola 500ml', category: 'Drinks', price: 45, priceHalf: 0, description: 'Pet bottle chilled', imageUrl: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400', portionType: 'Bottle', isAvailable: true },
+            { id: 'm44-sprite', name: 'Sprite 500ml', category: 'Drinks', price: 45, priceHalf: 0, description: 'Pet bottle chilled', imageUrl: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400', portionType: 'Bottle', isAvailable: true },
+            { id: 'm45-eggc', name: 'Egg Curry (2pcs)', category: 'Main Course', price: 120, priceHalf: 0, description: 'Boiled eggs in spicy gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm46-dakb', name: 'Chicken Dak Bunglow', category: 'Main Course', price: 300, priceHalf: 180, description: 'Heritage chicken curry with egg', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm47-posto', name: 'Posto Bora (4pcs)', category: 'Starters', price: 120, priceHalf: 0, description: 'Poppy seed fried fritters', imageUrl: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400', portionType: 'Quantity', isAvailable: true },
+            { id: 'm48-dachr', name: 'Macher Matha Diye Dal', category: 'Main Course', price: 130, priceHalf: 0, description: 'Roasted Moong dal with fish head', imageUrl: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm49-kanka', name: 'Kancha Lanka Murgi', category: 'Main Course', price: 290, priceHalf: 160, description: 'Green chili chicken (spicy)', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Plate', isAvailable: true },
+            { id: 'm50-bhetf', name: 'Bhetki Fry', category: 'Starters', price: 180, priceHalf: 0, description: 'Pure Bhetki fillet fry', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Quantity', isAvailable: true }
+        ];
     }
 
 
@@ -387,7 +360,7 @@ class CentralDatabase {
         return {
             number: number,
             floor: floor,
-            status: 'available', 
+            status: 'available',
             guest: null,
             guestName: null,
             guestPhone: null,
@@ -399,7 +372,7 @@ class CentralDatabase {
     // Simplified CSV-to-Menu Sync
     async syncMenuFromCSV(csvTextOrUrl) {
         if (!window.firebaseFS) return false;
-        
+
         try {
             // CSV Parser handling quotes from Google Sheets
             const parseCSVLine = (text) => {
@@ -450,9 +423,9 @@ class CentralDatabase {
                 headers.forEach((h, idx) => {
                     let val = (values[idx] || '').trim();
                     if (val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length - 1);
-                    
+
                     const key = h.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    
+
                     // Explicit Mapping for Specification
                     if (key === 'name') item.name = val;
                     if (key === 'category') item.category = val;
@@ -478,14 +451,14 @@ class CentralDatabase {
             if (newMenu.length > 0) {
                 const { collection, getDocs, doc, deleteDoc, setDoc } = window.firebaseHooks;
                 const menuCol = collection(window.firebaseFS, 'menuItems');
-                
+
                 // 1. Wipe old menu
                 triggerToast("Clearing old menu from database...", "sync");
                 const snapshot = await getDocs(menuCol);
                 const deletePromises = [];
                 snapshot.forEach(d => deletePromises.push(deleteDoc(d.ref)));
                 await Promise.all(deletePromises);
-                
+
                 // 2. Upload new menu
                 triggerToast(`Uploading ${newMenu.length} items to cloud...`, "sync");
                 const uploadPromises = [];
@@ -494,7 +467,7 @@ class CentralDatabase {
                     uploadPromises.push(setDoc(docRef, item));
                 });
                 await Promise.all(uploadPromises);
-                
+
                 this.menu = newMenu;
                 localStorage.setItem('br_menu', JSON.stringify(this.menu));
                 this.triggerSyncEvent();
@@ -516,15 +489,15 @@ class CentralDatabase {
     async persistUnavailable() {
         localStorage.setItem('br_unavailable_items', JSON.stringify(this.unavailableItems));
         this.triggerSyncEvent();
-        
+
         // Push to Firestore for real-time sync across portals
         if (window.firebaseFS) {
             try {
                 const { doc, setDoc } = window.firebaseHooks;
                 const ref = doc(window.firebaseFS, 'settings', 'availability');
-                await setDoc(ref, { 
+                await setDoc(ref, {
                     unavailableItems: this.db.unavailableItems,
-                    lastUpdated: Date.now() 
+                    lastUpdated: Date.now()
                 });
             } catch (e) { console.error("Availability sync failed", e); }
         }
@@ -648,8 +621,8 @@ class PMSApp {
             'kitchen': 'kitchen',
             'hotel waiter': 'ordering',
             'hotelwaiter': 'ordering',
-            'rest waiter': 'ordering',
-            'restwaiter': 'ordering',
+            'rest waiter': 'rest-waiter',
+            'restwaiter': 'rest-waiter',
             'rest desk': 'rest-desk',
             'restdesk': 'rest-desk',
             'restaurant desk': 'rest-desk',
@@ -674,19 +647,9 @@ class PMSApp {
             // Force switch to the role's panel
             this.switchTab(targetTab);
 
-            // Fix currentPortal for roles sharing the 'ordering' tab
-            if (roleKey.includes('rest') && roleKey.includes('waiter')) {
-                this.currentPortal = 'rest-waiter';
-                this._staffRole = 'rest-waiter';
-            } else if (roleKey.includes('waiter')) {
-                this.currentPortal = 'hotel-waiter';
-                this._staffRole = 'hotel-waiter';
-            } else {
-                this._staffRole = roleKey;
-            }
-
             // Store the locked tab so syncState doesn't wander
             this._lockedTab = targetTab;
+            this._staffRole = targetTab;
 
             const headerLogout = document.getElementById('header-logout');
             if (headerLogout) headerLogout.style.display = 'block';
@@ -712,19 +675,20 @@ class PMSApp {
     switchTab(tabId) {
         // Role-lock: if a tab is locked for this user, ignore any attempt to switch to a different one
         if (this._lockedTab && tabId !== this._lockedTab) {
-            console.warn(`[Auth] Tab switch to '${tabId}' blocked â€” role locked to '${this._lockedTab}'`);
+            console.warn(`[Auth] Tab switch to '${tabId}' blocked Ã¢â‚¬â€ role locked to '${this._lockedTab}'`);
             return;
         }
 
         this.currentTab = tabId;
-        
-        // Mission Sync: Ensure currentPortal matches for sound/logic triggers
+
+        // currentPortal sync
         if (tabId === 'dashboard' || tabId === 'reception') this.currentPortal = 'reception';
         else if (tabId === 'kitchen') this.currentPortal = 'kitchen';
         else if (tabId === 'inventory') this.currentPortal = 'owner';
         else if (tabId === 'financials') this.currentPortal = 'owner';
         else if (tabId === 'ordering') this.currentPortal = 'hotel-waiter';
         else if (tabId === 'rest-desk') this.currentPortal = 'rest-desk';
+        else if (tabId === 'rest-waiter') this.currentPortal = 'rest-waiter';
 
         document.querySelectorAll('.side-item').forEach(el => el.classList.remove('active'));
         const activeItem = document.getElementById(`side-${tabId}`);
@@ -739,6 +703,7 @@ class PMSApp {
         if (tabId === 'inventory') this.renderInventoryManagement();
         if (tabId === 'ordering') this.renderWaiterPortal();
         if (tabId === 'rest-desk') this.renderRestDesk();
+        if (tabId === 'rest-waiter') this.renderRestWaiterPortal();
     }
 
     observeMenuRealtime() {
@@ -746,13 +711,13 @@ class PMSApp {
         const menuCol = collection(window.firebaseFS, 'menuItems');
         onSnapshot(menuCol, (snapshot) => {
             const normalizeItem = (raw) => ({
-                id:          raw.id || raw.ID || `m-${Math.random().toString(36).slice(2,8)}`,
-                name:        raw.name || raw.Name || 'Dish',
-                category:    raw.category || raw.Category || 'General',
-                price:       parseFloat(raw.price || raw.PriceFull || raw.pricefull || 0),
-                priceHalf:   parseFloat(raw.priceHalf || raw.PriceHalf || raw.pricehalf || 0),
+                id: raw.id || raw.ID || `m-${Math.random().toString(36).slice(2, 8)}`,
+                name: raw.name || raw.Name || 'Dish',
+                category: raw.category || raw.Category || 'General',
+                price: parseFloat(raw.price || raw.PriceFull || raw.pricefull || 0),
+                priceHalf: parseFloat(raw.priceHalf || raw.PriceHalf || raw.pricehalf || 0),
                 description: raw.description || raw.Description || 'Barak Residency Special',
-                imageUrl:    raw.imageUrl || raw.ImageURL || raw.image || raw.img || '',
+                imageUrl: raw.imageUrl || raw.ImageURL || raw.image || raw.img || '',
                 portionType: raw.portionType || raw.PortionType || 'Plate',
                 isAvailable: raw.isAvailable !== false
             });
@@ -760,11 +725,11 @@ class PMSApp {
             const items = [];
             snapshot.forEach(doc => items.push(normalizeItem(doc.data())));
             this.db.menu = items;
-            
+
             const emptyState = document.getElementById('menu-empty-state');
             const tableWrapper = document.getElementById('menu-items-table-wrapper');
             const loadingMsg = document.getElementById('menu-loading-msg');
-            
+
             if (loadingMsg) loadingMsg.style.display = 'none';
             if (items.length === 0) {
                 if (emptyState) emptyState.style.display = 'block';
@@ -795,21 +760,21 @@ class PMSApp {
     }
 
     async systemReset() {
-        if (!confirm("ðŸš¨ CRITICAL: This will PERMANENTLY delete all active orders, guests, and service requests to fix 'object Object' bugs. Proceed?")) return;
-        
+        if (!confirm("Ã°Å¸Å¡Â¨ CRITICAL: This will PERMANENTLY delete all active orders, guests, and service requests to fix 'object Object' bugs. Proceed?")) return;
+
         try {
             const { collection, getDocs, deleteDoc, updateDoc, serverTimestamp } = window.firebaseHooks;
             const db = window.firebaseFS;
-            
+
             this.showToast("Initiating System Reset...", "info");
-            
+
             // 1. Clear Collections
             const collectionsToClear = ['orders', 'guests', 'serviceRequests', 'ledger', 'billing'];
             for (const collName of collectionsToClear) {
                 const snap = await getDocs(collection(db, collName));
                 await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
             }
-            
+
             // 2. Reset Rooms using direct collection access 
             const roomsSnap = await getDocs(collection(db, 'rooms'));
             await Promise.all(roomsSnap.docs.map(d => updateDoc(d.ref, {
@@ -822,10 +787,10 @@ class PMSApp {
                 billGenerated: false,
                 last_updated: serverTimestamp() || new Date()
             })));
-            
+
             this.showToast("System Reset Successful. refreshing...", "success");
             setTimeout(() => window.location.reload(), 1500);
-            
+
         } catch (err) {
             console.error("System Reset Failed:", err);
             this.showToast("Reset failed: " + err.message, "error");
@@ -833,7 +798,7 @@ class PMSApp {
     }
 
     async hardReset() {
-        const confirmed = confirm("ðŸ’£ HARD RESET: This will permanently wipe ALL active guests, ALL orders, ALL reservations, and reset billing to #1.\n\nThis CANNOT be undone. Type CONFIRM to proceed.");
+        const confirmed = confirm("Ã°Å¸â€™Â£ HARD RESET: This will permanently wipe ALL active guests, ALL orders, ALL reservations, and reset billing to #1.\n\nThis CANNOT be undone. Type CONFIRM to proceed.");
         if (!confirmed) return;
         const typed = prompt('Type CONFIRM (all caps) to execute the full wipe:');
         if (typed !== 'CONFIRM') { this.showToast('Hard Reset cancelled.', 'info'); return; }
@@ -898,8 +863,8 @@ class PMSApp {
         const modal = document.getElementById('history-modal');
         const content = document.getElementById('history-content');
         if (!modal || !content) {
-             this.showToast("History modal missing in DOM", "error");
-             return;
+            this.showToast("History modal missing in DOM", "error");
+            return;
         }
 
         modal.style.display = 'flex';
@@ -908,17 +873,17 @@ class PMSApp {
         try {
             const { collection, query, where, getDocs, orderBy } = window.firebaseHooks;
             const db = window.firebaseFS;
-            
+
             const q = query(
-                collection(db, 'ledger'), 
+                collection(db, 'ledger'),
                 where('guestPhone', '==', phone),
                 orderBy('timestamp', 'desc')
             );
-            
+
             const snap = await getDocs(q);
             if (snap.empty) {
                 content.innerHTML = `<div class="text-center py-6">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">ðŸ“­</div>
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">Ã°Å¸â€œÂ­</div>
                     No previous stay records found for <b>${phone}</b>.
                 </div>`;
                 return;
@@ -934,7 +899,7 @@ class PMSApp {
                     <div class="glass-panel mb-3" style="padding:1.25rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03);">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span style="color: var(--gold-primary); font-weight: 800; font-size: 1.1rem;">Stay: ${date}</span>
-                            <span style="color: #4ade80; font-weight: 900; font-size: 1.1rem;">â‚¹${total.toLocaleString()}</span>
+                            <span style="color: #4ade80; font-weight: 900; font-size: 1.1rem;">&#8377;${total.toLocaleString()}</span>
                         </div>
                         <div class="text-xs text-gray">
                             <strong>Room:</strong> ${data.roomNum} | 
@@ -970,7 +935,7 @@ class PMSApp {
             tr.innerHTML = `
                 <td>${item.name}</td>
                 <td>${item.category}</td>
-                <td>â‚¹${item.price}</td>
+                <td>&#8377;${item.price}</td>
                 <td>
                     <span class="status-badge" style="background:${isAvail ? '#4ade8020' : '#ef444420'}; color:${isAvail ? '#4ade80' : '#ef4444'}">
                         ${isAvail ? 'Live' : 'Hidden'}
@@ -1117,20 +1082,20 @@ class PMSApp {
         } else {
             switch (portalId) {
                 case 'rest-waiter':
-                case 'hotel-waiter': 
-                    title.innerText = "Waiter POS Auth"; 
-                    if (newHint) newHint.innerText = "1234"; 
+                case 'hotel-waiter':
+                    title.innerText = "Waiter POS Auth";
+                    if (newHint) newHint.innerText = "1234";
                     break;
-                case 'kitchen': 
-                    title.innerText = "Kitchen KDS Auth"; 
-                    if (newHint) newHint.innerText = "5678"; 
+                case 'kitchen':
+                    title.innerText = "Kitchen KDS Auth";
+                    if (newHint) newHint.innerText = "5678";
                     break;
             }
         }
 
         pwdInput.value = '';
         document.getElementById('security-modal').style.display = 'flex';
-        
+
         if (isAdmin) {
             document.getElementById('sec-email').focus();
         } else {
@@ -1375,12 +1340,12 @@ class PMSApp {
 
             const isOccupied = room.status === 'occupied';
             const isReserved = room.status === 'reserved';
-            
+
             let statusClass = 'status-available';
             let statusText = 'Available';
             if (isOccupied) { statusClass = 'status-occupied'; statusText = 'Occupied'; }
             if (isReserved) { statusClass = 'status-reserved'; statusText = 'Reserved'; }
-            
+
             // Mission Fix: Use consistent guestName key with fallback
             const displaySalutation = room.salutation || '';
             const displayName = room.guestName || (room.guest ? (room.guest.guestName || room.guest.name) : null);
@@ -1471,7 +1436,7 @@ class PMSApp {
         const now = new Date();
         now.setHours(now.getHours() + 2);
         document.getElementById('res-arrival').value = now.toISOString().slice(0, 16);
-        
+
         document.getElementById('reserve-modal').style.display = 'flex';
     }
 
@@ -1500,7 +1465,7 @@ class PMSApp {
             const roomRef = doc(db, 'rooms', roomNum.toString());
 
             const arrivalDate = new Date(arrival);
-            
+
             await updateDoc(roomRef, {
                 status: 'reserved',
                 salutation: salutation,
@@ -1509,7 +1474,7 @@ class PMSApp {
                 arrivalDate: Timestamp.fromDate(arrivalDate),
                 last_updated: serverTimestamp()
             });
-            
+
             this.showToast(`Room ${roomNum} reserved for ${name}`, "success");
             this.closeReserveModal();
             this.updateCommandCenter();
@@ -1522,7 +1487,7 @@ class PMSApp {
     // --- WAITER ADD-ON ORDERING (REMOVED FROM RECEPTION DASHBOARD) ---
     // Note: Reception order entry has been disabled to solidify order integrity. 
     // Waiters use the Waiter Portal or QR.
-    
+
     async convertResToCheckin() {
         const room = this.db.rooms[this.selectedRoomId];
         if (!room) return;
@@ -1531,14 +1496,14 @@ class PMSApp {
         document.getElementById('sci-salutation').value = room.salutation || 'Mr.';
         document.getElementById('sci-name').value = room.guestName || '';
         document.getElementById('sci-phone').value = room.guestPhone || '';
-        
+
         this.showCheckInForm();
     }
 
     async cancelReservation() {
         if (!confirm("Are you sure you want to cancel this reservation?")) return;
         const roomNum = this.selectedRoomId;
-        
+
         try {
             const db = window.firebaseFS;
             const { doc, updateDoc, serverTimestamp } = window.firebaseHooks;
@@ -1564,7 +1529,7 @@ class PMSApp {
     renderServiceRequests() {
         const container = document.getElementById('service-requests-panel');
         if (!container) return;
-        
+
         const countEl = document.getElementById('service-req-count');
         const pending = this.db.serviceRequests.filter(r => r.status === 'pending');
         if (countEl) countEl.innerText = pending.length;
@@ -1575,7 +1540,7 @@ class PMSApp {
         }
 
         container.innerHTML = '';
-        this.db.serviceRequests.sort((a,b) => b.timestamp - a.timestamp).forEach(req => {
+        this.db.serviceRequests.sort((a, b) => b.timestamp - a.timestamp).forEach(req => {
             const div = document.createElement('div');
             div.className = 'room-order-notification';
             div.style.borderTopColor = '#f43f5e';
@@ -1589,8 +1554,8 @@ class PMSApp {
                 <div style="font-weight:700; color:white; margin-bottom:0.5rem;">${req.type.toUpperCase()}</div>
                 <div style="font-size:0.85rem; color:var(--text-gray); margin-bottom:1rem;">${req.message || 'No additional note'}</div>
                 <div class="d-flex gap-2">
-                    ${req.status === 'pending' ? `<button class="btn btn-success" style="flex:1; font-size:0.7rem; padding:0.3rem;" onclick="app.completeServiceRequest('${req.id}')">MARK DONE</button>` : '<span class="color-success">COMPLETED âœ“</span>'}
-                    <button class="btn btn-danger" style="font-size:0.7rem; padding:0.3rem;" onclick="app.deleteServiceRequest('${req.id}')">ðŸ—‘ï¸</button>
+                    ${req.status === 'pending' ? `<button class="btn btn-success" style="flex:1; font-size:0.7rem; padding:0.3rem;" onclick="app.completeServiceRequest('${req.id}')">MARK DONE</button>` : '<span class="color-success">COMPLETED Ã¢Å“â€œ</span>'}
+                    <button class="btn btn-danger" style="font-size:0.7rem; padding:0.3rem;" onclick="app.deleteServiceRequest('${req.id}')">Ã°Å¸â€”â€˜Ã¯Â¸Â</button>
                 </div>
             `;
             container.appendChild(div);
@@ -1622,7 +1587,7 @@ class PMSApp {
         const ageInput = document.getElementById('sci-age');
         const tariffInput = document.getElementById('sci-tariff');
         const advanceInput = document.getElementById('sci-advance');
-        
+
         if (nameInput) nameInput.value = '';
         if (phoneInput) phoneInput.value = '';
         if (ageInput) ageInput.value = '';
@@ -1631,11 +1596,11 @@ class PMSApp {
 
         this.capturedGuestPhoto = null;
         this.capturedIdFiles = [];
-        
+
         const preview = document.getElementById('sci-photo-preview');
         const status = document.getElementById('sci-photo-status');
         const idList = document.getElementById('sci-id-list');
-        
+
         if (preview) preview.style.display = 'none';
         if (status) status.style.display = 'none';
         if (idList) idList.innerHTML = '<span id="id-placeholder-text" style="color: var(--color-slate-400);">No files attached</span>';
@@ -1698,13 +1663,13 @@ class PMSApp {
         const canvas = document.getElementById('sci-canvas');
         const preview = document.getElementById('sci-photo-preview');
         const status = document.getElementById('sci-photo-status');
-        
+
         if (!video || !canvas) return;
-        
+
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
-        
+
         canvas.toBlob(blob => {
             this.capturedGuestPhoto = new File([blob], `guest_photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
             preview.src = URL.createObjectURL(blob);
@@ -1721,7 +1686,7 @@ class PMSApp {
             const preview = document.getElementById('sci-photo-preview');
             const video = document.getElementById('sci-video');
             const status = document.getElementById('sci-photo-status');
-            
+
             preview.src = URL.createObjectURL(input.files[0]);
             preview.style.display = 'block';
             video.style.display = 'none';
@@ -1734,7 +1699,7 @@ class PMSApp {
         if (input.files) {
             this.capturedIdFiles = Array.from(input.files);
             const list = document.getElementById('sci-id-list');
-            list.innerHTML = this.capturedIdFiles.map(f => `<div style="background:rgba(255,255,255,0.1); padding:5px 10px; border-radius:4px; font-size:0.8rem;">ðŸ“„ ${f.name}</div>`).join('');
+            list.innerHTML = this.capturedIdFiles.map(f => `<div style="background:rgba(255,255,255,0.1); padding:5px 10px; border-radius:4px; font-size:0.8rem;">Ã°Å¸â€œâ€ž ${f.name}</div>`).join('');
             this.showToast(`${this.capturedIdFiles.length} ID files attached.`, "success");
         }
     }
@@ -1744,7 +1709,7 @@ class PMSApp {
             this.showToast("No media captured to view.", "info");
             return;
         }
-        
+
         // Show a temporary full-screen overlay for preview
         const overlay = document.createElement('div');
         overlay.style = "position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:30000; display:flex; flex-direction:column; padding:2rem; overflow:auto;";
@@ -1774,13 +1739,13 @@ class PMSApp {
                 img.src = URL.createObjectURL(file);
                 img.style = "max-width:300px; border:1px solid #fff; border-radius:8px;";
                 const div = document.createElement('div');
-                div.innerHTML = `<p style="text-align:center; color:white;">ID Proof ${idx+1}</p>`;
+                div.innerHTML = `<p style="text-align:center; color:white;">ID Proof ${idx + 1}</p>`;
                 div.appendChild(img);
                 list.appendChild(div);
             } else {
                 const p = document.createElement('p');
                 p.style = "background:rgba(255,255,255,0.1); padding:2rem; border-radius:8px;";
-                p.innerText = `ðŸ“„ ${file.name} (Non-image file)`;
+                p.innerText = `Ã°Å¸â€œâ€ž ${file.name} (Non-image file)`;
                 list.appendChild(p);
             }
         });
@@ -1801,10 +1766,10 @@ class PMSApp {
         if (captureBtn) captureBtn.style.display = 'none';
     }
 
-    // Old scanner functions removed â€” replaced by startWebcam/captureLivePhoto/handlePhotoUpload
+    // Old scanner functions removed Ã¢â‚¬â€ replaced by startWebcam/captureLivePhoto/handlePhotoUpload
 
     sciSwitchTab(tab) {
-        // Legacy no-op â€” new 5-step flow handles its own tabs
+        // Legacy no-op Ã¢â‚¬â€ new 5-step flow handles its own tabs
         console.log('[SCI] Tab switch ignored (legacy):', tab);
     }
 
@@ -1834,7 +1799,7 @@ class PMSApp {
                     photoUrl = await window.FirebaseSync.uploadIdFile(this.capturedGuestPhoto, phone + "_photo");
                 }
                 if (this.capturedIdFiles && this.capturedIdFiles.length > 0) {
-                    const uploads = this.capturedIdFiles.map(f => window.FirebaseSync.uploadIdFile(f, phone + "_id_" + Math.random().toString(36).substr(2,4)));
+                    const uploads = this.capturedIdFiles.map(f => window.FirebaseSync.uploadIdFile(f, phone + "_id_" + Math.random().toString(36).substr(2, 4)));
                     idUrls = await Promise.all(uploads);
                 }
             }
@@ -1878,10 +1843,10 @@ class PMSApp {
             if (window.FirebaseSync) {
                 const { doc, collection, runTransaction, serverTimestamp, Timestamp } = window.firebaseHooks;
                 const db = window.firebaseFS;
-                
+
                 // Pre-generate Guest ID
                 const guestsRef = collection(db, 'guests');
-                const newGuestRef = doc(guestsRef); 
+                const newGuestRef = doc(guestsRef);
                 cloudGuestId = newGuestRef.id;
 
                 const roomRef = doc(db, 'rooms', roomNum.toString());
@@ -1932,7 +1897,7 @@ class PMSApp {
 
             this.renderRoomGrid();
             this.showToast("CHECK-IN SUCCESSFUL! Redirecting...", "success");
-            
+
             // Auto redirect to reception/dashboard
             setTimeout(() => {
                 this.closeSmartCheckin();
@@ -1940,12 +1905,12 @@ class PMSApp {
             }, 2000);
 
             // Clear Form
-            ['sci-name','sci-phone','sci-age'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
-            const adv = document.getElementById('sci-advance'); if(adv) adv.value = '0';
+            ['sci-name', 'sci-phone', 'sci-age'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            const adv = document.getElementById('sci-advance'); if (adv) adv.value = '0';
             this.capturedGuestPhoto = null;
             this.capturedIdFiles = [];
 
-        } catch(err) {
+        } catch (err) {
             console.error("Check-in failed", err);
             this.showToast("System Error: Cloud writes failed.", "error");
         }
@@ -1976,7 +1941,7 @@ class PMSApp {
         document.getElementById('cc-guest-phone').innerText = room.guestPhone || guest.guestPhone || guest.phone || '---';
 
         const idEl = document.getElementById('cc-guest-id');
-        const idUrl = guest.idProofUrl || guest.idImageUrl;
+        const idUrl = guest.idProofUrl || (guest.idUrls && guest.idUrls[0]) || guest.idImageUrl || guest.photoUrl;
 
         if (idUrl) {
             idEl.innerHTML = `<a href="${idUrl}" target="_blank" style="color: inherit; text-decoration: none;">View ID</a>`;
@@ -1995,11 +1960,11 @@ class PMSApp {
         document.getElementById('cc-stay-days').innerText = daysBilled;
 
         const tariff = Number(guest.tariff) || Number(room.tariff) || 0;
-        document.getElementById('cc-tariff').innerText = `â‚¹${tariff}`;
+        document.getElementById('cc-tariff').innerText = `&#8377;${tariff}`;
         document.getElementById('cc-ledger-days').innerText = daysBilled;
 
         const roomTotal = tariff * daysBilled;
-        document.getElementById('cc-room-total').innerText = `â‚¹${roomTotal}`;
+        document.getElementById('cc-room-total').innerText = `&#8377;${roomTotal}`;
 
         // Mission: Instant Reception Sync + Strict stayID isolation
         const stayID = room.currentStayId || guest.stayID;
@@ -2007,19 +1972,19 @@ class PMSApp {
             const oTime = o.timestamp && typeof o.timestamp === 'object' && o.timestamp.seconds ? o.timestamp.seconds * 1000 : (Number(o.timestamp) || 0);
             const matchesRoom = (String(o.roomNumber) === String(room.number) || String(o.roomId) === String(room.number));
             const matchesStay = stayID ? (o.stayID === stayID) : (oTime >= checkInTimeValue);
-            
-            return matchesRoom && 
-                   matchesStay && 
-                   o.status !== 'Cancelled' &&
-                   o.status !== 'cancelled';
+
+            return matchesRoom &&
+                matchesStay &&
+                o.status !== 'Cancelled' &&
+                o.status !== 'cancelled';
         });
 
         // Sum total amount
         const foodTotal = sessionOrders.reduce((sum, o) => {
-             return sum + (Number(o.total_price) || Number(o.total) || Number(o.total_amount) || 0);
+            return sum + (Number(o.total_price) || Number(o.total) || Number(o.total_amount) || 0);
         }, 0);
-        
-        document.getElementById('cc-food-total').innerText = `â‚¹${foodTotal.toLocaleString()}`;
+
+        document.getElementById('cc-food-total').innerText = `&#8377;${foodTotal.toLocaleString()}`;
 
         // Robust Advance Lookup (Firestore stores as advancePaid usually)
         const advance = Number(guest.advance) || Number(guest.advancePaid) || Number(room.advancePaid) || 0;
@@ -2029,7 +1994,7 @@ class PMSApp {
         const balance = (Number(roomTotal) || 0) + (Number(foodTotal) || 0) - (Number(advance) || 0);
         const balanceEl = document.getElementById('cc-total-bill');
         if (balanceEl) {
-            balanceEl.innerText = `â‚¹${balance.toLocaleString()}`;
+            balanceEl.innerText = `&#8377;${balance.toLocaleString()}`;
             balanceEl.style.color = balance > 0 ? '#f43f5e' : '#4ade80';
         }
 
@@ -2045,12 +2010,12 @@ class PMSApp {
         const itemsContainer = document.getElementById('cc-food-items-list');
         if (itemsContainer) {
             itemsContainer.innerHTML = '';
-            
+
             if (sessionOrders.length > 0) {
                 // Re-sort session orders by time ascending
-                sessionOrders.sort((a,b) => {
-                    const ta = a.timestamp?.seconds ? a.timestamp.seconds*1000 : (a.timestamp || 0);
-                    const tb = b.timestamp?.seconds ? b.timestamp.seconds*1000 : (b.timestamp || 0);
+                sessionOrders.sort((a, b) => {
+                    const ta = a.timestamp?.seconds ? a.timestamp.seconds * 1000 : (a.timestamp || 0);
+                    const tb = b.timestamp?.seconds ? b.timestamp.seconds * 1000 : (b.timestamp || 0);
                     return ta - tb;
                 });
 
@@ -2058,12 +2023,12 @@ class PMSApp {
                     const orderGroup = document.createElement('div');
                     orderGroup.className = 'order-summary-group';
                     orderGroup.style.cssText = 'margin-bottom: 0.8rem; padding: 0.5rem; border-radius: 6px; background: rgba(255,b,b,0.03); border: 1px solid rgba(212,175,55,0.1);';
-                    
+
                     const timeStr = order.timestamp ? this.db.timeOnlyIST(order.timestamp) : '---';
                     const itemsHtml = order.items.map(i => `
                         <div style="display:flex; justify-content:space-between; font-size:0.75rem; color: #ddd;">
                             <span>${i.qty}x ${i.name}</span>
-                            <span>â‚¹${i.qty * i.price}</span>
+                            <span>&#8377;${i.qty * i.price}</span>
                         </div>
                     `).join('');
 
@@ -2086,7 +2051,7 @@ class PMSApp {
         e.preventDefault();
         const roomNum = this.selectedRoomId;
         const room = this.db.rooms[roomNum];
-        
+
         const guestData = {
             name: document.getElementById('ci-name').value,
             age: document.getElementById('ci-age').value,
@@ -2118,16 +2083,16 @@ class PMSApp {
             room.guest = guestData;
             room.guestName = guestData.name;
             room.guestPhone = guestData.phone;
-            
+
             this.db.persistRoom(roomNum);
             e.target.reset();
             this.syncState();
             this.showToast("Guest Checked In Successfully", "success");
-            
+
         } catch (err) {
             console.error("Check-in Error:", err);
             this.showToast("Cloud sync failed. Guest saved locally.", "error");
-            
+
             // Fallback: Local save anyway
             room.status = 'occupied';
             room.guest = guestData;
@@ -2616,7 +2581,7 @@ class PMSApp {
                         });
                     }
                 });
-                linkBtn.innerText = linkCount > 0 ? 'ðŸ”— Link Another Table' : 'ðŸ”— Link A Table';
+                linkBtn.innerText = linkCount > 0 ? 'Ã°Å¸â€â€” Link Another Table' : 'Ã°Å¸â€â€” Link A Table';
             }
         }
 
@@ -2921,7 +2886,7 @@ class PMSApp {
             const cat = item.category || item.Category || '';
             return (name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 cat.toLowerCase().includes(searchTerm.toLowerCase())) &&
-            (item.isAvailable !== false && !this.db.unavailableItems.includes(item.id));
+                (item.isAvailable !== false && !this.db.unavailableItems.includes(item.id));
         });
 
         if (filteredMenu.length === 0) {
@@ -2951,8 +2916,8 @@ class PMSApp {
                 el.style.flexDirection = 'column';
                 el.style.gap = '5px';
 
-                const imgUrl = item.imageUrl || item.image || item.ImageURL || item.photo || '';
-                const fallbackImg = 'br.png'; 
+                const imgUrl = item.imageUrl || item.image || item.ImageURL || item.imageUrl || '';
+                const fallbackImg = 'br.png';
                 const photoHtml = `<img src="${imgUrl}" style="width:100%; height:80px; object-fit:cover; border-radius:8px; margin-bottom:5px;" onerror="this.src='${fallbackImg}'">`;
 
                 const name = item.name || item.Name || 'Dish';
@@ -2962,8 +2927,8 @@ class PMSApp {
                 el.innerHTML = `
                     ${photoHtml}
                     <div style="display:flex; justify-content:space-between; align-items:start;">
-                        <div class="menu-icon">${item.icon || 'ðŸ½ï¸'}</div>
-                        <div class="menu-price">â‚¹${price}</div>
+                        <div class="menu-icon">${item.icon || 'Ã°Å¸ÂÂ½Ã¯Â¸Â'}</div>
+                        <div class="menu-price">&#8377;${price}</div>
                     </div>
                     <div class="menu-name" style="font-weight:bold;">${name}</div>
                     <div class="menu-desc" style="font-size:0.7rem; color:var(--color-slate-400); height:30px; overflow:hidden; line-height: 1.2;">${desc}</div>
@@ -3025,7 +2990,7 @@ class PMSApp {
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-outline';
                 btn.style.cssText = 'padding: 1.5rem; font-size: 1.1rem; border-color: var(--color-primary); color: var(--color-primary);';
-                btn.innerText = `${opt.label} (â‚¹${opt.price})`;
+                btn.innerText = `${opt.label} (&#8377;${opt.price})`;
                 btn.onclick = () => this.addVariantToCart(opt.val, opt.label, opt.price);
                 container.appendChild(btn);
             });
@@ -3046,11 +3011,11 @@ class PMSApp {
             const select = document.createElement('select');
             select.className = 'form-control';
             select.style.cssText = 'height: 60px; font-size: 1.2rem; text-align: center; border: 2px solid var(--gold-primary); background: rgba(0,0,0,0.5);';
-            
+
             sizes.forEach(opt => {
                 const o = document.createElement('option');
                 o.value = JSON.stringify(opt);
-                o.innerText = `${opt.label} - â‚¹${opt.price}`;
+                o.innerText = `${opt.label} - &#8377;${opt.price}`;
                 select.appendChild(o);
             });
             container.appendChild(select);
@@ -3139,7 +3104,7 @@ class PMSApp {
             total += itemTotal;
             const el = document.createElement('div');
             el.className = 'cart-item';
-            el.innerHTML = `<div><span class="cart-item-qty">${cartItem.qty}x</span><span>${cartItem.item.name}</span></div><span>â‚¹${itemTotal}</span>`;
+            el.innerHTML = `<div><span class="cart-item-qty">${cartItem.qty}x</span><span>${cartItem.item.name}</span></div><span>&#8377;${itemTotal}</span>`;
             cartEl.appendChild(el);
         });
 
@@ -3151,7 +3116,7 @@ class PMSApp {
             const el = document.getElementById('rest-waiter-table-info');
             if (el && el.innerText) {
                 const baseText = el.innerText.split(' | Total:')[0];
-                el.innerHTML = `${baseText} <span class="color-success font-bold" style="margin-left: 0.5rem;">| Total: â‚¹${total}</span>`;
+                el.innerHTML = `${baseText} <span class="color-success font-bold" style="margin-left: 0.5rem;">| Total: &#8377;${total}</span>`;
 
                 // Recalculate global total for sync
                 this.db.totalPrice = total;
@@ -3179,7 +3144,7 @@ class PMSApp {
         }
 
         this.db.activeRoomContext = roomNumber;
-        document.getElementById('guest-room-number').innerText = `Room ${roomNumber} â€¢ ${room.guest.name}`;
+        document.getElementById('guest-room-number').innerText = `Room ${roomNumber} Ã¢â‚¬Â¢ ${room.guest.name}`;
 
         // Render Swiggy-style Categorized Mobile Menu
         const grid = document.getElementById('guest-menu-grid');
@@ -3204,13 +3169,13 @@ class PMSApp {
             categories[cat].forEach(item => {
                 const el = document.createElement('div');
                 el.className = 'guest-item';
-                const photoHtml = item.photo ? `<img src="${item.photo}" style="width:80px; height:80px; object-fit:cover; border-radius:12px; margin-right:1rem;">` : `<div style="font-size: 3rem; margin-right: 1rem; align-self: center;">${item.icon}</div>`;
+                const photoHtml = item.imageUrl ? `<img src="${item.imageUrl}" style="width:80px; height:80px; object-fit:cover; border-radius:12px; margin-right:1rem;">` : `<div style="font-size: 3rem; margin-right: 1rem; align-self: center;">${item.icon}</div>`;
 
                 el.innerHTML = `
                     ${photoHtml}
                     <div class="guest-item-info">
                         <div class="guest-item-name">${item.name}</div>
-                        <div class="guest-item-price">â‚¹${item.price}</div>
+                        <div class="guest-item-price">&#8377;${item.price}</div>
                         <div class="text-xs text-gray mt-1">${item.description || ''}</div>
                     </div>
                     <div class="guest-item-action">
@@ -3261,11 +3226,11 @@ class PMSApp {
             orderIdStr = `ROOM ${targetId}-${nextId}`;
         }
 
-        const itemsListHTML = this.db.cart.map(c => `<div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;"><span style="color:var(--color-slate-400)">${c.qty}x</span> <span>${c.item.name}</span> <span class="color-primary">â‚¹${c.qty * c.item.price}</span></div>`).join('');
+        const itemsListHTML = this.db.cart.map(c => `<div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;"><span style="color:var(--color-slate-400)">${c.qty}x</span> <span>${c.item.name}</span> <span class="color-primary">&#8377;${c.qty * c.item.price}</span></div>`).join('');
         const total = this.db.cart.reduce((sum, c) => sum + (c.item.price * c.qty), 0);
 
         document.getElementById('confirm-order-id').innerText = orderIdStr;
-        document.getElementById('confirm-order-items').innerHTML = itemsListHTML + `<div style="margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--glass-border); display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem;"><span>Total</span><span class="color-success">â‚¹${total}</span></div>`;
+        document.getElementById('confirm-order-items').innerHTML = itemsListHTML + `<div style="margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--glass-border); display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem;"><span>Total</span><span class="color-success">&#8377;${total}</span></div>`;
 
         this.pendingOrderContext = context;
         document.getElementById('order-confirm-modal').style.display = 'flex';
@@ -3471,7 +3436,7 @@ class PMSApp {
                     <div class="order-payload text-md mt-4 text-left glass-panel" style="background:rgba(0,0,0,0.5); padding:1.5rem; border-radius:12px; max-width: 400px; max-height: 250px; overflow-y:auto; font-family: monospace;">
                         ${orderDetails.items.map(i => `<div style="margin-bottom:0.4rem;">${i}</div>`).join('')}
                     </div>
-                    <div class="mt-4 font-bold text-xl color-primary">${isAddon ? 'Delta Sync Complete' : 'Total: â‚¹' + orderDetails.total}</div>
+                    <div class="mt-4 font-bold text-xl color-primary">${isAddon ? 'Delta Sync Complete' : 'Total: &#8377;' + orderDetails.total}</div>
                 `;
             }
             overlay.style.display = 'flex';
@@ -3551,9 +3516,9 @@ class PMSApp {
 
     generateKOT(orderObj) {
         const copies = [
-            { label: 'ðŸ‘¨â€ðŸ³  CHEF COPY', color: '#c0392b' },
-            { label: 'ðŸ›Žï¸  WAITER COPY', color: '#1a237e' },
-            { label: 'ðŸ“‹  LEDGER COPY', color: '#1b5e20' }
+            { label: 'Ã°Å¸â€˜Â¨Ã¢â‚¬ÂÃ°Å¸ÂÂ³  CHEF COPY', color: '#c0392b' },
+            { label: 'Ã°Å¸â€ºÅ½Ã¯Â¸Â  WAITER COPY', color: '#1a237e' },
+            { label: 'Ã°Å¸â€œâ€¹  LEDGER COPY', color: '#1b5e20' }
         ];
 
         const printArea = document.getElementById('print-area');
@@ -3568,7 +3533,7 @@ class PMSApp {
         const pDate = timestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
         const pFullDate = timestamp.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-        const roomNum = orderObj.roomNumber || orderObj.roomId || 'â€”';
+        const roomNum = orderObj.roomNumber || orderObj.roomId || 'Ã¢â‚¬â€';
         const guestName = (() => {
             const r = this.db ? (this.db.rooms[roomNum] || this.db.rooms[String(roomNum)]) : null;
             return r ? `${r.salutation || ''} ${r.guestName || ''}`.trim() : 'Guest';
@@ -3579,21 +3544,21 @@ class PMSApp {
                 const name = typeof item === 'object' ? (item.name || 'Item') : item;
                 const qty = typeof item === 'object' ? (item.qty || item.quantity || 1) : 1;
                 const variant = item.variant && item.variant !== 'Full' && item.variant !== 'Standard' ? ` [${item.variant}]` : '';
-                const addons = item.specialInstructions ? `<tr><td colspan="3" style="padding:2px 6px; font-size:0.75rem; color:#c0392b; font-weight:bold;">  â†³ ${item.specialInstructions}</td></tr>` : '';
+                const addons = item.specialInstructions ? `<tr><td colspan="3" style="padding:2px 6px; font-size:0.75rem; color:#c0392b; font-weight:bold;">  Ã¢â€ Â³ ${item.specialInstructions}</td></tr>` : '';
                 return `<tr style="border-bottom:1px dotted #ccc;">
-                    <td style="padding:5px 6px; font-size:0.95rem;">â€¢ ${name}${variant}</td>
+                    <td style="padding:5px 6px; font-size:0.95rem;">Ã¢â‚¬Â¢ ${name}${variant}</td>
                     <td style="padding:5px 6px; text-align:center; font-weight:900;">${qty}</td>
-                    <td style="padding:5px 6px; text-align:right;">â‚¹${(item.price||0)*qty}</td>
+                    <td style="padding:5px 6px; text-align:right;">&#8377;${(item.price || 0) * qty}</td>
                 </tr>${addons}`;
             }).join('');
 
-            const total = (orderObj.items || []).reduce((s, i) => s + ((i.price||0)*(i.qty||1)), 0);
+            const total = (orderObj.items || []).reduce((s, i) => s + ((i.price || 0) * (i.qty || 1)), 0);
 
             printArea.innerHTML += `
                 <div style="font-family:'Courier New',monospace; width:80mm; padding:10px; margin:0 auto 30px; border:2px solid ${copy.color}; color:#000; background:#fff; page-break-after:always;">
                     <div style="text-align:center; background:${copy.color}; color:#fff; padding:6px 0; font-weight:bold; letter-spacing:2px; font-size:1rem; margin-bottom:8px;">${copy.label}</div>
                     <div style="text-align:center; font-size:1.2rem; font-weight:900; margin-bottom:2px;">BARAK RESIDENCY</div>
-                    <div style="text-align:center; font-size:0.7rem; margin-bottom:8px;">Luxury Hotel â€¢ Silchar, Assam</div>
+                    <div style="text-align:center; font-size:0.7rem; margin-bottom:8px;">Luxury Hotel Ã¢â‚¬Â¢ Silchar, Assam</div>
                     <div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:5px 0; margin-bottom:8px;">
                         <div style="display:flex; justify-content:space-between;"><b>ROOM:</b> <b>${roomNum}</b></div>
                         <div style="display:flex; justify-content:space-between;"><b>GUEST:</b> <span>${guestName}</span></div>
@@ -3610,16 +3575,16 @@ class PMSApp {
                         ${itemsHtml}
                         <tr style="border-top:2px solid #000; font-weight:900; font-size:1rem;">
                             <td colspan="2" style="padding:6px; text-align:right;">TOTAL:</td>
-                            <td style="padding:6px; text-align:right;">â‚¹${total}</td>
+                            <td style="padding:6px; text-align:right;">&#8377;${total}</td>
                         </tr>
                     </table>
-                    <div style="text-align:center; margin-top:8px; font-size:0.7rem; border-top:1px dashed #ccc; padding-top:5px;">Thank you! â€¢ ${new Date().toLocaleTimeString()}</div>
+                    <div style="text-align:center; margin-top:8px; font-size:0.7rem; border-top:1px dashed #ccc; padding-top:5px;">Thank you! Ã¢â‚¬Â¢ ${new Date().toLocaleTimeString()}</div>
                 </div>`;
         });
 
         window.print();
         if (this.currentPortal === 'reception') {
-            this.showToast(`KOT Printed: Room ${roomNum} â€” 3 Copies`, 'success');
+            this.showToast(`KOT Printed: Room ${roomNum} Ã¢â‚¬â€ 3 Copies`, 'success');
         }
     }
 
@@ -3636,35 +3601,35 @@ class PMSApp {
         const guest = room.guest;
         const guestId = guest.cloudId || room.currentGuestId;
 
-        // 1. Precise Itemized Ledger â€” use billItems if available, fall back to kitchenOrders
+        // 1. Precise Itemized Ledger Ã¢â‚¬â€ use billItems if available, fall back to kitchenOrders
         let itemizedFood = (guest.billItems && guest.billItems.length > 0) ? guest.billItems : [];
-        
+
         // Fallback: build itemized list from kitchenOrders if billItems is empty
         if (itemizedFood.length === 0) {
             const checkInTs = guest.checkInTimestamp || 0;
             const stayID = room.currentStayId || guest.stayID;
-            
+
             const fallbackOrders = this.db.kitchenOrders.filter(o => {
                 const oTime = o.timestamp?.seconds ? o.timestamp.seconds * 1000 : (Number(o.timestamp) || 0);
                 const matchesRoom = (String(o.roomNumber) === String(roomNum) || String(o.roomId) === String(roomNum));
                 const matchesStay = stayID ? (o.stayID === stayID) : (oTime >= checkInTs);
-                
-                return matchesRoom && 
-                       matchesStay && 
-                       o.status !== 'Cancelled' && 
-                       o.status !== 'cancelled';
+
+                return matchesRoom &&
+                    matchesStay &&
+                    o.status !== 'Cancelled' &&
+                    o.status !== 'cancelled';
             });
 
             fallbackOrders.forEach(o => {
                 (o.items || []).forEach(i => {
                     if (typeof i === 'object') {
-                        itemizedFood.push({ 
-                            name: i.name || 'Item', 
-                            qty: i.qty || 1, 
-                            price: i.price || 0, 
-                            variant: i.variant || 'Full', 
+                        itemizedFood.push({
+                            name: i.name || 'Item',
+                            qty: i.qty || 1,
+                            price: i.price || 0,
+                            variant: i.variant || 'Full',
                             orderId: o.id,
-                            timestamp: o.timestamp 
+                            timestamp: o.timestamp
                         });
                     }
                 });
@@ -3672,11 +3637,11 @@ class PMSApp {
         }
 
         const foodSubtotal = itemizedFood.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.qty || 1)), 0);
-        
+
         // 2. Timings & Stay Details
         const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : (guest.checkInTime || guest.check_in_date || Date.now()));
         const days = this.calculateBilledDays(checkInTimeValue);
-        
+
         const tariff = Number(guest.tariff) || Number(room.tariff) || 0;
         const roomSubtotal = days * tariff;
         let roomGSTPerc = (tariff > 7500) ? 18 : ((tariff > 1000) ? 12 : 0);
@@ -3713,7 +3678,7 @@ class PMSApp {
             if (printArea) {
                 // User Mission: 2 Copies Only
                 const invoiceCopyTypes = ['Guest Copy', 'Hotel / Office Copy'];
-                printArea.innerHTML = ''; 
+                printArea.innerHTML = '';
                 const checkInDateStr = this.db.formattedIST(checkInTimeValue);
                 const checkOutDateStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
                 const safeBalance = isNaN(balancePayable) ? 0 : balancePayable;
@@ -3725,7 +3690,7 @@ class PMSApp {
                             <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #D4AF37; padding-bottom: 20px; margin-bottom: 30px;">
                                 <div>
                                     <h1 style="margin: 0; color: #1a237e; font-size: 2.2rem; letter-spacing: 1px;">BARAK RESIDENCY</h1>
-                                    <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">Modern Luxury â€¢ Silchar, Assam</p>
+                                    <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">Modern Luxury Ã¢â‚¬Â¢ Silchar, Assam</p>
                                     <p style="margin: 2px 0; font-size: 0.8rem; color: #888;">GSTIN: 18AABCB1234F1Z5</p>
                                 </div>
                                 <div style="text-align: right;">
@@ -3764,49 +3729,49 @@ class PMSApp {
                                     <tr>
                                         <td style="padding: 12px; border: 1px solid #eee;">Luxury Room Accommodation <br><small>${tariff} x ${days} Nights</small></td>
                                         <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${days}</td>
-                                        <td style="padding: 12px; text-align: right; border: 1px solid #eee;">â‚¹${roomSubtotal.toFixed(2)}</td>
+                                        <td style="padding: 12px; text-align: right; border: 1px solid #eee;">&#8377;${roomSubtotal.toFixed(2)}</td>
                                         <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${roomGSTPerc}%</td>
-                                        <td style="padding: 12px; text-align: right; border: 1px solid #eee;">â‚¹${(roomSubtotal + roomGSTValue).toFixed(2)}</td>
+                                        <td style="padding: 12px; text-align: right; border: 1px solid #eee;">&#8377;${(roomSubtotal + roomGSTValue).toFixed(2)}</td>
                                     </tr>
 
                                     ${itemizedFood.length > 0 ? (() => {
-                                        // Mission: Professional Grouping by Order ID
-                                        const ordersMap = {};
-                                        itemizedFood.forEach(item => {
-                                            const oid = item.orderId || 'Direct / Walk-in';
-                                            if (!ordersMap[oid]) ordersMap[oid] = [];
-                                            ordersMap[oid].push(item);
-                                        });
+                            // Mission: Professional Grouping by Order ID
+                            const ordersMap = {};
+                            itemizedFood.forEach(item => {
+                                const oid = item.orderId || 'Direct / Walk-in';
+                                if (!ordersMap[oid]) ordersMap[oid] = [];
+                                ordersMap[oid].push(item);
+                            });
 
-                                        return Object.entries(ordersMap).map(([oid, items]) => {
-                                            // Find a timestamp fallback if possible
-                                            const firstItem = items[0];
-                                            const orderDateStr = firstItem.timestamp ? this.db.timeOnlyIST(firstItem.timestamp) : '';
-                                            
-                                            return `
+                            return Object.entries(ordersMap).map(([oid, items]) => {
+                                // Find a timestamp fallback if possible
+                                const firstItem = items[0];
+                                const orderDateStr = firstItem.timestamp ? this.db.timeOnlyIST(firstItem.timestamp) : '';
+
+                                return `
                                                 <tr style="background:#f8faff;">
                                                     <td colspan="5" style="padding: 10px 12px; border: 1px solid #eee; font-weight:bold; color:#1a237e; font-size:0.9rem;">
                                                         ORDER #${oid} <span style="float:right; font-weight:normal; font-size:0.75rem; color:#666;">${orderDateStr}</span>
                                                     </td>
                                                 </tr>
                                                 ${items.map(item => {
-                                                    const price = Number(item.price || 0);
-                                                    const qty = Number(item.qty || 1);
-                                                    const amount = price * qty;
-                                                    return `
+                                    const price = Number(item.price || 0);
+                                    const qty = Number(item.qty || 1);
+                                    const amount = price * qty;
+                                    return `
                                                     <tr>
                                                         <td style="padding:10px 12px; border:1px solid #eee; font-size:0.85rem;">
-                                                            â€¢ ${item.name} ${item.variant && item.variant !== 'Full' ? `(${item.variant})` : ''}
+                                                            Ã¢â‚¬Â¢ ${item.name} ${item.variant && item.variant !== 'Full' ? `(${item.variant})` : ''}
                                                         </td>
                                                         <td style="padding:10px 12px; text-align:center; border:1px solid #eee;">${qty}</td>
-                                                        <td style="padding:10px 12px; text-align:right; border:1px solid #eee;">â‚¹${price.toFixed(2)}</td>
+                                                        <td style="padding:10px 12px; text-align:right; border:1px solid #eee;">&#8377;${price.toFixed(2)}</td>
                                                         <td style="padding:10px 12px; text-align:center; border:1px solid #eee;">5%</td>
-                                                        <td style="padding:10px 12px; text-align:right; border:1px solid #eee;">â‚¹${(amount * 1.05).toFixed(2)}</td>
+                                                        <td style="padding:10px 12px; text-align:right; border:1px solid #eee;">&#8377;${(amount * 1.05).toFixed(2)}</td>
                                                     </tr>`;
-                                                }).join('')}
+                                }).join('')}
                                             `;
-                                        }).join('');
-                                    })() : ''}
+                            }).join('');
+                        })() : ''}
                                 </tbody>
                                 <tfoot>
                                     <tr style="background: #fcfcfc;">
@@ -3819,19 +3784,19 @@ class PMSApp {
                                 <div style="width: 350px; background: #fff8e1; border: 2px solid #D4AF37; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
                                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;">
                                         <span>Subtotal:</span>
-                                        <span>â‚¹${(roomSubtotal + foodSubtotal).toFixed(2)}</span>
+                                        <span>&#8377;${(roomSubtotal + foodSubtotal).toFixed(2)}</span>
                                     </div>
                                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #666;">
                                         <span>Tax (GST):</span>
-                                        <span>â‚¹${(roomGSTValue + foodGSTValue).toFixed(2)}</span>
+                                        <span>&#8377;${(roomGSTValue + foodGSTValue).toFixed(2)}</span>
                                     </div>
                                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #2e7d32;">
                                         <span>Advance Paid:</span>
-                                        <span>- â‚¹${advance.toFixed(2)}</span>
+                                        <span>- &#8377;${advance.toFixed(2)}</span>
                                     </div>
                                     <div style="border-top: 2px solid #D4AF37; margin-top: 12px; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
                                         <span style="font-weight: 900; font-size: 1.1rem; color: #1a237e;">TOTAL AMOUNT</span>
-                                        <span style="font-weight: 900; font-size: 1.5rem; color: #c62828;">â‚¹${safeBalance.toFixed(2)}</span>
+                                        <span style="font-weight: 900; font-size: 1.5rem; color: #c62828;">&#8377;${safeBalance.toFixed(2)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -3848,7 +3813,7 @@ class PMSApp {
                     `;
                     printArea.innerHTML += copyHTML;
                 });
-                
+
                 console.log("[Print] Bill generated. Total Items:", itemizedFood.length);
                 setTimeout(() => { window.print(); }, 800);
             }
@@ -3974,7 +3939,7 @@ class PMSApp {
             }
             if (o.isAddon) groups[baseId].hasAddon = true;
             groups[baseId].orders.push(o);
-            
+
             if (o.status === 'preparing' || o.status === 'Pending' || o.status === 'Kitchen') {
                 groups[baseId].status = 'Kitchen';
             } else if (o.status === 'ready' || o.status === 'Served') {
@@ -3991,7 +3956,7 @@ class PMSApp {
 
         // Play alert sound once if any new add-on present
         if (newAddonIds.size > 0 && window.FirebaseSync) {
-            try { window.FirebaseSync.playReceptionAlert(); } catch(e) {}
+            try { window.FirebaseSync.playReceptionAlert(); } catch (e) { }
         }
 
         sortedGroups.forEach(group => {
@@ -4033,18 +3998,18 @@ class PMSApp {
                 <div style="margin-bottom: 0.75rem; border-left: 3px solid ${isAddon ? '#EF4444' : 'var(--gold-primary)'}; padding-left: 0.75rem; position: relative;">
                     <div style="font-size: 0.65rem; color: ${isAddon ? '#EF4444' : 'var(--text-gray)'}; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">${o.id}</div>
                     ${o.items.map(item => {
-                        const name = typeof item === 'object' ? item.name : item;
-                        const qty = typeof item === 'object' ? item.qty : '1';
-                        const variant = item.variant && item.variant !== 'Full' ? `[${item.variant}]` : '';
-                        const instructions = (item.specialInstructions || item.instructions) ? `<div style="margin-left:1rem; color: #EF4444; font-weight: 900; font-size: 0.85rem; text-transform: uppercase;">âš ï¸ ${item.specialInstructions || item.instructions}</div>` : '';
-                        return `
+                    const name = typeof item === 'object' ? item.name : item;
+                    const qty = typeof item === 'object' ? item.qty : '1';
+                    const variant = item.variant && item.variant !== 'Full' ? `[${item.variant}]` : '';
+                    const instructions = (item.specialInstructions || item.instructions) ? `<div style="margin-left:1rem; color: #EF4444; font-weight: 900; font-size: 0.85rem; text-transform: uppercase;">Ã¢Å¡Â Ã¯Â¸Â ${item.specialInstructions || item.instructions}</div>` : '';
+                    return `
                             <div style="padding: 2px 0; font-size: 1.1rem; color: white; display: flex; justify-content: space-between;">
                                 <span>${name} ${variant}</span>
                                 <span style="font-weight: 700;">x${qty}</span>
                             </div>
                             ${instructions}
                         `;
-                    }).join('')}
+                }).join('')}
                     <div style="display: flex; gap: 8px; margin-top: 8px; position: relative; z-index: 20;">
                         ${isKitchen ? `
                             <button class="btn btn-primary" style="flex: 1; height: 35px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;" onclick="app.updateCloudOrderStatus('${o.id}', 'preparing')">PREPARE</button>
@@ -4060,7 +4025,7 @@ class PMSApp {
 
             card.innerHTML = `
                 ${freezeOverlay}
-                ${group.hasAddon ? `<div style="background:#EF4444;color:white;font-size:0.7rem;font-weight:900;letter-spacing:2px;padding:4px 10px;border-radius:6px 6px 0 0;text-align:center;animation:addonPulse 1s infinite;">ðŸ”´ ADD-ON ORDER â€” ITEMS ADDED TO EXISTING BILL</div>` : ''}
+                ${group.hasAddon ? `<div style="background:#EF4444;color:white;font-size:0.7rem;font-weight:900;letter-spacing:2px;padding:4px 10px;border-radius:6px 6px 0 0;text-align:center;animation:addonPulse 1s infinite;">Ã°Å¸â€Â´ ADD-ON ORDER Ã¢â‚¬â€ ITEMS ADDED TO EXISTING BILL</div>` : ''}
                 <div class="kds-ticket-header mb-2" style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div>
                         <div style="font-size: 1.4rem; font-weight: 900; color: var(--gold-primary);">${group.roomNumber ? `ROOM ${group.roomNumber}` : (group.tableId ? `TABLE ${group.tableId}` : (group.id.startsWith('Table') ? group.id : 'WALK-IN'))}</div>
@@ -4099,7 +4064,7 @@ class PMSApp {
 
             // Play kitchen sound ONLY in kitchen portal
             if ((status === 'preparing' || status === 'Kitchen') && (this.currentPortal === 'kitchen')) {
-                new Audio('kitchensound.mp3.mpeg').play().catch(() => {});
+                new Audio('kitchensound.mp3.mpeg').play().catch(() => { });
             }
 
             if (status === 'ready') {
@@ -4108,15 +4073,15 @@ class PMSApp {
                 const notifyTarget = (order.tableId || order.orderType === 'pickup') ? 'desk' : 'reception';
 
                 this.db.addNotification('ready',
-                    `âœ… FOOD READY: ${target} â€” Order ${orderId}`,
+                    `Ã¢Å“â€¦ FOOD READY: ${target} Ã¢â‚¬â€ Order ${orderId}`,
                     notifyTarget,
                     { type: 'room', orderId, roomNumber: roomNum, items: order.items || [] }
                 );
 
                 // Alert sound ONLY at reception
                 if (this.currentPortal === 'reception') {
-                    new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
-                    this.showToast(`âœ… Kitchen says READY: ${target}`, 'success');
+                    new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => { });
+                    this.showToast(`Ã¢Å“â€¦ Kitchen says READY: ${target}`, 'success');
                 }
             }
 
@@ -4146,7 +4111,7 @@ class PMSApp {
             if (window.FirebaseSync) window.FirebaseSync.updateOrderStatus(orderId, 'Delivered');
             this.db.persistKitchenSync();
 
-            // Atomic Bill Update in Firestore â€” write to billSummary array AND increment foodTotal
+            // Atomic Bill Update in Firestore Ã¢â‚¬â€ write to billSummary array AND increment foodTotal
             if (window.firebaseFS && order.roomNumber) {
                 try {
                     const { doc, updateDoc, increment, arrayUnion } = window.firebaseHooks;
@@ -4164,15 +4129,15 @@ class PMSApp {
                         'guest.foodTotal': increment(billEntry.total_price)
                     });
                     console.log('[Bill] Delivered order synced to guest billSummary:', billEntry.order_id);
-                } catch(err) {
+                } catch (err) {
                     console.error('[Bill] Failed to update billSummary:', err);
                 }
             }
 
             // Play sound at Reception
-            new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
+            new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => { });
             this.syncState();
-            this.showToast(`Order ${orderId} Delivered â€” Bill Updated âœ“`, 'success');
+            this.showToast(`Order ${orderId} Delivered Ã¢â‚¬â€ Bill Updated Ã¢Å“â€œ`, 'success');
             localStorage.setItem('yukt_pms_sync', Date.now());
         }
     }
@@ -4253,10 +4218,10 @@ class PMSApp {
                     if (lowCase === 'cancelled') return 3; // Absolute Bottom
                     return 1; // Pending/Kitchen/Ready/OnWay go to TOP
                 };
-                
+
                 const sA = statusOrder(a.status);
                 const sB = statusOrder(b.status);
-                
+
                 if (sA !== sB) return sA - sB;
                 return getTime(b.timestamp) - getTime(a.timestamp);
             })
@@ -4272,15 +4237,15 @@ class PMSApp {
         if (countBadge) countBadge.innerText = active.length || roomOrders.length;
 
         const STATUS_INFO = {
-            'Pending':    { color: '#D4AF37', label: 'â³ Pending',       stage: 1 },
-            'Kitchen':    { color: '#F97316', label: 'ðŸ‘¨â€ðŸ³ In Kitchen',   stage: 2 },
-            'preparing':  { color: '#F97316', label: 'ðŸ‘¨â€ðŸ³ In Kitchen',   stage: 2 },
-            'Served':     { color: '#22C55E', label: 'âœ… Ready',         stage: 3 },
-            'ready':      { color: '#22C55E', label: 'âœ… Ready',         stage: 3 },
-            'On the Way': { color: '#3B82F6', label: 'ðŸ›µ On the Way',    stage: 3 },
-            'ontheway':   { color: '#3B82F6', label: 'ðŸ›µ On the Way',    stage: 3 },
-            'Delivered':  { color: '#6B7280', label: 'âœ” Delivered',      stage: 4 },
-            'delivered':  { color: '#6B7280', label: 'âœ” Delivered',      stage: 4 },
+            'Pending': { color: '#D4AF37', label: 'Ã¢ÂÂ³ Pending', stage: 1 },
+            'Kitchen': { color: '#F97316', label: 'Ã°Å¸â€˜Â¨Ã¢â‚¬ÂÃ°Å¸ÂÂ³ In Kitchen', stage: 2 },
+            'preparing': { color: '#F97316', label: 'Ã°Å¸â€˜Â¨Ã¢â‚¬ÂÃ°Å¸ÂÂ³ In Kitchen', stage: 2 },
+            'Served': { color: '#22C55E', label: 'Ã¢Å“â€¦ Ready', stage: 3 },
+            'ready': { color: '#22C55E', label: 'Ã¢Å“â€¦ Ready', stage: 3 },
+            'On the Way': { color: '#3B82F6', label: 'Ã°Å¸â€ºÂµ On the Way', stage: 3 },
+            'ontheway': { color: '#3B82F6', label: 'Ã°Å¸â€ºÂµ On the Way', stage: 3 },
+            'Delivered': { color: '#6B7280', label: 'Ã¢Å“â€ Delivered', stage: 4 },
+            'delivered': { color: '#6B7280', label: 'Ã¢Å“â€ Delivered', stage: 4 },
         };
 
         roomOrders.forEach(order => {
@@ -4291,11 +4256,11 @@ class PMSApp {
             const isReady = order.status === 'Served' || order.status === 'ready';
 
             const room = this.db.rooms[roomNumber] || this.db.rooms[String(roomNumber)];
-            const guestLabel = room ? `${room.salutation||''} ${room.guestName||'Occupied'}`.trim() : 'Occupied';
+            const guestLabel = room ? `${room.salutation || ''} ${room.guestName || 'Occupied'}`.trim() : 'Occupied';
 
             const itemStrings = (order.items || []).map(i => {
                 if (typeof i === 'object') {
-                    let str = `${i.name||'Item'} Ã— ${i.qty||1}`;
+                    let str = `${i.name || 'Item'} Ãƒâ€” ${i.qty || 1}`;
                     if (i.variant && i.variant !== 'Full' && i.variant !== 'Standard') str += ` (${i.variant})`;
                     if (i.specialInstructions) str += ` <span style="color:#EF4444;font-weight:900;">[${i.specialInstructions}]</span>`;
                     return str;
@@ -4303,14 +4268,14 @@ class PMSApp {
                 return i;
             });
 
-            const total = (order.items||[]).reduce((s, i) => s + ((i.price||0)*(i.qty||1)), 0);
-            const orderTime = order.timestamp ? new Date(typeof order.timestamp === 'object' && order.timestamp.seconds ? order.timestamp.seconds*1000 : order.timestamp).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', hour12:true}) : 'â€”';
+            const total = (order.items || []).reduce((s, i) => s + ((i.price || 0) * (i.qty || 1)), 0);
+            const orderTime = order.timestamp ? new Date(typeof order.timestamp === 'object' && order.timestamp.seconds ? order.timestamp.seconds * 1000 : order.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Ã¢â‚¬â€';
 
             const div = document.createElement('div');
             div.className = 'room-order-notification';
-            if (isDelivered) { 
-                div.style.opacity = '0.45'; 
-                div.style.filter = 'grayscale(1)'; 
+            if (isDelivered) {
+                div.style.opacity = '0.45';
+                div.style.filter = 'grayscale(1)';
                 div.style.background = '#000';
             }
 
@@ -4325,21 +4290,21 @@ class PMSApp {
                     <div class="room-order-badge">${orderId}</div>
                 </div>
                 <div class="room-order-guest">${guestLabel}</div>
-                <div style="font-size:0.75rem; color:${st.color}; font-weight:800; margin:4px 0;">Status: ${st.label} &nbsp;â€¢&nbsp; ${orderTime}</div>
+                <div style="font-size:0.75rem; color:${st.color}; font-weight:800; margin:4px 0;">Status: ${st.label} &nbsp;Ã¢â‚¬Â¢&nbsp; ${orderTime}</div>
                 <div style="padding:6px 8px; background:rgba(212,175,55,0.06); border-left:3px solid ${st.color}; border-radius:4px; font-size:0.78rem; margin:6px 0; max-height:140px; overflow-y:auto;">
-                    ${itemStrings.map(i => `<div>â€¢ ${i}</div>`).join('')}
-                    <div style="margin-top:5px; font-weight:800; color:var(--gold-primary);">Total: â‚¹${total}</div>
+                    ${itemStrings.map(i => `<div>Ã¢â‚¬Â¢ ${i}</div>`).join('')}
+                    <div style="margin-top:5px; font-weight:800; color:var(--gold-primary);">Total: &#8377;${total}</div>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:6px;">
-                    <button class="btn btn-primary" style="font-size:0.7rem; padding:0.3rem;" onclick="app.kotFromOrder('${orderId}','${roomNumber}')">ðŸ–¨ PRINT KOT</button>
+                    <button class="btn btn-primary" style="font-size:0.7rem; padding:0.3rem;" onclick="app.kotFromOrder('${orderId}','${roomNumber}')">Ã°Å¸â€“Â¨ PRINT KOT</button>
                     ${!isDelivered && order.status !== 'On the Way' && order.status !== 'ontheway'
-                        ? `<button class="btn btn-warning" style="font-size:0.7rem; padding:0.3rem; background:#F97316; border-color:#F97316;" onclick="app.markOrderOnTheWay('${orderId}')">ðŸ›µ ON THE WAY</button>`
-                        : '<div></div>'
-                    }
+                    ? `<button class="btn btn-warning" style="font-size:0.7rem; padding:0.3rem; background:#F97316; border-color:#F97316;" onclick="app.markOrderOnTheWay('${orderId}')">Ã°Å¸â€ºÂµ ON THE WAY</button>`
+                    : '<div></div>'
+                }
                     ${!isDelivered
-                        ? `<button class="btn btn-success" style="font-size:0.7rem; padding:0.3rem; grid-column:span 2; background:#16a34a; border-color:#16a34a;" onclick="app.markOrderDelivered('${orderId}')">âœ” MARK DELIVERED</button>`
-                        : '<div style="grid-column:span 2; text-align:center; color:#6B7280; font-size:0.7rem; padding:4px;">âœ” Delivered</div>'
-                    }
+                    ? `<button class="btn btn-success" style="font-size:0.7rem; padding:0.3rem; grid-column:span 2; background:#16a34a; border-color:#16a34a;" onclick="app.markOrderDelivered('${orderId}')">Ã¢Å“â€ MARK DELIVERED</button>`
+                    : '<div style="grid-column:span 2; text-align:center; color:#6B7280; font-size:0.7rem; padding:4px;">Ã¢Å“â€ Delivered</div>'
+                }
                 </div>
             `;
             container.appendChild(div);
@@ -4348,7 +4313,7 @@ class PMSApp {
 
     kotFromOrder(orderId, roomNumber) {
         const order = this.db.kitchenOrders.find(o => (o.order_id || o.id) === orderId);
-        if (order) this.generateKOT({...order, roomNumber: roomNumber || order.roomNumber});
+        if (order) this.generateKOT({ ...order, roomNumber: roomNumber || order.roomNumber });
     }
 
 
@@ -4360,12 +4325,12 @@ class PMSApp {
         // Filter: ONLY show Reception or Both
         this.db.notifications
             .filter(n => n.target === 'reception' || n.target === 'both')
-            .sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0))
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
             .slice(0, 30)
             .forEach(n => {
                 const div = document.createElement('div');
                 div.className = `notification-card ${n.status}`;
-                
+
                 // Blacken if delivered (Room orders)
                 if (n.data && n.data.type === 'room') {
                     const order = this.db.kitchenOrders.find(o => o.id === n.data.orderId || o.id === `ADDON ${n.data.orderId}`);
@@ -4389,14 +4354,14 @@ class PMSApp {
 
                     actionHtml = `
                     <div class="d-flex gap-2 mt-2" style="display:flex; gap:5px;">
-                        <button class="btn btn-primary" style="flex:1; font-size:0.7rem; padding:0.3rem;" onclick="app.kotFromOrder('${orderId}', '${n.data.roomNumber || n.data.roomId}')">ðŸ–¨ KOT</button>
+                        <button class="btn btn-primary" style="flex:1; font-size:0.7rem; padding:0.3rem;" onclick="app.kotFromOrder('${orderId}', '${n.data.roomNumber || n.data.roomId}')">Ã°Å¸â€“Â¨ KOT</button>
                         ${!isDelivered && order && order.status !== 'On the Way' && order.status !== 'ontheway'
-                            ? `<button class="btn btn-warning" style="flex:1; font-size:0.6rem; padding:0.3rem; background:#F97316; border-color:#F97316;" onclick="app.markOrderOnTheWay('${orderId}')">ðŸ›µ ON WAY</button>`
+                            ? `<button class="btn btn-warning" style="flex:1; font-size:0.6rem; padding:0.3rem; background:#F97316; border-color:#F97316;" onclick="app.markOrderOnTheWay('${orderId}')">Ã°Å¸â€ºÂµ ON WAY</button>`
                             : ''
                         }
-                        ${!isDelivered 
-                            ? `<button class="btn btn-success" style="flex:1.5; font-size:0.7rem; padding:0.3rem;" onclick="app.markOrderDelivered('${orderId}')">âœ” DELIVER</button>` 
-                            : `<span class="text-xs color-success" style="align-self:center; font-weight:800;">âœ“ DONE</span>`
+                        ${!isDelivered
+                            ? `<button class="btn btn-success" style="flex:1.5; font-size:0.7rem; padding:0.3rem;" onclick="app.markOrderDelivered('${orderId}')">Ã¢Å“â€ DELIVER</button>`
+                            : `<span class="text-xs color-success" style="align-self:center; font-weight:800;">Ã¢Å“â€œ DONE</span>`
                         }
                     </div>
                 `;
@@ -4485,10 +4450,10 @@ class PMSApp {
                         // Calculate total for THIS specific Bill ID
                         const billTotal = table.orders.filter(o => o.id === b.billID).reduce((sum, o) => sum + o.total, 0);
 
-                        let isLinkedObj = b.colorIndex === 5 ? `ðŸ”— ${b.linkGroupId || 'L'}:` : '';
+                        let isLinkedObj = b.colorIndex === 5 ? `Ã°Å¸â€â€” ${b.linkGroupId || 'L'}:` : '';
                         guestDetailsDivs += `
                             <div class="split-bill-row" onclick="event.stopPropagation(); app.selectDeskCheckout('${table.id}', '${b.billID}');" style="color: ${nameColor}; font-weight: bold; margin-bottom: 0.3rem; cursor: pointer; padding: 0.2rem; border-radius: 4px; border: 1px solid ${b.colorIndex === 5 ? '#A020F0' : 'transparent'};">
-                                ${isLinkedObj} ${b.billID} | ${b.guestName} <span class="color-success">â‚¹${billTotal}</span>
+                                ${isLinkedObj} ${b.billID} | ${b.guestName} <span class="color-success">&#8377;${billTotal}</span>
                             </div>`;
                     });
                 } else {
@@ -4544,7 +4509,7 @@ class PMSApp {
                         </div>
                     </div>
                     <div class="text-sm mt-3 text-center text-gray">${table.pax} / 4 Seats Occupied</div>
-                    <div class="text-xl font-bold mt-2 text-center color-primary">â‚¹${table.total}</div>
+                    <div class="text-xl font-bold mt-2 text-center color-primary">&#8377;${table.total}</div>
                 `;
                 // Add Glow to Card if Linked
                 const isLinkedTable = activeBills.some(b => b.colorIndex === 5);
@@ -4603,7 +4568,7 @@ class PMSApp {
                             <span class="text-xs text-gray ml-2">${this.db.timeOnlyIST(p.timestamp)}</span>
                         </div>
                         <div class="d-flex align-center gap-3">
-                            <span class="font-bold color-success">â‚¹${p.total}</span>
+                            <span class="font-bold color-success">&#8377;${p.total}</span>
                             ${!isPaid ? `<button class="btn btn-success" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;" onclick="app.markPickupPaid('${p.id}')">PAY</button>` : ''}
                             ${isPaid ? `<button class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;" onclick="app.markPickupDelivered('${p.id}')">DELIVERED</button>` : ''}
                         </div>
@@ -4616,9 +4581,9 @@ class PMSApp {
         const revDisplay = document.getElementById('desk-revenue-display');
         if (revDisplay) {
             if (revDisplay.classList.contains('revealed')) {
-                revDisplay.innerText = `â‚¹ ${this.db.restaurantRevenue}`;
+                revDisplay.innerText = `&#8377; ${this.db.restaurantRevenue}`;
             } else {
-                revDisplay.innerText = `â‚¹ ****`;
+                revDisplay.innerText = `&#8377; ****`;
             }
         }
     }
@@ -4651,12 +4616,12 @@ class PMSApp {
         if (display.classList.contains('revealed')) {
             display.classList.remove('revealed');
             display.style.filter = 'blur(4px)';
-            display.innerText = 'â‚¹ ****';
+            display.innerText = '&#8377; ****';
             btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
         } else {
             display.classList.add('revealed');
             display.style.filter = 'none';
-            display.innerText = `â‚¹ ${this.db.restaurantRevenue}`;
+            display.innerText = `&#8377; ${this.db.restaurantRevenue}`;
             btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>`;
         }
     }
@@ -4683,8 +4648,8 @@ class PMSApp {
             const row = document.createElement('div');
             row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--glass-border);';
             const imgHtml = item.image
-                ? `<img src="${item.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\'><rect width=\\\'100%\\\' height=\\\'100%\\\' fill=\\\'%23333\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' dominant-baseline=\\\'middle\\\' text-anchor=\\\'middle\\\' fill=\\\'%23777\\\'>ðŸ”</text></svg>'">`
-                : `<span style="font-size:1.5rem;">${item.icon || 'ðŸ½ï¸'}</span>`;
+                ? `<img src="${item.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\'><rect width=\\\'100%\\\' height=\\\'100%\\\' fill=\\\'%23333\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' dominant-baseline=\\\'middle\\\' text-anchor=\\\'middle\\\' fill=\\\'%23777\\\'>Ã°Å¸Ââ€</text></svg>'">`
+                : `<span style="font-size:1.5rem;">${item.icon || 'Ã°Å¸ÂÂ½Ã¯Â¸Â'}</span>`;
 
             row.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -4727,7 +4692,7 @@ class PMSApp {
                 return `
                     <button class="btn btn-block" style="background: rgba(0,0,0,0.4); border: 1px solid ${btnColor}; color: ${btnColor}; padding: 1rem; margin-bottom: 0.8rem; text-align: left; font-size: 1.1rem; display: flex; justify-content: space-between;" onclick="app.selectDeskCheckout('${table.id}', '${b.billID}')">
                         <span>${b.billID} - ${b.guestName}</span>
-                        <span class="font-bold">â‚¹${targetTotal}</span>
+                        <span class="font-bold">&#8377;${targetTotal}</span>
                     </button>
                 `;
             }).join('');
@@ -4760,14 +4725,14 @@ class PMSApp {
                 <div style="max-height: 200px; overflow-y: auto;">
                     ${ordersToShow.map(o => `
                         <div class="text-sm mb-2 text-gray">
-                            [${this.db.timeOnlyIST(o.timestamp)}] â‚¹${o.total}<br>
+                            [${this.db.timeOnlyIST(o.timestamp)}] &#8377;${o.total}<br>
                             ${o.items.join(', ')}
                         </div>
                     `).join('')}
                 </div>
                 <div class="d-flex justify-between mt-4 pt-3 border-top" style="border-top: 1px solid var(--glass-border); font-size: 1.25rem;">
                     <span>Grand Total</span>
-                    <span class="color-primary font-bold">â‚¹${displayTotal}</span>
+                    <span class="color-primary font-bold">&#8377;${displayTotal}</span>
                 </div>
             </div>
             
@@ -4802,12 +4767,12 @@ class PMSApp {
                 ${ordersToShow.map(o => `
                     <tr><td colspan="2" style="padding-top:10px; font-weight:bold;">Order ${o.id}</td></tr>
                     ${o.items.map(i => `<tr><td>${i}</td><td style="text-align:right">-</td></tr>`).join('')}
-                    <tr><td style="color:#666;">Subtotal</td><td style="text-align:right">â‚¹${o.total}</td></tr>
+                    <tr><td style="color:#666;">Subtotal</td><td style="text-align:right">&#8377;${o.total}</td></tr>
                 `).join('')}
             </table>
             <div style="margin-top:2rem; border-top: 2px solid #000; padding-top:10px; font-size: 1.25rem; font-weight: bold; display: flex; justify-content: space-between;">
                 <span>GRAND TOTAL</span>
-                <span>â‚¹${displayTotal}</span>
+                <span>&#8377;${displayTotal}</span>
             </div>
             <div style="margin-top: 1.5rem; background: #f8f8f8; padding: 1rem; border-radius: 8px;">
                 <label style="display: block; font-weight: bold; margin-bottom: 0.5rem; color: #333;">Select Payment Mode:</label>
@@ -4866,7 +4831,7 @@ class PMSApp {
         localStorage.setItem('yukt_rest_rev', this.db.restaurantRevenue);
         localStorage.setItem('yukt_rest_pax', this.db.restaurantCustomersToday);
 
-        this.db.addNotification('checkout', `Payment Received: â‚¹${billTotal.toFixed(2)} [${paymentMode}] from ${targetOrderId || tableId} `);
+        this.db.addNotification('checkout', `Payment Received: &#8377;${billTotal.toFixed(2)} [${paymentMode}] from ${targetOrderId || tableId} `);
 
         // MASS CLEAR LINKED TABLES
         if (targetOrderId) {
@@ -4962,11 +4927,11 @@ class PMSApp {
                     <div class="text-xs text-gray">${p.items.length} items</div>
                 </div>
                 <div class="checkout-items-mini mb-4" style="max-height: 200px; overflow-y:auto;">
-                    ${p.items.map(i => `<div class="d-flex justify-between text-sm mb-1"><span>â€¢ ${i}</span></div>`).join('')}
+                    ${p.items.map(i => `<div class="d-flex justify-between text-sm mb-1"><span>Ã¢â‚¬Â¢ ${i}</span></div>`).join('')}
                 </div>
                 <div class="d-flex justify-between border-top pt-3 font-bold text-lg">
                     <span>Grand Total</span>
-                    <span class="color-success">â‚¹${p.total}</span>
+                    <span class="color-success">&#8377;${p.total}</span>
                 </div>
             </div>
             <button class="btn btn-success btn-block mt-4" onclick="app.processPickupPayment('${p.id}')">RECEIVE CASH/UPI & CLOSE</button>
@@ -5064,9 +5029,9 @@ class PMSApp {
                 <tr>
                     <td class="font-bold color-primary">${emp.name}</td>
                     <td><span class="status-badge" style="background:rgba(148, 163, 184, 0.1); color:var(--color-slate-200);">${emp.role}</span></td>
-                    <td>â‚¹${emp.baseSalary.toLocaleString()}</td>
-                    <td style="color:var(--color-yellow-500)">- â‚¹${emp.advances.toLocaleString()}</td>
-                    <td class="font-bold color-success">â‚¹${netPayable.toLocaleString()}</td>
+                    <td>&#8377;${emp.baseSalary.toLocaleString()}</td>
+                    <td style="color:var(--color-yellow-500)">- &#8377;${emp.advances.toLocaleString()}</td>
+                    <td class="font-bold color-success">&#8377;${netPayable.toLocaleString()}</td>
                 </tr>
             `;
         });
@@ -5116,10 +5081,10 @@ class PMSApp {
         const restPaxEl = document.getElementById('kpi-rest-pax');
         const ebitdaEl = document.getElementById('kpi-ebitda');
 
-        if (roomRevEl) roomRevEl.innerText = `â‚¹${totalRoomRevenueToday.toLocaleString()}`;
-        if (restRevEl) restRevEl.innerText = `â‚¹${totalRestEarningsToday.toLocaleString()}`;
+        if (roomRevEl) roomRevEl.innerText = `&#8377;${totalRoomRevenueToday.toLocaleString()}`;
+        if (restRevEl) restRevEl.innerText = `&#8377;${totalRestEarningsToday.toLocaleString()}`;
         if (restPaxEl) restPaxEl.innerText = restCustomers;
-        if (ebitdaEl) ebitdaEl.innerText = `â‚¹${Math.round(approxEbitda).toLocaleString()}`;
+        if (ebitdaEl) ebitdaEl.innerText = `&#8377;${Math.round(approxEbitda).toLocaleString()}`;
 
         // 2. Render Charts
         // Chart rendering was moved to renderOwnerHub
@@ -5137,7 +5102,7 @@ class PMSApp {
                 <tr>
                     <td>${this.db.timeOnlyIST(sale.timestamp)}</td>
                     <td>${label}</td>
-                    <td class="font-bold color-primary">â‚¹${sale.total}</td>
+                    <td class="font-bold color-primary">&#8377;${sale.total}</td>
                 </tr>
             `;
         });
@@ -5157,20 +5122,20 @@ class PMSApp {
             if (g) roomRevenue += (Number(g.tariff || 0) * this.calculateBilledDays(g.checkInTimestamp || g.checkInTime || Date.now()));
         });
 
-        const setEl = (id, v) => { const el = document.getElementById(id); if(el) el.innerText = v; };
+        const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
         setEl('kpi-occupied', `${occupied} / ${total}`);
-        setEl('kpi-room-revenue', `â‚¹${roomRevenue.toLocaleString()}`);
+        setEl('kpi-room-revenue', `&#8377;${roomRevenue.toLocaleString()}`);
         setEl('kpi-pending-orders', pending);
-        const ebitda = roomRevenue - (42000/30); // rough daily salary cost
-        setEl('kpi-ebitda', `â‚¹${Math.max(0, Math.round(ebitda)).toLocaleString()}`);
+        const ebitda = roomRevenue - (42000 / 30); // rough daily salary cost
+        setEl('kpi-ebitda', `&#8377;${Math.max(0, Math.round(ebitda)).toLocaleString()}`);
 
         // Room Mini-Grid
         const grid = document.getElementById('owner-room-grid');
         if (grid) {
             grid.innerHTML = '';
-            rooms.sort((a,b) => Number(a.number) - Number(b.number)).forEach(room => {
+            rooms.sort((a, b) => Number(a.number) - Number(b.number)).forEach(room => {
                 const color = room.status === 'occupied' ? '#D4AF37' : room.status === 'reserved' ? '#a855f7' : '#4ade80';
-                const icon = room.status === 'occupied' ? 'ðŸ›ï¸' : room.status === 'reserved' ? 'ðŸ“…' : 'âœ…';
+                const icon = room.status === 'occupied' ? 'Ã°Å¸â€ºÂÃ¯Â¸Â' : room.status === 'reserved' ? 'Ã°Å¸â€œâ€¦' : 'Ã¢Å“â€¦';
                 const name = room.guestName ? `<div style="font-size:0.7rem; color:${color}; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${room.salutation || ''} ${room.guestName}</div>` : '';
                 grid.innerHTML += `<div style="background:rgba(255,255,255,0.04); border:1px solid ${color}33; border-top:3px solid ${color}; border-radius:8px; padding:0.75rem; cursor:pointer;" onclick="app.selectRoom('${room.number}'); app.switchTab('dashboard');">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -5190,16 +5155,16 @@ class PMSApp {
                 feed.innerHTML = '<div style="color:var(--color-slate-400); text-align:center; padding:1rem;">No orders yet</div>';
             } else {
                 feed.innerHTML = orders.map(o => {
-                    const statusColor = { Pending:'#f59e0b', Kitchen:'#6366f1', Served:'#22c55e', 'On the Way':'#3b82f6', Delivered:'#6b7280' }[o.status] || '#94a3b8';
-                    const items = (o.items||[]).map(i => `${typeof i==='object' ? i.name : i} x${typeof i==='object' ? (i.qty||1) : 1}`).join(', ');
-                    const t = o.timestamp ? new Date(typeof o.timestamp==='object'&&o.timestamp.seconds ? o.timestamp.seconds*1000 : o.timestamp).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) : '';
+                    const statusColor = { Pending: '#f59e0b', Kitchen: '#6366f1', Served: '#22c55e', 'On the Way': '#3b82f6', Delivered: '#6b7280' }[o.status] || '#94a3b8';
+                    const items = (o.items || []).map(i => `${typeof i === 'object' ? i.name : i} x${typeof i === 'object' ? (i.qty || 1) : 1}`).join(', ');
+                    const t = o.timestamp ? new Date(typeof o.timestamp === 'object' && o.timestamp.seconds ? o.timestamp.seconds * 1000 : o.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
                     return `<div style="border-bottom:1px solid rgba(255,255,255,0.06); padding:0.4rem 0; display:flex; flex-direction:column; gap:2px;">
                         <div style="display:flex; justify-content:space-between;">
-                            <span style="font-weight:700;">Room ${o.roomNumber||o.roomId} &nbsp;Â·&nbsp; ${o.order_id||o.id}</span>
+                            <span style="font-weight:700;">Room ${o.roomNumber || o.roomId} &nbsp;Ã‚Â·&nbsp; ${o.order_id || o.id}</span>
                             <span style="color:${statusColor}; font-size:0.75rem; font-weight:700;">${o.status}</span>
                         </div>
                         <div style="color:var(--color-slate-400); font-size:0.78rem;">${items}</div>
-                        <div style="font-size:0.7rem; color:var(--color-slate-400);">â‚¹${o.total_price||0} &nbsp;Â·&nbsp; ${t}</div>
+                        <div style="font-size:0.7rem; color:var(--color-slate-400);">&#8377;${o.total_price || 0} &nbsp;Ã‚Â·&nbsp; ${t}</div>
                     </div>`;
                 }).join('');
             }
@@ -5293,7 +5258,7 @@ class PMSApp {
                 // MISSION: ADVANCED BULK CSV SYNC
                 const success = await this.db.syncMenuFromCSV(bulkCSV);
                 if (success) {
-                    alert('ðŸ”¥ Success! Bulk Menu Uploaded and Synced to Cloud.');
+                    alert('Ã°Å¸â€Â¥ Success! Bulk Menu Uploaded and Synced to Cloud.');
                     if (bulkObj) bulkObj.value = ''; // clear after success
                 }
             } else {
@@ -5344,18 +5309,18 @@ class PMSApp {
     }
 
     // =======================================================
-    //  WAITER PORTAL â€” COMPLETE LOGIC
+    //  WAITER PORTAL Ã¢â‚¬â€ COMPLETE LOGIC
     // =======================================================
 
     populateWaiterRoomSelect() {
         const select = document.getElementById('waiter-room-select');
         if (!select) return;
         const currentVal = select.value;
-        select.innerHTML = '<option value="">ðŸ“‹ Choose Room...</option>';
+        select.innerHTML = '<option value="">Ã°Å¸â€œâ€¹ Choose Room...</option>';
         Object.values(this.db.rooms).filter(r => r.status === 'occupied').forEach(r => {
             const opt = document.createElement('option');
             opt.value = r.number;
-            opt.innerText = `Room ${r.number} â€” ${r.guestName || 'Active Guest'}`;
+            opt.innerText = `Room ${r.number} Ã¢â‚¬â€ ${r.guestName || 'Active Guest'}`;
             select.appendChild(opt);
         });
         if (currentVal) select.value = currentVal;
@@ -5366,10 +5331,10 @@ class PMSApp {
         this.waiterAddOnOrderId = null;  // clear any addon mode when room changes
 
         const display = document.getElementById('ordering-room-display');
-        const newBtn  = document.getElementById('waiter-new-btn');
-        const badge   = document.getElementById('waiter-addon-badge');
+        const newBtn = document.getElementById('waiter-new-btn');
+        const badge = document.getElementById('waiter-addon-badge');
 
-        if (display) display.innerText = roomNum ? `ROOM ${roomNum} â€” NEW ORDER` : 'SELECT A ROOM TO BEGIN';
+        if (display) display.innerText = roomNum ? `ROOM ${roomNum} Ã¢â‚¬â€ NEW ORDER` : 'SELECT A ROOM TO BEGIN';
         if (newBtn) newBtn.disabled = !roomNum;
         if (badge) badge.style.display = 'none';
 
@@ -5388,10 +5353,10 @@ class PMSApp {
         this.updateWaiterCartUI();
 
         const display = document.getElementById('ordering-room-display');
-        const badge   = document.getElementById('waiter-addon-badge');
-        const target  = document.getElementById('addon-target-id');
+        const badge = document.getElementById('waiter-addon-badge');
+        const target = document.getElementById('addon-target-id');
 
-        if (display) display.innerText = `ROOM ${this.selectedWaiterRoom} â€” ADD-ON: ${orderId}`;
+        if (display) display.innerText = `ROOM ${this.selectedWaiterRoom} Ã¢â‚¬â€ ADD-ON: ${orderId}`;
         if (badge) badge.style.display = 'flex';
         if (target) target.innerText = orderId;
 
@@ -5410,11 +5375,11 @@ class PMSApp {
         this.updateWaiterCartUI();
 
         const display = document.getElementById('ordering-room-display');
-        const badge   = document.getElementById('waiter-addon-badge');
-        if (display && this.selectedWaiterRoom) display.innerText = `ROOM ${this.selectedWaiterRoom} â€” NEW ORDER`;
+        const badge = document.getElementById('waiter-addon-badge');
+        if (display && this.selectedWaiterRoom) display.innerText = `ROOM ${this.selectedWaiterRoom} Ã¢â‚¬â€ NEW ORDER`;
         if (badge) badge.style.display = 'none';
         document.querySelectorAll('.waiter-addon-btn').forEach(b => b.classList.remove('active-addon'));
-        this.showToast('New order mode â€” build your cart', 'success');
+        this.showToast('New order mode Ã¢â‚¬â€ build your cart', 'success');
     }
 
     /** Render the menu grid with correct field fallbacks */
@@ -5427,7 +5392,7 @@ class PMSApp {
 
         const menu = this.db.menu || [];
         if (menu.length === 0) {
-            grid.innerHTML = '<div style="color:var(--text-gray);padding:2rem;text-align:center;">Menu loading â€” please wait...</div>';
+            grid.innerHTML = '<div style="color:var(--text-gray);padding:2rem;text-align:center;">Menu loading Ã¢â‚¬â€ please wait...</div>';
             return;
         }
 
@@ -5439,20 +5404,20 @@ class PMSApp {
         const items = categoryFilter === 'All' ? menu : menu.filter(i => (i.category || i.Category) === categoryFilter);
 
         grid.innerHTML = items.map(i => {
-            const name   = i.name;
-            const price  = i.price;
+            const name = i.name;
+            const price = i.price;
             const priceH = i.priceHalf;
             const imgUrl = i.imageUrl;
             const itemId = i.id;
             const imgTag = imgUrl
-                ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextSibling.style.display='block'" style="width:100%;height:80px;object-fit:cover;border-radius:8px;" /><span class="item-icon" style="display:none">ðŸ½ï¸</span>`
-                : `<span class="item-icon">ðŸ½ï¸</span>`;
-            const halfLine = priceH ? `<div class="item-half-price">Â½: â‚¹${priceH}</div>` : '';
+                ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextSibling.style.display='block'" style="width:100%;height:80px;object-fit:cover;border-radius:8px;" /><span class="item-icon" style="display:none">Ã°Å¸ÂÂ½Ã¯Â¸Â</span>`
+                : `<span class="item-icon">Ã°Å¸ÂÂ½Ã¯Â¸Â</span>`;
+            const halfLine = priceH ? `<div class="item-half-price">Ã‚Â½: &#8377;${priceH}</div>` : '';
             return `
                 <div class="waiter-menu-card" onclick="app.waiterPromptPortion('${itemId}')">
                     ${imgTag}
                     <div class="item-name">${name}</div>
-                    <div class="item-price">â‚¹${price}</div>
+                    <div class="item-price">&#8377;${price}</div>
                     ${halfLine}
                 </div>`;
         }).join('');
@@ -5466,8 +5431,8 @@ class PMSApp {
         const modal = document.getElementById('waiter-portion-modal');
         const nameEl = document.getElementById('wpm-item-name');
         const descEl = document.getElementById('wpm-item-desc');
-        const imgEl  = document.getElementById('wpm-item-img');
-        const ctn    = document.getElementById('wpm-options-container');
+        const imgEl = document.getElementById('wpm-item-img');
+        const ctn = document.getElementById('wpm-options-container');
 
         nameEl.innerText = item.name;
         descEl.innerText = item.description || 'Select your preference';
@@ -5487,20 +5452,20 @@ class PMSApp {
             sizes.forEach(opt => {
                 const btn = document.createElement('button');
                 btn.style.cssText = 'width:100%;padding:0.9rem;margin-bottom:0.5rem;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:12px;color:white;font-family:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:0.95rem;';
-                btn.innerHTML = `<span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">â‚¹${opt.price}</span>`;
+                btn.innerHTML = `<span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">&#8377;${opt.price}</span>`;
                 btn.onclick = () => this.waiterPromptQuantity(item, opt.val, opt.label, opt.price);
                 ctn.appendChild(btn);
             });
             modal.style.display = 'flex';
         } else {
-            // Plate â€” Full / Half
+            // Plate Ã¢â‚¬â€ Full / Half
             const halfPrice = item.priceHalf > 0 ? item.priceHalf : Math.floor(item.price * 0.6);
             const opts = [{ label: 'Full Plate', val: 'Full', price: item.price }];
             if (halfPrice > 0) opts.push({ label: 'Half Plate', val: 'Half', price: halfPrice });
             opts.forEach(opt => {
                 const btn = document.createElement('button');
                 btn.style.cssText = 'width:100%;padding:0.9rem;margin-bottom:0.5rem;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:12px;color:white;font-family:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:0.95rem;';
-                btn.innerHTML = `<span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">â‚¹${opt.price}</span>`;
+                btn.innerHTML = `<span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">&#8377;${opt.price}</span>`;
                 btn.onclick = () => this.waiterPromptQuantity(item, opt.val, opt.label, opt.price);
                 ctn.appendChild(btn);
             });
@@ -5509,10 +5474,10 @@ class PMSApp {
     }
 
     waiterPromptQuantity(item, variant, label, price) {
-        const ctn    = document.getElementById('wpm-options-container');
+        const ctn = document.getElementById('wpm-options-container');
         const nameEl = document.getElementById('wpm-item-name');
         const descEl = document.getElementById('wpm-item-desc');
-        const modal  = document.getElementById('waiter-portion-modal');
+        const modal = document.getElementById('waiter-portion-modal');
 
         nameEl.innerText = `${item.name} (${label})`;
         descEl.innerText = 'How many portions?';
@@ -5530,10 +5495,10 @@ class PMSApp {
 
         const addBtn = document.createElement('button');
         addBtn.style.cssText = 'width:100%;padding:1rem;background:linear-gradient(135deg,#22C55E,#16A34A);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:800;cursor:pointer;margin-top:0.5rem;';
-        addBtn.innerText = `ADD TO CART â€” â‚¹${price}`;
+        addBtn.innerText = `ADD TO CART Ã¢â‚¬â€ &#8377;${price}`;
         ctn.appendChild(addBtn);
 
-        const updateTotal = () => { addBtn.innerText = `ADD TO CART â€” â‚¹${price * qty}`; };
+        const updateTotal = () => { addBtn.innerText = `ADD TO CART Ã¢â‚¬â€ &#8377;${price * qty}`; };
 
         document.getElementById('wpm-dec').onclick = () => { if (qty > 1) { qty--; document.getElementById('wpm-qty').innerText = qty; updateTotal(); } };
         document.getElementById('wpm-inc').onclick = () => { qty++; document.getElementById('wpm-qty').innerText = qty; updateTotal(); };
@@ -5551,7 +5516,7 @@ class PMSApp {
             else this.waiterCart.push(cartItem);
             this.updateWaiterCartUI();
             this.closeWaiterPortionModal();
-            this.showToast(`Added ${cartItem.name} Ã—${qty}`, 'success');
+            this.showToast(`Added ${cartItem.name} Ãƒâ€”${qty}`, 'success');
         };
 
         modal.style.display = 'flex';
@@ -5589,10 +5554,10 @@ class PMSApp {
                     <div class="waiter-cart-row">
                         <div class="cart-info">
                             <div class="cart-name">${item.name}</div>
-                            <div class="cart-sub">â‚¹${item.price} Ã— ${item.qty} = â‚¹${item.price * item.qty}</div>
+                            <div class="cart-sub">&#8377;${item.price} Ãƒâ€” ${item.qty} = &#8377;${item.price * item.qty}</div>
                         </div>
                         <div class="cart-controls">
-                            <button class="waiter-cart-qty-btn" onclick="app.removeFromWaiterCart('${item.id}')">âˆ’</button>
+                            <button class="waiter-cart-qty-btn" onclick="app.removeFromWaiterCart('${item.id}')">Ã¢Ë†â€™</button>
                             <span style="min-width:22px;text-align:center;font-weight:700;color:white">${item.qty}</span>
                             <button class="waiter-cart-qty-btn" onclick="app.addToWaiterCart('${item.id}')">+</button>
                         </div>
@@ -5605,7 +5570,7 @@ class PMSApp {
 
         const hasRoom = !!this.selectedWaiterRoom;
         const hasItems = cart.length > 0;
-        ['waiter-place-btn','waiter-place-btn2'].forEach(id => {
+        ['waiter-place-btn', 'waiter-place-btn2'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) btn.disabled = !(hasRoom && hasItems);
         });
@@ -5620,7 +5585,7 @@ class PMSApp {
             const match = String(o.roomNumber || o.roomId) === String(roomNum);
             const active = !['completed', 'cancelled', 'Cancelled'].includes(o.status);
             return match && active;
-        }).sort((a,b) => {
+        }).sort((a, b) => {
             const ta = a.timestamp?.seconds ? a.timestamp.seconds * 1000 : (a.timestamp || 0);
             const tb = b.timestamp?.seconds ? b.timestamp.seconds * 1000 : (b.timestamp || 0);
             return tb - ta; // newest first
@@ -5640,19 +5605,19 @@ class PMSApp {
             const statusLabel = o.status;
             const isAddon = o.isAddon;
             const itemsHtml = (o.items || []).map(i => {
-                const n = typeof i === 'object' ? (i.name||'?') : i;
-                const q = typeof i === 'object' ? (i.qty||1) : 1;
-                return `<div class="waiter-live-order-item">â€¢ ${n} Ã—${q}</div>`;
+                const n = typeof i === 'object' ? (i.name || '?') : i;
+                const q = typeof i === 'object' ? (i.qty || 1) : 1;
+                return `<div class="waiter-live-order-item">Ã¢â‚¬Â¢ ${n} Ãƒâ€”${q}</div>`;
             }).join('');
             return `
                 <div class="waiter-live-order-card${isAddon ? ' kds-addon-glow' : ''}">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                        <span class="live-order-id">${oid}${isAddon ? ' ðŸ”´' : ''}</span>
+                        <span class="live-order-id">${oid}${isAddon ? ' Ã°Å¸â€Â´' : ''}</span>
                         <span class="${statusCls}">${statusLabel}</span>
                     </div>
                     ${itemsHtml}
                     <button class="waiter-addon-btn" data-oid="${oid}" onclick="app.startWaiterAddon('${oid}')">
-                        âž• ADD ITEMS TO THIS ORDER
+                        Ã¢Å¾â€¢ ADD ITEMS TO THIS ORDER
                     </button>
                 </div>`;
         }).join('');
@@ -5662,15 +5627,15 @@ class PMSApp {
         const cart = this.waiterCart || [];
         if (cart.length === 0 || !this.selectedWaiterRoom) return;
 
-        ['waiter-place-btn','waiter-place-btn2'].forEach(id => {
+        ['waiter-place-btn', 'waiter-place-btn2'].forEach(id => {
             const b = document.getElementById(id);
-            if (b) { b.disabled = true; b.innerText = 'â³ PROCESSING...'; }
+            if (b) { b.disabled = true; b.innerText = 'Ã¢ÂÂ³ PROCESSING...'; }
         });
 
         try {
-            const roomNum  = this.selectedWaiterRoom;
-            const room     = this.db.rooms[roomNum] || {};
-            const total    = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const roomNum = this.selectedWaiterRoom;
+            const room = this.db.rooms[roomNum] || {};
+            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
             const { serverTimestamp, doc, updateDoc, arrayUnion, increment, setDoc } = window.firebaseHooks;
 
             if (this.waiterAddOnOrderId) {
@@ -5704,7 +5669,7 @@ class PMSApp {
                     orderType: 'Room'
                 });
 
-                this.showToast(`âœ… Add-on added to ${oid}!`, 'success');
+                this.showToast(`Ã¢Å“â€¦ Add-on added to ${oid}!`, 'success');
                 this.newWaiterOrder();
 
             } else {
@@ -5722,7 +5687,7 @@ class PMSApp {
                     orderType: 'Room'
                 };
                 await window.FirebaseSync.pushOrderToCloud(orderObj);
-                this.showToast(`âœ… Order ${orderId} placed!`, 'success');
+                this.showToast(`Ã¢Å“â€¦ Order ${orderId} placed!`, 'success');
                 this.waiterCart = [];
                 this.updateWaiterCartUI();
             }
@@ -5732,11 +5697,11 @@ class PMSApp {
 
         } catch (err) {
             console.error('Waiter order failed', err);
-            this.showToast('Order failed â€” check console', 'error');
+            this.showToast('Order failed Ã¢â‚¬â€ check console', 'error');
         } finally {
-            ['waiter-place-btn','waiter-place-btn2'].forEach(id => {
+            ['waiter-place-btn', 'waiter-place-btn2'].forEach(id => {
                 const b = document.getElementById(id);
-                if (b) { b.disabled = false; b.innerText = 'ðŸš€ PLACE ORDER'; }
+                if (b) { b.disabled = false; b.innerText = 'Ã°Å¸Å¡â‚¬ PLACE ORDER'; }
             });
         }
     }
@@ -5769,3 +5734,4 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+

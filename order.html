@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -438,8 +438,22 @@
 
     <!-- Cart Bar -->
     <div class="cart-bar" id="cart-bar">
-        <div id="cart-info">0 Items | ₹0</div>
-        <div onclick="placeGuestOrder()" style="cursor:pointer;">ORDER NOW →</div>
+        <div id="cart-info">0 Items | &#8377;0</div>
+        <div onclick="document.getElementById('cart-modal').style.display='flex'; portal.renderCartModal();" style="cursor:pointer;">ORDER NOW →</div>
+    </div>
+
+        <!-- Cart Modal -->
+    <div id="cart-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:rgba(0,0,0,0.8); align-items:center; justify-content:center;">
+        <div style="background:#050B1A; border:1px solid var(--gold-primary); border-radius:16px; width:90%; max-width:400px; padding:2rem; position:relative;">
+            <h3 style="color:var(--gold-primary); margin-bottom:1.5rem; text-align:center;">Your Cart</h3>
+            <div id="cart-modal-items" style="max-height:250px; overflow-y:auto; margin-bottom:1.5rem;"></div>
+            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem; color:var(--color-green-400); margin-bottom:1.5rem;">
+                <span>Total</span>
+                <span id="cart-modal-total">&#8377;0</span>
+            </div>
+            <button class="btn btn-primary btn-block mb-3" style="padding:1rem; font-size:1.1rem; background:var(--gold-primary); color:black; font-weight:bold;" onclick="portal.placeOrder()">CONFIRM ORDER</button>
+            <button class="btn btn-outline btn-block" style="padding:0.8rem; color:var(--text-gray); border-color:var(--text-gray);" onclick="document.getElementById('cart-modal').style.display='none'">← Continue Browsing</button>
+        </div>
     </div>
 
     <!-- Swiggy Tracker -->
@@ -533,3 +547,4 @@
     <script type="module" src="order.js"></script>
 </body>
 </html>
+
