@@ -12,6 +12,7 @@ import {
     onSnapshot, query, orderBy, limit, updateDoc, deleteDoc,
     serverTimestamp, where, increment, arrayUnion
 } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
 // ── Firebase Config ───────────────────────────────────────
 const firebaseConfig = {
@@ -26,6 +27,7 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig, 'desk-app');
 const db = getFirestore(firebaseApp);
+const auth = getAuth(firebaseApp);
 
 // ── State ─────────────────────────────────────────────────
 let tables = {};
@@ -629,13 +631,22 @@ async function toggleItemAvailability(id, available) {
     } catch (e) { console.warn('[Availability] Update failed', e); }
 }
 
+async function handleLogout() {
+    try {
+        await signOut(auth);
+        window.location.href = 'login.html';
+    } catch (e) {
+        window.location.href = 'login.html';
+    }
+}
+
 // ── Expose to window ──────────────────────────────────────
 window.deskApp = {
     selectDeskCheckout, printAndCloseTable, printBill,
     generatePickupOrder, markPickupPaid, markPickupDelivered,
     renderNotificationSidebar, printKOT, clearNotifications,
     toggleRevVisibility, openAvailabilityModal, renderAvailabilityTool,
-    toggleItemAvailability
+    toggleItemAvailability, handleLogout
 };
 
 // Legacy onclick compatibility

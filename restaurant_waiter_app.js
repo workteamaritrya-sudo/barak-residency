@@ -11,6 +11,7 @@ import {
     onSnapshot, query, orderBy, limit, updateDoc, serverTimestamp,
     runTransaction, increment
 } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
 // ── Firebase Config ───────────────────────────────────────
 const firebaseConfig = {
@@ -25,6 +26,7 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig, 'waiter-app');
 const db = getFirestore(firebaseApp);
+const auth = getAuth(firebaseApp);
 
 // ── State ─────────────────────────────────────────────────
 let tables = {};
@@ -47,12 +49,11 @@ async function getNextOrderSerial(tableId) {
     try {
         const tableRef = doc(db, 'tables', String(tableId));
         let nextSerial = 1;
-        await runTransaction(db, async (tx) => {
-            const snap = await tx.get(tableRef);
-            const curr = snap.exists() ? (snap.data().lifetimeOrderCount || 0) : 0;
-            nextSerial = curr + 1;
-            tx.update(tableRef, { lifetimeOrderCount: nextSerial });
-        });
+        // runTransaction was removed from imports, using direct read/write for simplicity
+        const snap = await getDoc(tableRef);
+        const curr = snap.exists() ? (snap.data().lifetimeOrderCount || 0) : 0;
+        nextSerial = curr + 1;
+        await updateDoc(tableRef, { lifetimeOrderCount: nextSerial });
         return `${tableId}-${nextSerial}`;
     } catch (e) {
         return `${tableId}-${Date.now().toString().slice(-4)}`;
@@ -480,12 +481,12 @@ function renderMenu(search = '') {
             const photo = item.imageUrl ? `<img src="${item.imageUrl}" style="width:100%;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;box-shadow:0 4px 8px rgba(0,0,0,0.3);">` : '';
             el.innerHTML = `
                 ${photo}
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div class="menu-icon">${item.icon || '🍽'}</div>
-                    <div class="menu-price">&#8377;${item.price || 0}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center; width:100%;">
+                    <div class="menu-icon" style="font-size:1.5rem;">${item.icon || '🍽'}</div>
+                    <div class="menu-price" style="color:var(--gold-primary) !important; font-weight:800; font-size:1.1rem;">&#8377;${item.price || 0}</div>
                 </div>
-                <div class="menu-name">${item.name || 'Unnamed Item'}</div>
-                <div class="menu-desc">${item.description || 'No description available.'}</div>
+                <div class="menu-name" style="color:#FFFFFF !important; font-size:1.1rem !important; font-weight:700 !important; display:block !important;">${item.name || 'Unnamed Item'}</div>
+                <div class="menu-desc" style="color:var(--color-slate-400) !important; font-size:0.8rem !important; display:block !important;">${item.description || 'No description provided.'}</div>
                 <div style="margin-top:auto; padding-top:10px;">
                     <button class="menu-add-btn" style="position:static; width:100%; border-radius:8px; padding:0.6rem;" 
                         onclick="window.waiterApp.promptVariant({id:'${item.id}',name:'${(item.name || '').replace(/'/g,"\\'")}',price:${item.price || 0}})">
@@ -765,12 +766,22 @@ async function submitLinkTable() {
     showToast(`Table ${tid} linked to Bill ${billId}`, 'success');
 }
 
+async function handleLogout() {
+    try {
+        await signOut(auth);
+        window.location.href = 'login.html';
+    } catch (e) {
+        window.location.href = 'login.html';
+    }
+}
+
 // ── Export to window ──────────────────────────────────────
 // All functions exposed so inline HTML onclick handlers work
 window.waiterApp = {
     promptVariant, qpSelectVariant, qpBack, addToCartFromModal,
     submitTableCheckin, cancelModal, showOrderConfirm, confirmOrder,
-    showLinkTableModal, renderLinkDropdown, submitLinkTable, filterMenu
+    showLinkTableModal, renderLinkDropdown, submitLinkTable, filterMenu,
+    handleLogout
 };
 
 // Also expose directly for legacy onclick="..." handlers
