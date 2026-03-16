@@ -1633,6 +1633,53 @@ class PMSApp {
         }
     }
 
+    viewCapturedMedia() {
+        if (!this.capturedGuestPhoto && this.capturedIdFiles.length === 0) {
+            this.showToast("No media captured to view.", "info");
+            return;
+        }
+        
+        // Show a temporary full-screen overlay for preview
+        const overlay = document.createElement('div');
+        overlay.style = "position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:30000; display:flex; flex-direction:column; padding:2rem; overflow:auto;";
+        overlay.innerHTML = `
+            <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                <h2 style="color:var(--gold-primary)">Media Preview</h2>
+                <button class="btn btn-outline" onclick="this.parentElement.parentElement.remove()">CLOSE</button>
+            </div>
+            <div id="media-preview-list" style="display:flex; flex-wrap:wrap; gap:1rem; justify-content:center;"></div>
+        `;
+        document.body.appendChild(overlay);
+        const list = overlay.querySelector('#media-preview-list');
+
+        if (this.capturedGuestPhoto) {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(this.capturedGuestPhoto);
+            img.style = "max-width:300px; border:2px solid gold; border-radius:8px;";
+            const div = document.createElement('div');
+            div.innerHTML = `<p style="text-align:center; color:gold;">Guest Photo</p>`;
+            div.appendChild(img);
+            list.appendChild(div);
+        }
+
+        this.capturedIdFiles.forEach((file, idx) => {
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style = "max-width:300px; border:1px solid #fff; border-radius:8px;";
+                const div = document.createElement('div');
+                div.innerHTML = `<p style="text-align:center; color:white;">ID Proof ${idx+1}</p>`;
+                div.appendChild(img);
+                list.appendChild(div);
+            } else {
+                const p = document.createElement('p');
+                p.style = "background:rgba(255,255,255,0.1); padding:2rem; border-radius:8px;";
+                p.innerText = `📄 ${file.name} (Non-image file)`;
+                list.appendChild(p);
+            }
+        });
+    }
+
     stopScanner() {
         if (this.cameraStream) {
             this.cameraStream.getTracks().forEach(track => track.stop());
@@ -1774,8 +1821,14 @@ class PMSApp {
             }
 
             this.renderRoomGrid();
-            this.sciNext(5); 
+            this.showToast("CHECK-IN SUCCESSFUL! Redirecting...", "success");
             
+            // Auto redirect to reception/dashboard
+            setTimeout(() => {
+                this.closeSmartCheckin();
+                this.switchTab('dashboard'); // Go back to front desk
+            }, 2000);
+
             // Clear Form
             ['sci-name','sci-phone','sci-age'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
             const adv = document.getElementById('sci-advance'); if(adv) adv.value = '0';
