@@ -1731,25 +1731,23 @@ class PMSApp {
 
                 const roomRef = doc(db, 'rooms', roomNum.toString());
 
-                await runTransaction(db, async (transaction) => {
-                    // Step A: Create guest document
-                    transaction.set(newGuestRef, {
-                        ...guestData,
-                        id: cloudGuestId,
-                        cloudId: cloudGuestId,
-                        last_updated: serverTimestamp()
-                    });
+                // Step A: Create guest document with native setDoc
+                await window.firebaseHooks.setDoc(newGuestRef, {
+                    ...guestData,
+                    id: cloudGuestId,
+                    cloudId: cloudGuestId,
+                    last_updated: serverTimestamp()
+                });
 
-                    // Step B: Update room document (Top-level sync)
-                    transaction.update(roomRef, {
-                        status: 'occupied',
-                        salutation: salutation,
-                        guestName: name,
-                        guestPhone: phone,
-                        checkInDate: Timestamp.now(),
-                        currentGuestId: cloudGuestId,
-                        last_updated: serverTimestamp()
-                    });
+                // Step B: Update room document (Top-level sync) natively
+                await window.firebaseHooks.updateDoc(roomRef, {
+                    status: 'occupied',
+                    salutation: salutation,
+                    guestName: name,
+                    guestPhone: phone,
+                    checkInDate: Timestamp.now(),
+                    currentGuestId: cloudGuestId,
+                    last_updated: serverTimestamp()
                 });
 
                 // Mission 3: Compliance Log 
@@ -1771,7 +1769,7 @@ class PMSApp {
                 room.guestPhone = phone;
                 room.guest = { ...guestData, cloudId: cloudGuestId };
                 room.currentGuestId = cloudGuestId;
-                localStorage.setItem(`br_room_serial_${roomNum}`, "0");
+                // DO NOT RESET order sequence - preserving local serial
                 this.db.persistRooms();
             }
 
@@ -5077,5 +5075,20 @@ document.addEventListener('DOMContentLoaded', () => {
         window.app = app;
     } catch (err) {
         console.error("PMS Bootstrap Error:", err);
+    }
+});
+
+// Smart Check-in Keyboard Navigation
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const checkinModal = document.getElementById('smart-checkin-modal');
+        if (checkinModal && checkinModal.style.display !== 'none') {
+            const activeView = checkinModal.querySelector('.ci-view.active');
+            if (activeView) {
+                e.preventDefault();
+                const nextBtn = activeView.querySelector('button.btn-primary');
+                if (nextBtn) nextBtn.click();
+            }
+        }
     }
 });

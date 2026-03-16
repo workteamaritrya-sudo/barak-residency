@@ -358,6 +358,8 @@ class GuestPortal {
 
         if (this.roomStatus === 'available') {
             greetEl.innerHTML = `Welcome House!`;
+            const heroGreet = document.getElementById('hero-greeting');
+            if (heroGreet) heroGreet.innerText = 'Ready for next Guest';
             return;
         }
 
