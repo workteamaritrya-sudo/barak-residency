@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Barak Residency Pro PMS
  * Central Shared Data State & Ecosystem Logic
  */
@@ -696,7 +696,7 @@ class PMSApp {
     switchTab(tabId) {
         // Role-lock: if a tab is locked for this user, ignore any attempt to switch to a different one
         if (this._lockedTab && tabId !== this._lockedTab) {
-            console.warn(`[Auth] Tab switch to '${tabId}' blocked Ã¢â‚¬â€ role locked to '${this._lockedTab}'`);
+            console.warn(`[Auth] Tab switch to '${tabId}' blocked ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â role locked to '${this._lockedTab}'`);
             return;
         }
 
@@ -781,7 +781,7 @@ class PMSApp {
     }
 
     async systemReset() {
-        if (!confirm("Ã°Å¸Å¡Â¨ CRITICAL: This will PERMANENTLY delete all active orders, guests, and service requests to fix 'object Object' bugs. Proceed?")) return;
+        if (!confirm("ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â¨ CRITICAL: This will PERMANENTLY delete all active orders, guests, and service requests to fix 'object Object' bugs. Proceed?")) return;
 
         try {
             const { collection, getDocs, deleteDoc, updateDoc, serverTimestamp } = window.firebaseHooks;
@@ -819,7 +819,7 @@ class PMSApp {
     }
 
     async hardReset() {
-        const confirmed = confirm("Ã°Å¸â€™Â£ HARD RESET: This will permanently wipe ALL active guests, ALL orders, ALL reservations, and reset billing to #1.\n\nThis CANNOT be undone. Type CONFIRM to proceed.");
+        const confirmed = confirm("ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â£ HARD RESET: This will permanently wipe ALL active guests, ALL orders, ALL reservations, and reset billing to #1.\n\nThis CANNOT be undone. Type CONFIRM to proceed.");
         if (!confirmed) return;
         const typed = prompt('Type CONFIRM (all caps) to execute the full wipe:');
         if (typed !== 'CONFIRM') { this.showToast('Hard Reset cancelled.', 'info'); return; }
@@ -904,7 +904,7 @@ class PMSApp {
             const snap = await getDocs(q);
             if (snap.empty) {
                 content.innerHTML = `<div class="text-center py-6">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">Ã°Å¸â€œÂ­</div>
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â­</div>
                     No previous stay records found for <b>${phone}</b>.
                 </div>`;
                 return;
@@ -1787,10 +1787,10 @@ class PMSApp {
         if (captureBtn) captureBtn.style.display = 'none';
     }
 
-    // Old scanner functions removed — replaced by startWebcam/captureLivePhoto/handlePhotoUpload
+    // Old scanner functions removed â€” replaced by startWebcam/captureLivePhoto/handlePhotoUpload
 
     sciSwitchTab(tab) {
-        // Legacy no-op — new 5-step flow handles its own tabs
+        // Legacy no-op â€” new 5-step flow handles its own tabs
         console.log('[SCI] Tab switch ignored (legacy):', tab);
     }
 
@@ -1981,11 +1981,11 @@ class PMSApp {
         document.getElementById('cc-stay-days').innerText = daysBilled;
 
         const tariff = Number(guest.tariff) || Number(room.tariff) || 0;
-        document.getElementById('cc-tariff').innerText = `&#8377;${tariff}`;
+        document.getElementById('cc-tariff').textContent = `â‚¹${tariff}`;
         document.getElementById('cc-ledger-days').innerText = daysBilled;
 
         const roomTotal = tariff * daysBilled;
-        document.getElementById('cc-room-total').innerText = `&#8377;${roomTotal}`;
+        document.getElementById('cc-room-total').textContent = `â‚¹${roomTotal}`;
 
         // Mission: Instant Reception Sync + Strict stayID isolation
         const stayID = room.currentStayId || guest.stayID;
@@ -2005,7 +2005,7 @@ class PMSApp {
             return sum + (Number(o.total_price) || Number(o.total) || Number(o.total_amount) || 0);
         }, 0);
 
-        document.getElementById('cc-food-total').innerText = `&#8377;${foodTotal.toLocaleString()}`;
+        document.getElementById('cc-food-total').textContent = `â‚¹${foodTotal.toLocaleString()}`;
 
         // Robust Advance Lookup (Firestore stores as advancePaid usually)
         const advance = Number(guest.advance) || Number(guest.advancePaid) || Number(room.advancePaid) || 0;
@@ -2015,7 +2015,7 @@ class PMSApp {
         const balance = (Number(roomTotal) || 0) + (Number(foodTotal) || 0) - (Number(advance) || 0);
         const balanceEl = document.getElementById('cc-total-bill');
         if (balanceEl) {
-            balanceEl.innerText = `&#8377;${balance.toLocaleString()}`;
+            balanceEl.textContent = `â‚¹${balance.toLocaleString()}`;
             balanceEl.style.color = balance > 0 ? '#f43f5e' : '#4ade80';
         }
 
@@ -3011,7 +3011,7 @@ class PMSApp {
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-outline';
                 btn.style.cssText = 'padding: 1.5rem; font-size: 1.1rem; border-color: var(--color-primary); color: var(--color-primary);';
-                btn.innerText = `${opt.label} (&#8377;${opt.price})`;
+                btn.innerText = `${opt.label} (â‚¹${opt.price})`;
                 btn.onclick = () => this.addVariantToCart(opt.val, opt.label, opt.price);
                 container.appendChild(btn);
             });
@@ -3036,7 +3036,7 @@ class PMSApp {
             sizes.forEach(opt => {
                 const o = document.createElement('option');
                 o.value = JSON.stringify(opt);
-                o.innerText = `${opt.label} - &#8377;${opt.price}`;
+                o.textContent = `${opt.label} - â‚¹${opt.price}`;
                 select.appendChild(o);
             });
             container.appendChild(select);
@@ -3196,7 +3196,7 @@ class PMSApp {
                     ${photoHtml}
                     <div class="guest-item-info">
                         <div class="guest-item-name">${item.name}</div>
-                        <div class="guest-item-price">&#8377;${item.price}</div>
+                        <div class="guest-item-price">₹${item.price}</div>
                         <div class="text-xs text-gray mt-1">${item.description || ''}</div>
                     </div>
                     <div class="guest-item-action">
@@ -4471,7 +4471,7 @@ class PMSApp {
                         // Calculate total for THIS specific Bill ID
                         const billTotal = table.orders.filter(o => o.id === b.billID).reduce((sum, o) => sum + o.total, 0);
 
-                        let isLinkedObj = b.colorIndex === 5 ? `Ã°Å¸â€â€” ${b.linkGroupId || 'L'}:` : '';
+                        let isLinkedObj = b.colorIndex === 5 ? `ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â€ ${b.linkGroupId || 'L'}:` : '';
                         guestDetailsDivs += `
                             <div class="split-bill-row" onclick="event.stopPropagation(); app.selectDeskCheckout('${table.id}', '${b.billID}');" style="color: ${nameColor}; font-weight: bold; margin-bottom: 0.3rem; cursor: pointer; padding: 0.2rem; border-radius: 4px; border: 1px solid ${b.colorIndex === 5 ? '#A020F0' : 'transparent'};">
                                 ${isLinkedObj} ${b.billID} | ${b.guestName} <span class="color-success">&#8377;${billTotal}</span>
@@ -4602,9 +4602,9 @@ class PMSApp {
         const revDisplay = document.getElementById('desk-revenue-display');
         if (revDisplay) {
             if (revDisplay.classList.contains('revealed')) {
-                revDisplay.innerText = `&#8377; ${this.db.restaurantRevenue}`;
+                revDisplay.textContent = `â‚¹ ${this.db.restaurantRevenue.toLocaleString('en-IN')}`;
             } else {
-                revDisplay.innerText = `&#8377; ****`;
+                revDisplay.textContent = `â‚¹ ****`;
             }
         }
     }
@@ -4637,12 +4637,12 @@ class PMSApp {
         if (display.classList.contains('revealed')) {
             display.classList.remove('revealed');
             display.style.filter = 'blur(4px)';
-            display.innerText = '&#8377; ****';
+            display.textContent = 'â‚¹ ****';
             btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
         } else {
             display.classList.add('revealed');
             display.style.filter = 'none';
-            display.innerText = `&#8377; ${this.db.restaurantRevenue}`;
+            display.textContent = `â‚¹ ${this.db.restaurantRevenue.toLocaleString('en-IN')}`;
             btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>`;
         }
     }
@@ -4669,8 +4669,8 @@ class PMSApp {
             const row = document.createElement('div');
             row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--glass-border);';
             const imgHtml = item.image
-                ? `<img src="${item.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\'><rect width=\\\'100%\\\' height=\\\'100%\\\' fill=\\\'%23333\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' dominant-baseline=\\\'middle\\\' text-anchor=\\\'middle\\\' fill=\\\'%23777\\\'>Ã°Å¸Ââ€</text></svg>'">`
-                : `<span style="font-size:1.5rem;">${item.icon || 'Ã°Å¸ÂÂ½Ã¯Â¸Â'}</span>`;
+                ? `<img src="${item.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\'><rect width=\\\'100%\\\' height=\\\'100%\\\' fill=\\\'%23333\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' dominant-baseline=\\\'middle\\\' text-anchor=\\\'middle\\\' fill=\\\'%23777\\\'>ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â</text></svg>'">`
+                : `<span style="font-size:1.5rem;">${item.icon || 'ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â½ÃƒÂ¯Ã‚Â¸Ã‚Â'}</span>`;
 
             row.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -4948,7 +4948,7 @@ class PMSApp {
                     <div class="text-xs text-gray">${p.items.length} items</div>
                 </div>
                 <div class="checkout-items-mini mb-4" style="max-height: 200px; overflow-y:auto;">
-                    ${p.items.map(i => `<div class="d-flex justify-between text-sm mb-1"><span>Ã¢â‚¬Â¢ ${i}</span></div>`).join('')}
+                    ${p.items.map(i => `<div class="d-flex justify-between text-sm mb-1"><span>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ${i}</span></div>`).join('')}
                 </div>
                 <div class="d-flex justify-between border-top pt-3 font-bold text-lg">
                     <span>Grand Total</span>
@@ -5102,10 +5102,10 @@ class PMSApp {
         const restPaxEl = document.getElementById('kpi-rest-pax');
         const ebitdaEl = document.getElementById('kpi-ebitda');
 
-        if (roomRevEl) roomRevEl.innerText = `&#8377;${totalRoomRevenueToday.toLocaleString()}`;
-        if (restRevEl) restRevEl.innerText = `&#8377;${totalRestEarningsToday.toLocaleString()}`;
-        if (restPaxEl) restPaxEl.innerText = restCustomers;
-        if (ebitdaEl) ebitdaEl.innerText = `&#8377;${Math.round(approxEbitda).toLocaleString()}`;
+        if (roomRevEl) roomRevEl.textContent = `â‚¹${totalRoomRevenueToday.toLocaleString()}`;
+        if (restRevEl) restRevEl.textContent = `â‚¹${totalRestEarningsToday.toLocaleString()}`;
+        if (restPaxEl) restPaxEl.textContent = restCustomers;
+        if (ebitdaEl) ebitdaEl.textContent = `â‚¹${Math.round(approxEbitda).toLocaleString()}`;
 
         // 2. Render Charts
         // Chart rendering was moved to renderOwnerHub
@@ -5143,12 +5143,12 @@ class PMSApp {
             if (g) roomRevenue += (Number(g.tariff || 0) * this.calculateBilledDays(g.checkInTimestamp || g.checkInTime || Date.now()));
         });
 
-        const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
+        const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
         setEl('kpi-occupied', `${occupied} / ${total}`);
-        setEl('kpi-room-revenue', `&#8377;${roomRevenue.toLocaleString()}`);
+        setEl('kpi-room-revenue', `₹${roomRevenue.toLocaleString()}`);
         setEl('kpi-pending-orders', pending);
         const ebitda = roomRevenue - (42000 / 30); // rough daily salary cost
-        setEl('kpi-ebitda', `&#8377;${Math.max(0, Math.round(ebitda)).toLocaleString()}`);
+        setEl('kpi-ebitda', `₹${Math.max(0, Math.round(ebitda)).toLocaleString()}`);
 
         // Room Mini-Grid
         const grid = document.getElementById('owner-room-grid');
@@ -5156,7 +5156,7 @@ class PMSApp {
             grid.innerHTML = '';
             rooms.sort((a, b) => Number(a.number) - Number(b.number)).forEach(room => {
                 const color = room.status === 'occupied' ? '#D4AF37' : room.status === 'reserved' ? '#a855f7' : '#4ade80';
-                const icon = room.status === 'occupied' ? 'Ã°Å¸â€ºÂÃ¯Â¸Â' : room.status === 'reserved' ? 'Ã°Å¸â€œâ€¦' : 'Ã¢Å“â€¦';
+                const icon = room.status === 'occupied' ? 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚ÂÃƒÂ¯Ã‚Â¸Ã‚Â' : room.status === 'reserved' ? 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦' : 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦';
                 const name = room.guestName ? `<div style="font-size:0.7rem; color:${color}; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${room.salutation || ''} ${room.guestName}</div>` : '';
                 grid.innerHTML += `<div style="background:rgba(255,255,255,0.04); border:1px solid ${color}33; border-top:3px solid ${color}; border-radius:8px; padding:0.75rem; cursor:pointer;" onclick="app.selectRoom('${room.number}'); app.switchTab('dashboard');">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -5181,11 +5181,11 @@ class PMSApp {
                     const t = o.timestamp ? new Date(typeof o.timestamp === 'object' && o.timestamp.seconds ? o.timestamp.seconds * 1000 : o.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
                     return `<div style="border-bottom:1px solid rgba(255,255,255,0.06); padding:0.4rem 0; display:flex; flex-direction:column; gap:2px;">
                         <div style="display:flex; justify-content:space-between;">
-                            <span style="font-weight:700;">Room ${o.roomNumber || o.roomId} &nbsp;Ã‚Â·&nbsp; ${o.order_id || o.id}</span>
+                            <span style="font-weight:700;">Room ${o.roomNumber || o.roomId} &nbsp;Ãƒâ€šÃ‚Â·&nbsp; ${o.order_id || o.id}</span>
                             <span style="color:${statusColor}; font-size:0.75rem; font-weight:700;">${o.status}</span>
                         </div>
                         <div style="color:var(--color-slate-400); font-size:0.78rem;">${items}</div>
-                        <div style="font-size:0.7rem; color:var(--color-slate-400);">&#8377;${o.total_price || 0} &nbsp;Ã‚Â·&nbsp; ${t}</div>
+                        <div style="font-size:0.7rem; color:var(--color-slate-400);">&#8377;${o.total_price || 0} &nbsp;Ãƒâ€šÃ‚Â·&nbsp; ${t}</div>
                     </div>`;
                 }).join('');
             }
@@ -5279,7 +5279,7 @@ class PMSApp {
                 // MISSION: ADVANCED BULK CSV SYNC
                 const success = await this.db.syncMenuFromCSV(bulkCSV);
                 if (success) {
-                    alert('Ã°Å¸â€Â¥ Success! Bulk Menu Uploaded and Synced to Cloud.');
+                    alert('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¥ Success! Bulk Menu Uploaded and Synced to Cloud.');
                     if (bulkObj) bulkObj.value = ''; // clear after success
                 }
             } else {
@@ -5330,18 +5330,18 @@ class PMSApp {
     }
 
     // =======================================================
-    //  WAITER PORTAL Ã¢â‚¬â€ COMPLETE LOGIC
+    //  WAITER PORTAL ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â COMPLETE LOGIC
     // =======================================================
 
     populateWaiterRoomSelect() {
         const select = document.getElementById('waiter-room-select');
         if (!select) return;
         const currentVal = select.value;
-        select.innerHTML = '<option value="">Ã°Å¸â€œâ€¹ Choose Room...</option>';
+        select.innerHTML = '<option value="">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Choose Room...</option>';
         Object.values(this.db.rooms).filter(r => r.status === 'occupied').forEach(r => {
             const opt = document.createElement('option');
             opt.value = r.number;
-            opt.innerText = `Room ${r.number} Ã¢â‚¬â€ ${r.guestName || 'Active Guest'}`;
+            opt.innerText = `Room ${r.number} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${r.guestName || 'Active Guest'}`;
             select.appendChild(opt);
         });
         if (currentVal) select.value = currentVal;
@@ -5355,7 +5355,7 @@ class PMSApp {
         const newBtn = document.getElementById('waiter-new-btn');
         const badge = document.getElementById('waiter-addon-badge');
 
-        if (display) display.innerText = roomNum ? `ROOM ${roomNum} Ã¢â‚¬â€ NEW ORDER` : 'SELECT A ROOM TO BEGIN';
+        if (display) display.innerText = roomNum ? `ROOM ${roomNum} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â NEW ORDER` : 'SELECT A ROOM TO BEGIN';
         if (newBtn) newBtn.disabled = !roomNum;
         if (badge) badge.style.display = 'none';
 
@@ -5377,7 +5377,7 @@ class PMSApp {
         const badge = document.getElementById('waiter-addon-badge');
         const target = document.getElementById('addon-target-id');
 
-        if (display) display.innerText = `ROOM ${this.selectedWaiterRoom} Ã¢â‚¬â€ ADD-ON: ${orderId}`;
+        if (display) display.innerText = `ROOM ${this.selectedWaiterRoom} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ADD-ON: ${orderId}`;
         if (badge) badge.style.display = 'flex';
         if (target) target.innerText = orderId;
 
@@ -5397,10 +5397,10 @@ class PMSApp {
 
         const display = document.getElementById('ordering-room-display');
         const badge = document.getElementById('waiter-addon-badge');
-        if (display && this.selectedWaiterRoom) display.innerText = `ROOM ${this.selectedWaiterRoom} Ã¢â‚¬â€ NEW ORDER`;
+        if (display && this.selectedWaiterRoom) display.innerText = `ROOM ${this.selectedWaiterRoom} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â NEW ORDER`;
         if (badge) badge.style.display = 'none';
         document.querySelectorAll('.waiter-addon-btn').forEach(b => b.classList.remove('active-addon'));
-        this.showToast('New order mode Ã¢â‚¬â€ build your cart', 'success');
+        this.showToast('New order mode ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â build your cart', 'success');
     }
 
     /** Render the menu grid with correct field fallbacks */
@@ -5413,7 +5413,7 @@ class PMSApp {
 
         const menu = this.db.menu || [];
         if (menu.length === 0) {
-            grid.innerHTML = '<div style="color:var(--text-gray);padding:2rem;text-align:center;">Menu loading Ã¢â‚¬â€ please wait...</div>';
+            grid.innerHTML = '<div style="color:var(--text-gray);padding:2rem;text-align:center;">Menu loading ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â please wait...</div>';
             return;
         }
 
@@ -5431,14 +5431,14 @@ class PMSApp {
             const imgUrl = i.imageUrl;
             const itemId = i.id;
             const imgTag = imgUrl
-                ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextSibling.style.display='block'" style="width:100%;height:80px;object-fit:cover;border-radius:8px;" /><span class="item-icon" style="display:none">Ã°Å¸ÂÂ½Ã¯Â¸Â</span>`
-                : `<span class="item-icon">Ã°Å¸ÂÂ½Ã¯Â¸Â</span>`;
-            const halfLine = priceH ? `<div class="item-half-price">Ã‚Â½: &#8377;${priceH}</div>` : '';
+                ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextSibling.style.display='block'" style="width:100%;height:80px;object-fit:cover;border-radius:8px;" /><span class="item-icon" style="display:none">🍽️</span>`
+                : `<span class="item-icon">🍽️</span>`;
+            const halfLine = priceH ? `<div class="item-half-price">Half: ₹${priceH}</div>` : '';
             return `
                 <div class="waiter-menu-card" onclick="app.waiterPromptPortion('${itemId}')">
                     ${imgTag}
                     <div class="item-name">${name}</div>
-                    <div class="item-price">&#8377;${price}</div>
+                    <div class="item-price">₹${price}</div>
                     ${halfLine}
                 </div>`;
         }).join('');
@@ -5479,7 +5479,7 @@ class PMSApp {
             });
             modal.style.display = 'flex';
         } else {
-            // Plate Ã¢â‚¬â€ Full / Half
+            // Plate ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Full / Half
             const halfPrice = item.priceHalf > 0 ? item.priceHalf : Math.floor(item.price * 0.6);
             const opts = [{ label: 'Full Plate', val: 'Full', price: item.price }];
             if (halfPrice > 0) opts.push({ label: 'Half Plate', val: 'Half', price: halfPrice });
@@ -5516,10 +5516,10 @@ class PMSApp {
 
         const addBtn = document.createElement('button');
         addBtn.style.cssText = 'width:100%;padding:1rem;background:linear-gradient(135deg,#22C55E,#16A34A);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:800;cursor:pointer;margin-top:0.5rem;';
-        addBtn.innerText = `ADD TO CART Ã¢â‚¬â€ &#8377;${price}`;
+        addBtn.innerText = `ADD TO CART — ₹${price}`;
         ctn.appendChild(addBtn);
 
-        const updateTotal = () => { addBtn.innerText = `ADD TO CART Ã¢â‚¬â€ &#8377;${price * qty}`; };
+        const updateTotal = () => { addBtn.innerText = `ADD TO CART — ₹${price * qty}`; };
 
         document.getElementById('wpm-dec').onclick = () => { if (qty > 1) { qty--; document.getElementById('wpm-qty').innerText = qty; updateTotal(); } };
         document.getElementById('wpm-inc').onclick = () => { qty++; document.getElementById('wpm-qty').innerText = qty; updateTotal(); };
@@ -5578,7 +5578,7 @@ class PMSApp {
                             <div class="cart-sub">&#8377;${item.price} &#215; ${item.qty} = &#8377;${item.price * item.qty}</div>
                         </div>
                         <div class="cart-controls">
-                            <button class="waiter-cart-qty-btn" onclick="app.removeFromWaiterCart('${item.id}')">Ã¢Ë†â€™</button>
+                            <button class="waiter-cart-qty-btn" onclick="app.removeFromWaiterCart('${item.id}')">ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢</button>
                             <span style="min-width:22px;text-align:center;font-weight:700;color:white">${item.qty}</span>
                             <button class="waiter-cart-qty-btn" onclick="app.addToWaiterCart('${item.id}')">+</button>
                         </div>
@@ -5633,12 +5633,12 @@ class PMSApp {
             return `
                 <div class="waiter-live-order-card${isAddon ? ' kds-addon-glow' : ''}">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                        <span class="live-order-id">${oid}${isAddon ? ' Ã°Å¸â€Â´' : ''}</span>
+                        <span class="live-order-id">${oid}${isAddon ? ' ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´' : ''}</span>
                         <span class="${statusCls}">${statusLabel}</span>
                     </div>
                     ${itemsHtml}
                     <button class="waiter-addon-btn" data-oid="${oid}" onclick="app.startWaiterAddon('${oid}')">
-                        Ã¢Å¾â€¢ ADD ITEMS TO THIS ORDER
+                        ÃƒÂ¢Ã…Â¾Ã¢â‚¬Â¢ ADD ITEMS TO THIS ORDER
                     </button>
                 </div>`;
         }).join('');
@@ -5650,7 +5650,7 @@ class PMSApp {
 
         ['waiter-place-btn', 'waiter-place-btn2'].forEach(id => {
             const b = document.getElementById(id);
-            if (b) { b.disabled = true; b.innerText = 'Ã¢ÂÂ³ PROCESSING...'; }
+            if (b) { b.disabled = true; b.innerText = 'ÃƒÂ¢Ã‚ÂÃ‚Â³ PROCESSING...'; }
         });
 
         try {
@@ -5690,7 +5690,7 @@ class PMSApp {
                     orderType: 'Room'
                 });
 
-                this.showToast(`Ã¢Å“â€¦ Add-on added to ${oid}!`, 'success');
+                this.showToast(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Add-on added to ${oid}!`, 'success');
                 this.newWaiterOrder();
 
             } else {
@@ -5708,7 +5708,7 @@ class PMSApp {
                     orderType: 'Room'
                 };
                 await window.FirebaseSync.pushOrderToCloud(orderObj);
-                this.showToast(`Ã¢Å“â€¦ Order ${orderId} placed!`, 'success');
+                this.showToast(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order ${orderId} placed!`, 'success');
                 this.waiterCart = [];
                 this.updateWaiterCartUI();
             }
@@ -5718,11 +5718,11 @@ class PMSApp {
 
         } catch (err) {
             console.error('Waiter order failed', err);
-            this.showToast('Order failed Ã¢â‚¬â€ check console', 'error');
+            this.showToast('Order failed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â check console', 'error');
         } finally {
             ['waiter-place-btn', 'waiter-place-btn2'].forEach(id => {
                 const b = document.getElementById(id);
-                if (b) { b.disabled = false; b.innerText = 'Ã°Å¸Å¡â‚¬ PLACE ORDER'; }
+                if (b) { b.disabled = false; b.innerText = 'ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ PLACE ORDER'; }
             });
         }
     }
@@ -5755,4 +5755,5 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
 

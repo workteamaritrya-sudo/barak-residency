@@ -536,3 +536,64 @@ input:checked + .slider::before { transform: translateX(22px); }
     50%  { box-shadow: 0 0 20px rgba(239,68,68,0.8); }
     100% { box-shadow: 0 0 0 rgba(239,68,68,0.4); }
 }
+
+
+/* ── Restaurant Desk Layout ───────────────────────────────── */
+.desk-layout {
+    display: flex;
+    flex: 1;
+    gap: 1.5rem;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.desk-main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.desk-table-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 1.25rem;
+    align-content: start;
+}
+
+.desk-sidebar {
+    flex: 0 0 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.sidebar-section {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    overflow-y: auto;
+}
+
+.sidebar-section:last-child {
+    flex: 1;
+    min-height: 0;
+}
+
+.sidebar-section h3 {
+    color: var(--gold-primary);
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--gold-dim);
+}

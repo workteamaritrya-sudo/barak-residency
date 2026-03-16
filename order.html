@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -437,9 +437,9 @@
     </nav>
 
     <!-- Cart Bar -->
-    <div class="cart-bar" id="cart-bar">
-        <div id="cart-info">0 Items | &#8377;0</div>
-        <div onclick="document.getElementById('cart-modal').style.display='flex'; portal.renderCartModal();" style="cursor:pointer;">ORDER NOW →</div>
+    <div class="cart-bar" id="cart-bar" onclick="document.getElementById('cart-modal').style.display='flex'; portal.renderCartModal();" style="cursor:pointer; display:none;">
+        <div id="cart-info" style="font-size:1rem; font-weight:800; letter-spacing:0.5px;">0 Items</div>
+        <div style="background:#050B1A; color:var(--gold-primary); border-radius:12px; padding:0.6rem 1.4rem; font-size:1rem; font-weight:900; letter-spacing:1.5px; box-shadow:0 0 15px rgba(212,175,55,0.4);">ORDER NOW →</div>
     </div>
 
         <!-- Cart Modal -->

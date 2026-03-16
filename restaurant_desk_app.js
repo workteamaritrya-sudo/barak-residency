@@ -342,8 +342,8 @@ function renderRestDesk() {
 
     const paxEl = document.getElementById('rest-desk-pax');
     const tabEl = document.getElementById('rest-desk-active-tables');
-    if (paxEl) paxEl.innerText = totalPax;
-    if (tabEl) tabEl.innerText = activeTables;
+    if (paxEl) paxEl.textContent = totalPax;
+    if (tabEl) tabEl.textContent = activeTables;
 
     renderPickupList();
     updateRevDisplay();
@@ -579,20 +579,21 @@ async function clearNotifications() {
 function toggleRevVisibility(btn) {
     const display = document.getElementById('desk-revenue-display');
     if (!display) return;
+    display.style.display = 'inline-block';
     if (display.classList.contains('revealed')) {
         display.classList.remove('revealed');
         display.style.filter = 'blur(4px)';
-        display.innerText = '₹ ****';
+        display.textContent = '₹ ****';
     } else {
         display.classList.add('revealed');
         display.style.filter = 'none';
-        display.innerText = `₹ ${restaurantRevenue}`;
+        display.textContent = `₹ ${restaurantRevenue.toLocaleString('en-IN')}`;
     }
 }
 
 function updateRevDisplay() {
     const el = document.getElementById('desk-revenue-display');
-    if (el && el.classList.contains('revealed')) el.innerText = `₹ ${restaurantRevenue}`;
+    if (el && el.classList.contains('revealed')) el.textContent = `₹ ${restaurantRevenue.toLocaleString('en-IN')}`;
 }
 
 // ── Food Availability ─────────────────────────────────────

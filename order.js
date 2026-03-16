@@ -581,11 +581,11 @@ class GuestPortal {
         addBtn.className = 'reorder-btn';
         addBtn.style.background = 'var(--gold-primary)';
         addBtn.style.color = '#000';
-        addBtn.innerText = `CONFIRM - &#8377;${price}`;
+        addBtn.innerText = `CONFIRM - ₹${price}`;
         container.appendChild(addBtn);
 
-        counter.querySelector('#q-dec').onclick = () => { qty = Math.max(1, qty-1); counter.querySelector('#q-val').innerText = qty; addBtn.innerText = `CONFIRM - &#8377;${price * qty}`; };
-        counter.querySelector('#q-inc').onclick = () => { qty++; counter.querySelector('#q-val').innerText = qty; addBtn.innerText = `CONFIRM - &#8377;${price * qty}`; };
+        counter.querySelector('#q-dec').onclick = () => { qty = Math.max(1, qty-1); counter.querySelector('#q-val').innerText = qty; addBtn.innerText = `CONFIRM - ₹${price * qty}`; };
+        counter.querySelector('#q-inc').onclick = () => { qty++; counter.querySelector('#q-val').innerText = qty; addBtn.innerText = `CONFIRM - ₹${price * qty}`; };
 
         addBtn.onclick = () => {
             this.executeAddToCart(item, variant, label, price, qty);
@@ -622,7 +622,7 @@ class GuestPortal {
 
         if (this.cart.length > 0) {
             const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            info.innerText = `${this.cart.length} Items | &#8377;${total}`;
+            info.innerHTML = `${this.cart.length} Items | ₹${total}`;
             bar.style.display = 'flex';
             bar.classList.add('active');
         } else {

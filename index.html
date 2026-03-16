@@ -385,24 +385,62 @@
                     <div class="luxury-identity golden-brand">RESTAURANT DESK &#8226; LIVE TABLES</div>
                     <div style="display: flex; gap: 1rem; align-items: center;">
                         <button class="btn btn-outline btn-sm" onclick="app.renderRestDesk()">&#128260; REFRESH</button>
-                        <div id="desk-revenue-display" class="luxury-pill" style="min-width: 150px; text-align: center;">&#8377; ****</div>
+                        <div id="desk-revenue-display" class="luxury-pill" style="min-width: 150px; text-align: center; cursor:pointer;" onclick="app.toggleRestRevVisibility(this)">&#8377; ****</div>
                         <button onclick="app.handleLogout()" style="background:rgba(239,68,68,0.2);border:1px solid #EF4444;color:#FCA5A5;border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.75rem;cursor:pointer;letter-spacing:1px;">&#128682; LOGOUT</button>
                     </div>
                 </div>
-                <div style="padding: 1.5rem; display: grid; grid-template-columns: 3fr 1fr; gap: 1.5rem; height: calc(100vh - 120px); overflow: hidden;">
+
+                <!-- KPI Strip -->
+                <div style="display:flex; gap:1.5rem; padding:0.75rem 1.5rem; background:rgba(255,255,255,0.02); border-bottom:1px solid var(--glass-border);">
+                    <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; color:var(--color-slate-400);">
+                        OCCUPIED TABLES: <strong style="color:var(--gold-primary); font-size:1.1rem;" id="rest-desk-active-tables">0</strong>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; color:var(--color-slate-400);">
+                        LIVE PAX: <strong style="color:#4ADE80; font-size:1.1rem;" id="rest-desk-pax">0</strong>
+                    </div>
+                </div>
+
+                <div style="padding: 1.5rem; display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; height: calc(100vh - 160px); overflow: hidden;">
+                    <!-- Table Grid -->
                     <div class="glass-panel" style="padding: 1.2rem; overflow-y: auto;">
                         <div id="rest-desk-table-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.2rem;">
                             <!-- Tables injected here -->
                         </div>
                     </div>
-                    <div class="glass-panel" style="padding: 1.2rem; display: flex; flex-direction: column;">
-                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem; font-size: 1rem; letter-spacing: 1px;">ACTIVE PICKUPS</h3>
-                        <div id="rest-desk-pickup-list" style="flex: 1; overflow-y: auto;">
-                            <!-- Pickups injected here -->
+
+                    <!-- Right Panel: Checkout + Pickups -->
+                    <div style="display:flex; flex-direction:column; gap:1.5rem; overflow:hidden;">
+
+                        <!-- Checkout Panel -->
+                        <div class="glass-panel" style="padding: 1.2rem; display:flex; flex-direction:column; flex:1; overflow:hidden;">
+                            <h3 id="desk-checkout-title" style="color: var(--gold-primary); margin-bottom: 1rem; font-size: 1rem; letter-spacing: 1px;">SELECT A TABLE</h3>
+                            <div id="desk-checkout-content" style="flex:1; overflow-y:auto; font-size:0.9rem;">
+                                <div class="text-gray" style="text-align:center; padding:2rem;">Click an occupied table to view checkout details.</div>
+                            </div>
+                        </div>
+
+                        <!-- Active Pickups -->
+                        <div class="glass-panel" style="padding: 1.2rem; max-height: 220px; overflow-y:auto;">
+                            <h3 style="color: var(--gold-primary); margin-bottom: 1rem; font-size: 1rem; letter-spacing: 1px;">ACTIVE PICKUPS</h3>
+                            <div id="rest-desk-pickup-list">
+                                <!-- Pickups injected here -->
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
+
+            <!-- Desk Invoice Preview Modal -->
+            <div id="invoice-preview-modal" class="modal-overlay" style="display:none; z-index:20001; background:rgba(0,0,0,0.85);">
+                <div class="glass-panel" style="max-width:520px; width:90%; margin:2rem auto; padding:2rem; max-height:85vh; overflow-y:auto; position:relative;">
+                    <button onclick="document.getElementById('invoice-preview-modal').style.display='none'" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:white;font-size:1.8rem;cursor:pointer;">&times;</button>
+                    <div id="invoice-preview-content"></div>
+                    <div style="display:flex; gap:1rem; margin-top:1.5rem;">
+                        <button class="btn btn-primary flex-1" style="padding:1rem;" onclick="window.print()">&#128424; Print Bill</button>
+                        <button class="btn btn-outline flex-1" style="padding:1rem;" onclick="document.getElementById('invoice-preview-modal').style.display='none'">Close</button>
+                    </div>
+                </div>
+            </div>
             
             <!-- 7. FINANCIAL ANALYTICS -->
             <section id="tab-financials" class="portal-content">

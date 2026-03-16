@@ -5,22 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Restaurant Desk | Barak Residency</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="restaurant_portal.css?v=1.6">
+    <link rel="stylesheet" href="restaurant_portal.css?v=1.7">
 </head>
 <body>
 <div class="page">
     <div class="luxury-portal-header">
-        <div class="luxury-identity">BARAK RESIDENCY — RESTAURANT DESK <span style="font-size:0.6rem;opacity:0.5;vertical-align:top;">v1.6</span></div>
+        <div class="luxury-identity">BARAK RESIDENCY — RESTAURANT DESK <span style="font-size:0.6rem;opacity:0.5;vertical-align:top;">v1.7</span></div>
         <div style="display:flex; gap:1rem; align-items:center;">
             <div class="portal-time-luxury" id="clock">--:-- --</div>
             <button onclick="window.deskApp.handleLogout()" style="background:rgba(239,68,68,0.2);border:1px solid #EF4444;color:#FCA5A5;border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.75rem;cursor:pointer;letter-spacing:1px;">&#128682; LOGOUT</button>
         </div>
     </div>
+
+    <!-- Top Action Bar -->
     <div class="portal-top-bar" style="display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; gap:1.5rem; align-items:center;">
-             <span id="desk-revenue-display" style="font-size:1.1rem; font-weight:700; color:var(--gold-primary); display:none;">Today's Revenue: ₹0</span>
-             <button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="deskApp.toggleRevVisibility()">👁 Toggle Rev</button>
-             <button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="deskApp.openAvailabilityModal()">🍴 Menu Availability</button>
+            <!-- KPI Chips -->
+            <div style="display:flex;gap:0.5rem;align-items:center;font-size:0.85rem;color:var(--color-slate-400);">
+                Tables Active: <strong style="color:var(--gold-primary);font-size:1.05rem;" id="rest-desk-active-tables">0</strong>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;font-size:0.85rem;color:var(--color-slate-400);">
+                Live Pax: <strong style="color:#4ADE80;font-size:1.05rem;" id="rest-desk-pax">0</strong>
+            </div>
+            <span id="desk-revenue-display" style="font-size:1.05rem; font-weight:700; color:var(--gold-primary); display:none; filter:blur(4px);">Today: ₹0</span>
+            <button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="deskApp.toggleRevVisibility()">👁 Revenue</button>
+            <button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="deskApp.openAvailabilityModal()">🍴 Menu Availability</button>
         </div>
         <button class="btn btn-primary" style="padding:0.6rem 1.2rem;" onclick="deskApp.generatePickupOrder()">+ NEW PICKUP ORDER</button>
     </div>
@@ -30,39 +39,68 @@
         <div class="desk-main-area">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
                 <h2 style="margin:0;">Live Table Grid</h2>
-                <div style="display:flex; gap:1rem;">
-                    <div class="kpi-card" style="padding:0.5rem 1rem;">
-                        <span class="text-xs text-gray">OCCUPIED</span>
-                        <div id="desk-occupied-count" style="font-size:1.2rem; font-weight:700;">0</div>
-                    </div>
-                </div>
             </div>
-            <div class="desk-table-grid" id="desk-table-live-grid"></div>
+            <!-- ✅ Correct ID that restaurant_desk_app.js uses -->
+            <div class="desk-table-grid" id="rest-desk-table-grid"></div>
         </div>
 
-        <!-- Right Side: Recent Activity & Pickups -->
+        <!-- Right Sidebar: Checkout + Pickups + Notifications -->
         <div class="desk-sidebar">
+
+            <!-- Checkout Panel -->
             <div class="sidebar-section">
-                <h3>Active Pickups</h3>
-                <div id="desk-pickup-list" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
+                <h3 id="checkout-panel-title" style="margin-bottom:0.75rem;">Table Checkout</h3>
+                <div id="desk-checkout-content" style="font-size:0.88rem; color:var(--color-slate-300);">
+                    <div style="text-align:center; padding:1rem; color:var(--color-slate-500);">Click an occupied table to view checkout.</div>
+                </div>
             </div>
+
+            <!-- Active Pickups -->
+            <div class="sidebar-section" style="margin-top:1rem;">
+                <h3>Active Pickups</h3>
+                <!-- ✅ Correct ID that restaurant_desk_app.js uses -->
+                <div id="rest-desk-pickup-list" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
+            </div>
+
+            <!-- Notifications -->
             <div class="sidebar-section" style="flex:1; margin-top:1.5rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
                     <h3 style="margin:0;">Notifications</h3>
                     <button class="btn btn-outline" style="font-size:0.7rem; padding:0.2rem 0.5rem;" onclick="deskApp.clearNotifications()">Clear</button>
                 </div>
+                <!-- ✅ Matches renderNotificationSidebar() -->
                 <div id="desk-notifications-list" style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.85rem;"></div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Availability Modal -->
+<!-- ════════════════════════════════════
+     CHECKOUT MODAL  (required by selectDeskCheckout)
+     ════════════════════════════════════ -->
+<div id="checkout-modal" class="modal-overlay" style="display:none; z-index:10010;">
+    <div class="security-box" style="width:500px; max-width:96vw; padding:2rem; position:relative; max-height:85vh; display:flex; flex-direction:column;">
+        <button onclick="document.getElementById('checkout-modal').style.display='none'" style="position:absolute;top:1rem;right:1rem;background:transparent;border:none;color:white;font-size:1.6rem;cursor:pointer;">&times;</button>
+        <!-- ✅ Correct ID -->
+        <h3 id="checkout-modal-title" style="color:var(--gold-primary); margin-bottom:1.25rem; text-align:center;"></h3>
+        <!-- ✅ Correct ID -->
+        <div id="checkout-modal-content" style="flex:1;overflow-y:auto;margin-bottom:1.5rem; color:white;"></div>
+        <div style="display:flex;gap:1rem;">
+            <button class="btn btn-success" style="flex:2;padding:1rem;font-size:1.05rem;font-weight:700;" onclick="window.deskApp.printAndCloseTable()">✅ PRINT &amp; CLOSE TABLE</button>
+            <button class="btn btn-outline" style="flex:1;padding:1rem;" onclick="document.getElementById('checkout-modal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════
+     AVAILABILITY MODAL
+     ════════════════════════════════════ -->
 <div id="availability-modal" class="modal-overlay" style="display:none;">
-    <div class="security-box" style="width:600px; max-height:80vh; display:flex; flex-direction:column;">
+    <div class="security-box" style="width:620px; max-height:80vh; display:flex; flex-direction:column;">
         <h3>Menu Item Availability</h3>
         <p class="text-sm text-gray mb-4">Toggle items that are currently out of stock. Changes reflect instantly on all waiter portals.</p>
-        <div id="availability-tool-grid" style="flex:1; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:1rem;"></div>
+        <!-- ✅ Correct ID that renderAvailabilityTool() uses -->
+        <div id="availability-list" style="flex:1; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:1rem;"></div>
         <button class="btn btn-outline mt-4" onclick="document.getElementById('availability-modal').style.display='none'">Close</button>
     </div>
 </div>
@@ -70,6 +108,6 @@
 <div id="print-area"></div>
 <div id="sync-status" class="sync-ok">● Firebase Connected</div>
 
-<script type="module" src="restaurant_desk_app.js?v=1.6"></script>
+<script type="module" src="restaurant_desk_app.js?v=1.7"></script>
 </body>
 </html>
