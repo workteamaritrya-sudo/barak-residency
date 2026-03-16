@@ -239,37 +239,69 @@
             </section>
             
             <!-- 5. WAITER ORDERING PORTAL -->
-            <section id="tab-ordering" class="portal-content">
-                <div class="luxury-portal-header">
-                    <div class="luxury-identity golden-brand">WAITER SERVICE • <span id="ordering-room-display">SELECT ROOM</span></div>
-                    <div style="display: flex; gap: 1rem;">
-                        <select id="waiter-room-select" class="form-control" style="width: 200px; height: 38px;" onchange="app.selectWaiterRoom(this.value)">
-                            <option value="">Choose Room...</option>
+            <section id="tab-ordering" class="portal-content waiter-fullscreen">
+
+                <!-- TOP BAR -->
+                <div class="waiter-topbar">
+                    <div class="waiter-brand">
+                        <span style="font-size:1.4rem;">🛎️</span>
+                        <div>
+                            <div class="waiter-brand-title">WAITER SERVICE</div>
+                            <div id="ordering-room-display" class="waiter-brand-sub">SELECT A ROOM TO BEGIN</div>
+                        </div>
+                    </div>
+                    <div class="waiter-topbar-right">
+                        <select id="waiter-room-select" class="waiter-room-select" onchange="app.selectWaiterRoom(this.value)">
+                            <option value="">📋 Choose Room...</option>
                         </select>
-                        <button class="btn btn-success btn-sm" onclick="app.placeWaiterOrder()" id="waiter-place-btn" disabled>🚀 PLACE ORDER</button>
+                        <div id="waiter-addon-badge" style="display:none; background:#EF4444; color:#fff; border-radius:8px; padding:0.4rem 0.8rem; font-size:0.75rem; font-weight:900; animation: addonPulse 1s infinite;">
+                            🔴 ADD-ON MODE: <span id="addon-target-id"></span>
+                        </div>
+                        <button class="waiter-btn-new" onclick="app.newWaiterOrder()" id="waiter-new-btn" disabled>
+                            ➕ NEW ORDER
+                        </button>
+                        <button class="waiter-btn-place" onclick="app.placeWaiterOrder()" id="waiter-place-btn" disabled>
+                            🚀 PLACE ORDER
+                        </button>
                     </div>
                 </div>
-                <div style="padding: 1.5rem; display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; height: calc(100vh - 120px); overflow: hidden;">
-                    <div class="glass-panel" style="padding: 1rem; display: flex; flex-direction: column;">
-                        <div class="category-pills mb-4" id="order-categories" style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem;">
-                            <!-- Categories injected here -->
-                        </div>
-                        <div id="order-menu-grid" style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;">
-                            <!-- Menu items injected here -->
+
+                <!-- MAIN BODY: 3 columns on tablet -->
+                <div class="waiter-body">
+
+                    <!-- MENU PANEL -->
+                    <div class="waiter-menu-panel">
+                        <div id="order-categories" class="waiter-cats"></div>
+                        <div id="order-menu-grid" class="waiter-menu-grid">
+                            <div style="color:var(--text-gray); padding:2rem; text-align:center;">Loading menu...</div>
                         </div>
                     </div>
-                    <div class="glass-panel" style="padding: 1rem; display: flex; flex-direction: column;">
-                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">CART</h3>
-                        <div id="waiter-cart-items" style="flex: 1; overflow-y: auto;">
-                            <!-- Cart items here -->
+
+                    <!-- CART PANEL -->
+                    <div class="waiter-cart-panel">
+                        <div class="waiter-panel-header">🛒 CART</div>
+                        <div id="waiter-cart-items" class="waiter-cart-items">
+                            <div style="color:var(--text-gray); text-align:center; padding:2rem; font-size:0.85rem;">Add items from the menu</div>
                         </div>
-                        <div style="border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1rem;">
-                            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.2rem; color: var(--gold-primary);">
+                        <div class="waiter-cart-footer">
+                            <div class="waiter-total-row">
                                 <span>TOTAL</span>
-                                <span>₹ <span id="waiter-total-amt">0</span></span>
+                                <span class="waiter-total-amt">₹ <span id="waiter-total-amt">0</span></span>
                             </div>
+                            <button class="waiter-btn-place w-full mt-2" onclick="app.placeWaiterOrder()" id="waiter-place-btn2" disabled>
+                                🚀 CONFIRM ORDER
+                            </button>
                         </div>
                     </div>
+
+                    <!-- LIVE ORDERS PANEL -->
+                    <div class="waiter-live-panel">
+                        <div class="waiter-panel-header">📋 LIVE ORDERS</div>
+                        <div id="waiter-live-orders" class="waiter-live-orders">
+                            <div style="color:var(--text-gray); text-align:center; padding:2rem; font-size:0.85rem;">Select a room to see orders</div>
+                        </div>
+                    </div>
+
                 </div>
             </section>
             

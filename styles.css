@@ -1347,3 +1347,106 @@ body.isolated-mode .portal-content {
     letter-spacing: 1px;
 }
 
+
+/* ====================================================
+   WAITER PORTAL — TABLET-FIRST FULL SCREEN UI
+   ==================================================== */
+
+/* When a staff role is active, hide the sidebar */
+.staff-mode .sidebar { display: none !important; }
+.staff-mode .main-content { margin-left: 0 !important; }
+
+/* ---- Waiter Fullscreen Section ---- */
+.waiter-fullscreen {
+    display: flex !important;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ---- TOP BAR ---- */
+.waiter-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.2rem;
+    background: rgba(212, 175, 55, 0.07);
+    border-bottom: 1px solid var(--glass-border);
+    flex-shrink: 0;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.waiter-brand { display: flex; align-items: center; gap: 0.75rem; }
+.waiter-brand-title { font-family: "Outfit", sans-serif; font-size: 1.1rem; font-weight: 900; color: var(--gold-primary); letter-spacing: 3px; }
+.waiter-brand-sub { font-size: 0.75rem; color: var(--color-slate-400); letter-spacing: 1px; text-transform: uppercase; }
+.waiter-topbar-right { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.waiter-room-select { background: rgba(212,175,55,0.1); border: 1px solid var(--gold-primary); border-radius: 10px; padding: 0.6rem 1rem; color: white; font-family: inherit; font-size: 0.9rem; font-weight: 600; min-width: 220px; cursor: pointer; }
+.waiter-btn-new { background: transparent; border: 2px solid var(--gold-primary); color: var(--gold-primary); border-radius: 10px; padding: 0.6rem 1.2rem; font-family: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; min-height: 44px; }
+.waiter-btn-new:hover:not(:disabled) { background: var(--gold-dim); }
+.waiter-btn-new:disabled, .waiter-btn-place:disabled { opacity: 0.4; cursor: not-allowed; }
+.waiter-btn-place { background: linear-gradient(135deg,#22C55E,#16A34A); border: none; color: white; border-radius: 10px; padding: 0.6rem 1.4rem; font-family: inherit; font-weight: 800; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; min-height: 44px; }
+.waiter-btn-place:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(34,197,94,0.5); }
+.waiter-btn-place.w-full { width: 100%; margin-top: 0.5rem; }
+
+/* ---- MAIN BODY ---- */
+.waiter-body { display: grid; grid-template-columns: 3fr 1.5fr 1.5fr; gap: 0; flex: 1; overflow: hidden; min-height: 0; }
+
+/* ---- MENU PANEL ---- */
+.waiter-menu-panel { display: flex; flex-direction: column; border-right: 1px solid var(--glass-border); overflow: hidden; }
+.waiter-cats { display: flex; gap: 0.5rem; padding: 0.75rem 1rem; overflow-x: auto; border-bottom: 1px solid var(--glass-border); flex-shrink: 0; background: rgba(0,0,0,0.2); scrollbar-width: thin; }
+.waiter-cat-pill { background: transparent; border: 1px solid var(--glass-border); color: var(--color-slate-400); border-radius: 20px; padding: 0.4rem 1rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; font-family: inherit; min-height: 36px; }
+.waiter-cat-pill.active, .waiter-cat-pill:hover { background: var(--gold-dim); border-color: var(--gold-primary); color: var(--gold-primary); }
+.waiter-menu-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 0.75rem; padding: 1rem; align-content: start; }
+
+/* Menu Item Card */
+.waiter-menu-card { background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 14px; padding: 0.75rem 0.5rem; text-align: center; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; min-height: 120px; justify-content: center; }
+.waiter-menu-card:hover, .waiter-menu-card:active { background: rgba(212,175,55,0.1); border-color: var(--gold-primary); transform: scale(1.02); box-shadow: 0 4px 20px rgba(212,175,55,0.2); }
+.waiter-menu-card img { width: 60px; height: 60px; border-radius: 10px; object-fit: cover; }
+.waiter-menu-card .item-icon { font-size: 1.8rem; }
+.waiter-menu-card .item-name { font-size: 0.8rem; font-weight: 700; color: white; line-height: 1.2; }
+.waiter-menu-card .item-price { font-size: 0.75rem; font-weight: 700; color: var(--gold-primary); }
+.waiter-menu-card .item-half-price { font-size: 0.65rem; color: var(--color-slate-400); }
+
+/* ---- SHARED PANEL HEADER ---- */
+.waiter-panel-header { padding: 0.75rem 1rem; font-size: 0.75rem; font-weight: 900; letter-spacing: 2px; color: var(--gold-primary); border-bottom: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); flex-shrink: 0; }
+
+/* ---- CART PANEL ---- */
+.waiter-cart-panel { display: flex; flex-direction: column; border-right: 1px solid var(--glass-border); overflow: hidden; }
+.waiter-cart-items { flex: 1; overflow-y: auto; padding: 0.5rem; }
+.waiter-cart-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 0.5rem; }
+.waiter-cart-row .cart-info { flex: 1; }
+.waiter-cart-row .cart-name { font-size: 0.85rem; color: white; font-weight: 600; }
+.waiter-cart-row .cart-sub { font-size: 0.7rem; color: var(--color-slate-400); }
+.waiter-cart-row .cart-controls { display: flex; gap: 4px; align-items: center; }
+.waiter-cart-qty-btn { background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; width: 28px; height: 28px; border-radius: 6px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.waiter-cart-qty-btn:hover { background: var(--gold-dim); border-color: var(--gold-primary); color: var(--gold-primary); }
+.waiter-cart-footer { padding: 0.75rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); flex-shrink: 0; }
+.waiter-total-row { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 1rem; color: var(--gold-primary); }
+
+/* ---- LIVE ORDERS PANEL ---- */
+.waiter-live-panel { display: flex; flex-direction: column; overflow: hidden; }
+.waiter-live-orders { flex: 1; overflow-y: auto; padding: 0.75rem; }
+.waiter-live-order-card { background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem; margin-bottom: 0.75rem; }
+.waiter-live-order-card .live-order-id { font-size: 0.7rem; font-weight: 900; color: var(--gold-primary); letter-spacing: 1px; margin-bottom: 4px; }
+.waiter-live-order-item { font-size: 0.78rem; color: #ddd; padding: 2px 0; }
+.status-pending { background: rgba(245,158,11,0.15); color: #F59E0B; border: 1px solid rgba(245,158,11,0.4); border-radius: 8px; padding: 2px 8px; font-size: 0.65rem; font-weight: 700; }
+.status-preparing { background: rgba(59,130,246,0.15); color: #60A5FA; border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; padding: 2px 8px; font-size: 0.65rem; font-weight: 700; }
+.status-ready { background: rgba(34,197,94,0.15); color: #22C55E; border: 1px solid rgba(34,197,94,0.4); border-radius: 8px; padding: 2px 8px; font-size: 0.65rem; font-weight: 700; }
+.waiter-addon-btn { width: 100%; margin-top: 0.5rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.5); color: #EF4444; border-radius: 8px; padding: 0.4rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; letter-spacing: 1px; transition: all 0.15s; font-family: inherit; }
+.waiter-addon-btn:hover { background: rgba(239,68,68,0.25); }
+.waiter-addon-btn.active-addon { background: #EF4444; color: white; }
+
+/* ---- ADD-ON ANIMATIONS ---- */
+@keyframes addonPulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); } 70% { box-shadow: 0 0 0 8px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
+.kds-addon-glow { animation: kdsAddonGlow 1.5s ease-in-out infinite; border: 2px solid #EF4444 !important; }
+@keyframes kdsAddonGlow { 0% { box-shadow: 0 0 5px rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 20px rgba(239,68,68,0.9), 0 0 40px rgba(239,68,68,0.4); } 100% { box-shadow: 0 0 5px rgba(239,68,68,0.4); } }
+
+/* ---- TABLET RESPONSIVE ---- */
+@media (max-width: 900px) {
+    .waiter-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto auto; }
+    .waiter-menu-panel { border-right: none; border-bottom: 1px solid var(--glass-border); max-height: 55vh; }
+    .waiter-cart-panel { border-right: none; border-bottom: 1px solid var(--glass-border); max-height: 35vh; }
+    .waiter-live-panel { max-height: 40vh; }
+    .waiter-menu-grid { grid-template-columns: repeat(auto-fill,minmax(110px,1fr)); gap: 0.5rem; padding: 0.7rem; }
+}
+@media (min-width: 901px) and (max-width: 1200px) { .waiter-body { grid-template-columns: 2.5fr 1.5fr 1.2fr; } }

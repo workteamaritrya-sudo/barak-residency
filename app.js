@@ -655,7 +655,13 @@ class PMSApp {
         const targetTab = roleTabs[roleKey] || (roleKey.includes('waiter') ? 'ordering' : (roleKey.includes('desk') ? 'rest-desk' : 'dashboard'));
 
         if (roleKey !== 'admin') {
-            // Lock sidebar: hide everything except this role's tab
+            // Hide sidebar entirely for staff
+            const hubEl = document.querySelector('.management-hub');
+            if (hubEl) hubEl.classList.add('staff-mode');
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar) sidebar.style.display = 'none';
+
+            // Lock sidebar: only show this role's tab item
             document.querySelectorAll('.side-item').forEach(item => {
                 const itemId = item.id.replace('side-', '');
                 item.style.display = (itemId === targetTab) ? 'flex' : 'none';
@@ -671,6 +677,8 @@ class PMSApp {
             if (headerLogout) headerLogout.style.display = 'block';
         } else {
             // Admin: show everything
+            const hubEl = document.querySelector('.management-hub');
+            if (hubEl) hubEl.classList.remove('staff-mode');
             document.querySelector('.sidebar').style.display = 'flex';
             document.querySelectorAll('.side-item').forEach(item => item.style.display = 'flex');
             this.switchTab('dashboard');
@@ -1231,7 +1239,10 @@ class PMSApp {
         // Sync Waiter (Hotel)
         if (this.currentPortal === 'hotel-waiter' || this.currentTab === 'ordering') {
             this.populateWaiterRoomSelect();
-            if (this.currentTab === 'ordering') this.renderWaiterPortal();
+            if (this.currentTab === 'ordering') {
+                this.renderWaiterPortal();
+                if (this.selectedWaiterRoom) this.renderWaiterLiveOrders(this.selectedWaiterRoom);
+            }
         }
 
         // Sync Waiter (Rest)
@@ -3906,34 +3917,53 @@ class PMSApp {
 
         // Grouping Logic: Session-Based Grouping
         const groups = {};
+        // Track which base IDs have new add-ons
+        const newAddonIds = new Set();
+
         allOrders.forEach(o => {
-            const baseId = o.id.replace('ADDON ', '');
+            const oid = o.order_id || o.id || '';
+
+            // Detect add-on notification docs
+            if (oid.includes('_ADDON_')) {
+                const parentId = o.parentOrderId || oid.split('_ADDON_')[0];
+                newAddonIds.add(parentId);
+                return; // Don't add addon-notif as its own card
+            }
+
+            const baseId = oid.replace(/^ADDON /, '');
             if (!groups[baseId]) {
                 groups[baseId] = {
                     id: baseId,
                     orders: [],
-                    status: 'ready', // Default to ready, downgraded if any part is pending
+                    status: 'ready',
                     timestamp: o.timestamp,
                     orderType: o.orderType,
                     roomNumber: o.roomNumber,
-                    tableId: o.tableId
+                    tableId: o.tableId,
+                    hasAddon: o.isAddon || false
                 };
             }
+            if (o.isAddon) groups[baseId].hasAddon = true;
             groups[baseId].orders.push(o);
             
-            // If any order in group is pending/preparing, the whole group is 'Active'
             if (o.status === 'preparing' || o.status === 'Pending' || o.status === 'Kitchen') {
                 groups[baseId].status = 'Kitchen';
             } else if (o.status === 'ready' || o.status === 'Served') {
-                // If it's already 'Kitchen', keep it 'Kitchen'. Otherwise 'ready'
                 if (groups[baseId].status !== 'Kitchen') groups[baseId].status = 'ready';
             }
-            // Use earliest timestamp for sorting
             if (o.timestamp < groups[baseId].timestamp) groups[baseId].timestamp = o.timestamp;
         });
 
+        // Mark groups that received an addon notification
+        newAddonIds.forEach(pid => { if (groups[pid]) groups[pid].hasAddon = true; });
+
         const sortedGroups = Object.values(groups).sort((a, b) => b.timestamp - a.timestamp).slice(0, 12);
         const now = new Date().getTime();
+
+        // Play alert sound once if any new add-on present
+        if (newAddonIds.size > 0 && window.FirebaseSync) {
+            try { window.FirebaseSync.playReceptionAlert(); } catch(e) {}
+        }
 
         sortedGroups.forEach(group => {
             const isGroupReady = group.status === 'Served' || group.status === 'ready';
@@ -3945,7 +3975,8 @@ class PMSApp {
 
             let borderClass = 'kds-ticket-room';
             let dynamicBorderColor = '';
-            if (group.orderType === 'table') borderClass = 'kds-ticket-table';
+            if (group.hasAddon) { borderClass = 'kds-ticket-room kds-addon-glow'; }
+            else if (group.orderType === 'table') borderClass = 'kds-ticket-table';
             else if (group.orderType === 'pickup') { borderClass = 'kds-ticket-pickup'; dynamicBorderColor = '#A020F0'; }
 
             card.className = `kds-ticket ${borderClass} ${isUrgent ? 'urgent' : ''} ${isGroupReady ? 'ready-freeze' : ''}`;
@@ -4000,6 +4031,7 @@ class PMSApp {
 
             card.innerHTML = `
                 ${freezeOverlay}
+                ${group.hasAddon ? `<div style="background:#EF4444;color:white;font-size:0.7rem;font-weight:900;letter-spacing:2px;padding:4px 10px;border-radius:6px 6px 0 0;text-align:center;animation:addonPulse 1s infinite;">🔴 ADD-ON ORDER — ITEMS ADDED TO EXISTING BILL</div>` : ''}
                 <div class="kds-ticket-header mb-2" style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div>
                         <div style="font-size: 1.4rem; font-weight: 900; color: var(--gold-primary);">${group.roomNumber ? `ROOM ${group.roomNumber}` : (group.tableId ? `TABLE ${group.tableId}` : (group.id.startsWith('Table') ? group.id : 'WALK-IN'))}</div>
@@ -5282,74 +5314,142 @@ class PMSApp {
         await window.FirebaseSync.pushBillingToCloud(billObj);
     }
 
-    // --- WAITER PORTAL LOGIC ---
+    // =======================================================
+    //  WAITER PORTAL — COMPLETE LOGIC
+    // =======================================================
+
     populateWaiterRoomSelect() {
         const select = document.getElementById('waiter-room-select');
         if (!select) return;
         const currentVal = select.value;
-        select.innerHTML = '<option value="">Choose Room...</option>';
-        
+        select.innerHTML = '<option value="">📋 Choose Room...</option>';
         Object.values(this.db.rooms).filter(r => r.status === 'occupied').forEach(r => {
             const opt = document.createElement('option');
             opt.value = r.number;
-            opt.innerText = `Room ${r.number} - ${r.guestName || 'Active'}`;
+            opt.innerText = `Room ${r.number} — ${r.guestName || 'Active Guest'}`;
             select.appendChild(opt);
         });
-        
         if (currentVal) select.value = currentVal;
     }
 
     async selectWaiterRoom(roomNum) {
         this.selectedWaiterRoom = roomNum;
+        this.waiterAddOnOrderId = null;  // clear any addon mode when room changes
+
         const display = document.getElementById('ordering-room-display');
-        const btn = document.getElementById('waiter-place-btn');
-        if (display) display.innerText = roomNum ? `ROOM ${roomNum}` : 'SELECT ROOM';
-        if (btn) btn.disabled = !roomNum;
-        
+        const newBtn  = document.getElementById('waiter-new-btn');
+        const badge   = document.getElementById('waiter-addon-badge');
+
+        if (display) display.innerText = roomNum ? `ROOM ${roomNum} — NEW ORDER` : 'SELECT A ROOM TO BEGIN';
+        if (newBtn) newBtn.disabled = !roomNum;
+        if (badge) badge.style.display = 'none';
+
+        // Clear cart
         this.waiterCart = [];
         this.updateWaiterCartUI();
+
+        // Load live orders for this room
+        if (roomNum) this.renderWaiterLiveOrders(roomNum);
     }
 
+    /** Switch to add-on mode for an existing order */
+    startWaiterAddon(orderId) {
+        this.waiterAddOnOrderId = orderId;
+        this.waiterCart = [];
+        this.updateWaiterCartUI();
+
+        const display = document.getElementById('ordering-room-display');
+        const badge   = document.getElementById('waiter-addon-badge');
+        const target  = document.getElementById('addon-target-id');
+
+        if (display) display.innerText = `ROOM ${this.selectedWaiterRoom} — ADD-ON: ${orderId}`;
+        if (badge) badge.style.display = 'flex';
+        if (target) target.innerText = orderId;
+
+        // Highlight the selected addon card
+        document.querySelectorAll('.waiter-addon-btn').forEach(b => b.classList.remove('active-addon'));
+        const activeBtn = document.querySelector(`.waiter-addon-btn[data-oid="${orderId}"]`);
+        if (activeBtn) activeBtn.classList.add('active-addon');
+
+        this.showToast(`ADD-ON MODE: Items will be added to ${orderId}`, 'info');
+    }
+
+    /** Cancel addon mode, start a fresh new order */
+    newWaiterOrder() {
+        this.waiterAddOnOrderId = null;
+        this.waiterCart = [];
+        this.updateWaiterCartUI();
+
+        const display = document.getElementById('ordering-room-display');
+        const badge   = document.getElementById('waiter-addon-badge');
+        if (display && this.selectedWaiterRoom) display.innerText = `ROOM ${this.selectedWaiterRoom} — NEW ORDER`;
+        if (badge) badge.style.display = 'none';
+        document.querySelectorAll('.waiter-addon-btn').forEach(b => b.classList.remove('active-addon'));
+        this.showToast('New order mode — build your cart', 'success');
+    }
+
+    /** Render the menu grid with correct field fallbacks */
     renderWaiterPortal(categoryFilter = 'All') {
         const grid = document.getElementById('order-menu-grid');
         const pills = document.getElementById('order-categories');
         if (!grid || !pills) return;
 
-        // Render Categories
-        const cats = ['All', ...new Set(this.db.menu.map(i => i.category))];
-        pills.innerHTML = cats.map(c => `
-            <div class="category-pill ${categoryFilter === c ? 'active' : ''}" onclick="app.renderWaiterPortal('${c}')">${c}</div>
-        `).join('');
+        this.populateWaiterRoomSelect();
 
-        // Render Menu
-        const items = categoryFilter === 'All' ? this.db.menu : this.db.menu.filter(i => i.category === categoryFilter);
-        grid.innerHTML = items.map(i => `
-            <div class="glass-panel menu-card-mini" style="padding: 0.5rem; text-align: center; cursor: pointer; border: 1px solid var(--glass-border);" onclick="app.addToWaiterCart('${i.id}')">
-                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">${i.icon || '🍽️'}</div>
-                <div style="font-size: 0.8rem; font-weight: bold; color: white;">${i.name}</div>
-                <div style="font-size: 0.75rem; color: var(--gold-primary);">₹${i.price}</div>
-            </div>
-        `).join('');
+        const menu = this.db.menu || [];
+        if (menu.length === 0) {
+            grid.innerHTML = '<div style="color:var(--text-gray);padding:2rem;text-align:center;">Menu loading — please wait...</div>';
+            return;
+        }
+
+        // Categories
+        const cats = ['All', ...new Set(menu.map(i => i.category || i.Category || 'General').filter(Boolean))];
+        pills.innerHTML = cats.map(c => `<button class="waiter-cat-pill ${categoryFilter === c ? 'active' : ''}" onclick="app.renderWaiterPortal('${c}')">${c}</button>`).join('');
+
+        // Filtered items
+        const items = categoryFilter === 'All' ? menu : menu.filter(i => (i.category || i.Category) === categoryFilter);
+
+        grid.innerHTML = items.map(i => {
+            const name    = i.name || i.Name || i.itemName || 'Dish';
+            const price   = Number(i.price || i.PriceFull || i.priceFull || 0);
+            const priceH  = Number(i.priceHalf || i.PriceHalf || 0);
+            const imgUrl  = i.imageUrl || i.ImageURL || i.image || i.photo || '';
+            const icon    = i.icon || '🍽️';
+            const itemId  = i.id || i.ID || name;
+            const imgTag  = imgUrl
+                ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextSibling.style.display='block'" /><span class="item-icon" style="display:none">${icon}</span>`
+                : `<span class="item-icon">${icon}</span>`;
+            const halfLine = priceH ? `<div class="item-half-price">½: ₹${priceH}</div>` : '';
+            return `
+                <div class="waiter-menu-card" onclick="app.addToWaiterCart('${itemId}')">
+                    ${imgTag}
+                    <div class="item-name">${name}</div>
+                    <div class="item-price">₹${price}</div>
+                    ${halfLine}
+                </div>`;
+        }).join('');
     }
 
     addToWaiterCart(itemId) {
         if (!this.selectedWaiterRoom) {
-            this.showToast("Please select a room first!", "warning");
+            this.showToast('Please select a room first!', 'warning');
             return;
         }
-        const item = this.db.menu.find(i => i.id === itemId);
-        if (item) {
-            const existing = this.waiterCart.find(c => c.id === itemId);
-            if (existing) {
-                existing.qty++;
-            } else {
-                this.waiterCart.push({ ...item, qty: 1 });
-            }
-            this.updateWaiterCartUI();
-        }
+        const item = this.db.menu.find(i => (i.id || i.ID || i.name || i.Name) === itemId)
+                  || this.db.menu.find(i => i.id === itemId || i.name === itemId);
+        if (!item) { this.showToast('Item not found', 'error'); return; }
+
+        const name  = item.name  || item.Name  || 'Dish';
+        const price = Number(item.price || item.PriceFull || 0);
+        if (!this.waiterCart) this.waiterCart = [];
+        const existing = this.waiterCart.find(c => c.id === itemId);
+        if (existing) { existing.qty++; }
+        else { this.waiterCart.push({ id: itemId, name, price, qty: 1, icon: item.icon || '🍽️' }); }
+        this.updateWaiterCartUI();
     }
 
     removeFromWaiterCart(itemId) {
+        if (!this.waiterCart) return;
         const idx = this.waiterCart.findIndex(c => c.id === itemId);
         if (idx !== -1) {
             if (this.waiterCart[idx].qty > 1) this.waiterCart[idx].qty--;
@@ -5360,77 +5460,174 @@ class PMSApp {
 
     updateWaiterCartUI() {
         const container = document.getElementById('waiter-cart-items');
+        if (!container) return;
+        const cart = this.waiterCart || [];
+        let total = 0;
+
+        if (cart.length === 0) {
+            container.innerHTML = '<div style="color:var(--text-gray);text-align:center;padding:1.5rem;font-size:0.85rem;">Cart is empty</div>';
+        } else {
+            container.innerHTML = cart.map(item => {
+                total += item.price * item.qty;
+                return `
+                    <div class="waiter-cart-row">
+                        <div class="cart-info">
+                            <div class="cart-name">${item.name}</div>
+                            <div class="cart-sub">₹${item.price} × ${item.qty} = ₹${item.price * item.qty}</div>
+                        </div>
+                        <div class="cart-controls">
+                            <button class="waiter-cart-qty-btn" onclick="app.removeFromWaiterCart('${item.id}')">−</button>
+                            <span style="min-width:22px;text-align:center;font-weight:700;color:white">${item.qty}</span>
+                            <button class="waiter-cart-qty-btn" onclick="app.addToWaiterCart('${item.id}')">+</button>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
         const totalEl = document.getElementById('waiter-total-amt');
+        if (totalEl) totalEl.innerText = total;
+
+        const hasRoom = !!this.selectedWaiterRoom;
+        const hasItems = cart.length > 0;
+        ['waiter-place-btn','waiter-place-btn2'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.disabled = !(hasRoom && hasItems);
+        });
+    }
+
+    /** Render live orders for quick add-on access */
+    renderWaiterLiveOrders(roomNum) {
+        const container = document.getElementById('waiter-live-orders');
         if (!container) return;
 
-        let total = 0;
-        container.innerHTML = this.waiterCart.map(item => {
-            total += item.price * item.qty;
-            return `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid var(--glass-border);">
-                    <div style="flex: 1;">
-                        <div style="font-size: 0.9rem; color: white;">${item.name}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-gray);">₹${item.price} x ${item.qty}</div>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn btn-sm btn-outline" style="padding: 2px 8px;" onclick="app.removeFromWaiterCart('${item.id}')">-</button>
-                        <button class="btn btn-sm btn-outline" style="padding: 2px 8px;" onclick="app.addToWaiterCart('${item.id}')">+</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        const roomOrders = (this.db.kitchenOrders || []).filter(o => {
+            const match = String(o.roomNumber || o.roomId) === String(roomNum);
+            const active = !['completed', 'cancelled', 'Cancelled'].includes(o.status);
+            return match && active;
+        }).sort((a,b) => {
+            const ta = a.timestamp?.seconds ? a.timestamp.seconds * 1000 : (a.timestamp || 0);
+            const tb = b.timestamp?.seconds ? b.timestamp.seconds * 1000 : (b.timestamp || 0);
+            return tb - ta; // newest first
+        });
 
-        if (totalEl) totalEl.innerText = total;
-        
-        const btn = document.getElementById('waiter-place-btn');
-        if (btn) btn.disabled = !this.selectedWaiterRoom || this.waiterCart.length === 0;
+        if (roomOrders.length === 0) {
+            container.innerHTML = '<div style="color:var(--text-gray);text-align:center;padding:2rem;font-size:0.85rem;">No active orders for this room</div>';
+            return;
+        }
+
+        container.innerHTML = roomOrders.map(o => {
+            const oid = o.order_id || o.id;
+            const statusCls = {
+                'Pending': 'status-pending', 'Kitchen': 'status-preparing',
+                'preparing': 'status-preparing', 'Served': 'status-ready', 'ready': 'status-ready'
+            }[o.status] || 'status-pending';
+            const statusLabel = o.status;
+            const isAddon = o.isAddon;
+            const itemsHtml = (o.items || []).map(i => {
+                const n = typeof i === 'object' ? (i.name||'?') : i;
+                const q = typeof i === 'object' ? (i.qty||1) : 1;
+                return `<div class="waiter-live-order-item">• ${n} ×${q}</div>`;
+            }).join('');
+            return `
+                <div class="waiter-live-order-card${isAddon ? ' kds-addon-glow' : ''}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span class="live-order-id">${oid}${isAddon ? ' 🔴' : ''}</span>
+                        <span class="${statusCls}">${statusLabel}</span>
+                    </div>
+                    ${itemsHtml}
+                    <button class="waiter-addon-btn" data-oid="${oid}" onclick="app.startWaiterAddon('${oid}')">
+                        ➕ ADD ITEMS TO THIS ORDER
+                    </button>
+                </div>`;
+        }).join('');
     }
 
     async placeWaiterOrder() {
-        if (this.waiterCart.length === 0 || !this.selectedWaiterRoom) return;
+        const cart = this.waiterCart || [];
+        if (cart.length === 0 || !this.selectedWaiterRoom) return;
 
-        const btn = document.getElementById('waiter-place-btn');
-        btn.disabled = true;
-        btn.innerText = 'PROCESSING...';
+        ['waiter-place-btn','waiter-place-btn2'].forEach(id => {
+            const b = document.getElementById(id);
+            if (b) { b.disabled = true; b.innerText = '⏳ PROCESSING...'; }
+        });
 
         try {
-            const roomNum = this.selectedWaiterRoom;
-            const room = this.db.rooms[roomNum];
-            const orderId = await window.FirebaseSync.getNextOrderSerial(roomNum);
-            
-            const total = this.waiterCart.reduce((s, i) => s + (i.price * i.qty), 0);
-            
-            const orderObj = {
-                order_id: orderId,
-                id: orderId,
-                roomNumber: String(roomNum),
-                roomId: String(roomNum),
-                stayID: room.currentStayId || '',
-                guestName: room.guestName || 'Guest',
-                items: this.waiterCart,
-                total_price: total,
-                status: 'Pending',
-                timestamp: window.firebaseHooks.serverTimestamp(),
-                orderType: 'Room'
-            };
+            const roomNum  = this.selectedWaiterRoom;
+            const room     = this.db.rooms[roomNum] || {};
+            const total    = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const { serverTimestamp, doc, updateDoc, arrayUnion, increment, setDoc } = window.firebaseHooks;
 
-            await window.FirebaseSync.pushOrderToCloud(orderObj);
-            
-            this.showToast(`Order ${orderId} placed successfully!`, "success");
-            this.waiterCart = [];
-            this.updateWaiterCartUI();
-            
-            // Ding at reception is handled by the cloud listener
-            
+            if (this.waiterAddOnOrderId) {
+                // ---- ADD-ON MODE: merge into existing order ----
+                const oid = this.waiterAddOnOrderId;
+                const orderRef = doc(window.firebaseFS, 'orders', String(oid));
+                const addOnItems = cart.map(i => ({ ...i, addedAt: Date.now(), addedBy: 'waiter' }));
+
+                await updateDoc(orderRef, {
+                    items: arrayUnion(...addOnItems),
+                    total_price: increment(total),
+                    isAddon: true,
+                    lastAddonAt: serverTimestamp(),
+                    status: 'Pending'   // re-trigger kitchen
+                });
+
+                // Notify kitchen and reception with ADD-ON flag
+                const addonNotifRef = doc(window.firebaseFS, 'orders', `${oid}_ADDON_${Date.now()}`);
+                await setDoc(addonNotifRef, {
+                    order_id: `${oid}_ADDON`,
+                    parentOrderId: oid,
+                    isAddon: true,
+                    roomNumber: String(roomNum),
+                    roomId: String(roomNum),
+                    stayID: room.currentStayId || '',
+                    guestName: room.guestName || 'Guest',
+                    items: addOnItems,
+                    total_price: total,
+                    status: 'Pending',
+                    timestamp: serverTimestamp(),
+                    orderType: 'Room'
+                });
+
+                this.showToast(`✅ Add-on added to ${oid}!`, 'success');
+                this.newWaiterOrder();
+
+            } else {
+                // ---- NEW ORDER ----
+                const orderId = await window.FirebaseSync.getNextOrderSerial(roomNum);
+                const orderObj = {
+                    order_id: orderId, id: orderId,
+                    roomNumber: String(roomNum), roomId: String(roomNum),
+                    stayID: room.currentStayId || '',
+                    guestName: room.guestName || 'Guest',
+                    items: cart,
+                    total_price: total,
+                    status: 'Pending',
+                    timestamp: serverTimestamp(),
+                    orderType: 'Room'
+                };
+                await window.FirebaseSync.pushOrderToCloud(orderObj);
+                this.showToast(`✅ Order ${orderId} placed!`, 'success');
+                this.waiterCart = [];
+                this.updateWaiterCartUI();
+            }
+
+            // Refresh live orders
+            setTimeout(() => this.renderWaiterLiveOrders(roomNum), 1500);
+
         } catch (err) {
-            console.error("Waiter order failed", err);
-            this.showToast("Order failed. Check console.", "error");
+            console.error('Waiter order failed', err);
+            this.showToast('Order failed — check console', 'error');
         } finally {
-            btn.disabled = false;
-            btn.innerText = '🚀 PLACE ORDER';
+            ['waiter-place-btn','waiter-place-btn2'].forEach(id => {
+                const b = document.getElementById(id);
+                if (b) { b.disabled = false; b.innerText = '🚀 PLACE ORDER'; }
+            });
         }
     }
+
 }
+
+
 
 // Bootstrap Unified Management Hub
 document.addEventListener('DOMContentLoaded', () => {
