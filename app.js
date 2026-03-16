@@ -248,9 +248,12 @@ class CentralDatabase {
 
     persistTables() {
         localStorage.setItem('yukt_rest_tables', JSON.stringify(this.restaurantTables));
-        this.triggerSyncEvent();
-        // Granular push for each table if specifically called, but usually we just push all for now
-        // For efficiency, we can call window.FirebaseSync.pushTableToCloud(specificTable) elsewhere
+        // Push each table directly to Firestore so cross-device sync works on same tab too
+        if (window.FirebaseSync) {
+            Object.values(this.restaurantTables).forEach(t => {
+                window.FirebaseSync.pushTableToCloud(t).catch(e => console.warn('[Tables] Cloud push failed:', e));
+            });
+        }
     }
 
     persistRestRevenue() {
@@ -730,8 +733,20 @@ class PMSApp {
         const { collection, onSnapshot } = window.firebaseHooks;
         const menuCol = collection(window.firebaseFS, 'menuItems');
         onSnapshot(menuCol, (snapshot) => {
+            const normalizeItem = (raw) => ({
+                id:          raw.id || raw.ID || `m-${Math.random().toString(36).slice(2,8)}`,
+                name:        raw.name || raw.Name || 'Dish',
+                category:    raw.category || raw.Category || 'General',
+                price:       parseFloat(raw.price || raw.PriceFull || raw.pricefull || 0),
+                priceHalf:   parseFloat(raw.priceHalf || raw.PriceHalf || raw.pricehalf || 0),
+                description: raw.description || raw.Description || 'Barak Residency Special',
+                imageUrl:    raw.imageUrl || raw.ImageURL || raw.image || raw.img || '',
+                portionType: raw.portionType || raw.PortionType || 'Plate',
+                isAvailable: raw.isAvailable !== false
+            });
+
             const items = [];
-            snapshot.forEach(doc => items.push(doc.data()));
+            snapshot.forEach(doc => items.push(normalizeItem(doc.data())));
             this.db.menu = items;
             
             const emptyState = document.getElementById('menu-empty-state');
@@ -746,6 +761,8 @@ class PMSApp {
                 if (emptyState) emptyState.style.display = 'none';
                 if (tableWrapper) tableWrapper.style.display = 'block';
                 if (this.currentTab === 'inventory') this.renderInventoryManagement();
+                // Re-render waiter portal if open so menu pops in
+                if (this.currentTab === 'ordering') this.renderWaiterPortal();
             }
         });
     }
@@ -5410,18 +5427,17 @@ class PMSApp {
         const items = categoryFilter === 'All' ? menu : menu.filter(i => (i.category || i.Category) === categoryFilter);
 
         grid.innerHTML = items.map(i => {
-            const name    = i.name || i.Name || i.itemName || 'Dish';
-            const price   = Number(i.price || i.PriceFull || i.priceFull || 0);
-            const priceH  = Number(i.priceHalf || i.PriceHalf || 0);
-            const imgUrl  = i.imageUrl || i.ImageURL || i.image || i.photo || '';
-            const icon    = i.icon || '🍽️';
-            const itemId  = i.id || i.ID || name;
-            const imgTag  = imgUrl
-                ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextSibling.style.display='block'" /><span class="item-icon" style="display:none">${icon}</span>`
-                : `<span class="item-icon">${icon}</span>`;
+            const name   = i.name;
+            const price  = i.price;
+            const priceH = i.priceHalf;
+            const imgUrl = i.imageUrl;
+            const itemId = i.id;
+            const imgTag = imgUrl
+                ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextSibling.style.display='block'" style="width:100%;height:80px;object-fit:cover;border-radius:8px;" /><span class="item-icon" style="display:none">🍽️</span>`
+                : `<span class="item-icon">🍽️</span>`;
             const halfLine = priceH ? `<div class="item-half-price">½: ₹${priceH}</div>` : '';
             return `
-                <div class="waiter-menu-card" onclick="app.addToWaiterCart('${itemId}')">
+                <div class="waiter-menu-card" onclick="app.waiterPromptPortion('${itemId}')">
                     ${imgTag}
                     <div class="item-name">${name}</div>
                     <div class="item-price">₹${price}</div>
@@ -5430,23 +5446,111 @@ class PMSApp {
         }).join('');
     }
 
-    addToWaiterCart(itemId) {
-        if (!this.selectedWaiterRoom) {
-            this.showToast('Please select a room first!', 'warning');
-            return;
-        }
-        const item = this.db.menu.find(i => (i.id || i.ID || i.name || i.Name) === itemId)
-                  || this.db.menu.find(i => i.id === itemId || i.name === itemId);
+    waiterPromptPortion(itemId) {
+        if (!this.selectedWaiterRoom) { this.showToast('Please select a room first!', 'warning'); return; }
+        const item = this.db.menu.find(i => i.id === itemId);
         if (!item) { this.showToast('Item not found', 'error'); return; }
 
-        const name  = item.name  || item.Name  || 'Dish';
-        const price = Number(item.price || item.PriceFull || 0);
-        if (!this.waiterCart) this.waiterCart = [];
-        const existing = this.waiterCart.find(c => c.id === itemId);
-        if (existing) { existing.qty++; }
-        else { this.waiterCart.push({ id: itemId, name, price, qty: 1, icon: item.icon || '🍽️' }); }
-        this.updateWaiterCartUI();
+        const modal = document.getElementById('waiter-portion-modal');
+        const nameEl = document.getElementById('wpm-item-name');
+        const descEl = document.getElementById('wpm-item-desc');
+        const imgEl  = document.getElementById('wpm-item-img');
+        const ctn    = document.getElementById('wpm-options-container');
+
+        nameEl.innerText = item.name;
+        descEl.innerText = item.description || 'Select your preference';
+        if (item.imageUrl) { imgEl.src = item.imageUrl; imgEl.style.display = 'block'; }
+        else { imgEl.style.display = 'none'; }
+        ctn.innerHTML = '';
+
+        const type = item.portionType || 'Plate';
+
+        if (type === 'Quantity' || type === 'Cup' || type === 'Drink') {
+            this.waiterPromptQuantity(item, 'Regular', 'Standard', item.price);
+        } else if (type === 'Bottle') {
+            const sizes = [
+                { label: 'Full Bottle', val: 'Full', price: item.price },
+                { label: '500ml', val: '500ml', price: Math.floor(item.price * 0.65) }
+            ];
+            sizes.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.style.cssText = 'width:100%;padding:0.9rem;margin-bottom:0.5rem;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:12px;color:white;font-family:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:0.95rem;';
+                btn.innerHTML = `<span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span>`;
+                btn.onclick = () => this.waiterPromptQuantity(item, opt.val, opt.label, opt.price);
+                ctn.appendChild(btn);
+            });
+            modal.style.display = 'flex';
+        } else {
+            // Plate — Full / Half
+            const halfPrice = item.priceHalf > 0 ? item.priceHalf : Math.floor(item.price * 0.6);
+            const opts = [{ label: 'Full Plate', val: 'Full', price: item.price }];
+            if (halfPrice > 0) opts.push({ label: 'Half Plate', val: 'Half', price: halfPrice });
+            opts.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.style.cssText = 'width:100%;padding:0.9rem;margin-bottom:0.5rem;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:12px;color:white;font-family:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:0.95rem;';
+                btn.innerHTML = `<span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span>`;
+                btn.onclick = () => this.waiterPromptQuantity(item, opt.val, opt.label, opt.price);
+                ctn.appendChild(btn);
+            });
+            modal.style.display = 'flex';
+        }
     }
+
+    waiterPromptQuantity(item, variant, label, price) {
+        const ctn    = document.getElementById('wpm-options-container');
+        const nameEl = document.getElementById('wpm-item-name');
+        const descEl = document.getElementById('wpm-item-desc');
+        const modal  = document.getElementById('waiter-portion-modal');
+
+        nameEl.innerText = `${item.name} (${label})`;
+        descEl.innerText = 'How many portions?';
+        ctn.innerHTML = '';
+        let qty = 1;
+
+        const counter = document.createElement('div');
+        counter.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:2rem;margin:1.5rem 0;';
+        counter.innerHTML = `
+            <button id="wpm-dec" style="width:50px;height:50px;border-radius:50%;background:var(--glass-bg);border:1px solid var(--glass-border);color:white;font-size:1.5rem;cursor:pointer;">-</button>
+            <div id="wpm-qty" style="font-size:2.5rem;font-weight:900;color:white;">1</div>
+            <button id="wpm-inc" style="width:50px;height:50px;border-radius:50%;background:var(--glass-bg);border:1px solid var(--glass-border);color:white;font-size:1.5rem;cursor:pointer;">+</button>
+        `;
+        ctn.appendChild(counter);
+
+        const addBtn = document.createElement('button');
+        addBtn.style.cssText = 'width:100%;padding:1rem;background:linear-gradient(135deg,#22C55E,#16A34A);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:800;cursor:pointer;margin-top:0.5rem;';
+        addBtn.innerText = `ADD TO CART — ₹${price}`;
+        ctn.appendChild(addBtn);
+
+        const updateTotal = () => { addBtn.innerText = `ADD TO CART — ₹${price * qty}`; };
+
+        document.getElementById('wpm-dec').onclick = () => { if (qty > 1) { qty--; document.getElementById('wpm-qty').innerText = qty; updateTotal(); } };
+        document.getElementById('wpm-inc').onclick = () => { qty++; document.getElementById('wpm-qty').innerText = qty; updateTotal(); };
+        addBtn.onclick = () => {
+            const cartItem = {
+                id: `${item.id}_${variant}`,
+                name: variant === 'Full' || variant === 'Regular' || variant === 'Standard' ? item.name : `${item.name} (${label})`,
+                price: price,
+                qty: qty,
+                variant: variant
+            };
+            // Check existing
+            const existing = this.waiterCart.find(c => c.id === cartItem.id);
+            if (existing) existing.qty += qty;
+            else this.waiterCart.push(cartItem);
+            this.updateWaiterCartUI();
+            this.closeWaiterPortionModal();
+            this.showToast(`Added ${cartItem.name} ×${qty}`, 'success');
+        };
+
+        modal.style.display = 'flex';
+    }
+
+    closeWaiterPortionModal() {
+        const modal = document.getElementById('waiter-portion-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+
 
     removeFromWaiterCart(itemId) {
         if (!this.waiterCart) return;

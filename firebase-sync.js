@@ -105,6 +105,7 @@ class FirebaseSyncEngine {
                 if (window.app && window.app.db) {
                     window.app.db.restaurantTables = tablesData;
                     if (window.app.currentPortal === 'rest-desk') window.app.renderRestDesk();
+                    if (window.app.currentPortal === 'rest-waiter') window.app.renderRestWaiterSidebar();
                 }
             }
         });
