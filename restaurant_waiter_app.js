@@ -141,11 +141,18 @@ async function loadInitialData() {
 
     const menuSnap = await getDocs(collection(db, 'menuItems'));
     if (!menuSnap.empty) {
-        menuSnap.forEach(d => menu.push({ id: d.id, ...d.data() }));
-        menu = menu.filter(i => i.isAvailable !== false);
-    } else {
+        const cloudMenu = [];
+        menuSnap.forEach(d => cloudMenu.push({ id: d.id, ...d.data() }));
+        menu = cloudMenu.filter(i => (i.name && i.isAvailable !== false));
+        console.log('[Menu] Loaded from Cloud:', menu.length);
+    } 
+    
+    if (menu.length === 0) {
+        console.log('[Menu] Using Default Fallback');
         menu = getDefaultMenu();
     }
+
+    renderMenu('');
 
     try {
         const availSnap = await getDoc(doc(db, 'settings', 'availability'));
@@ -426,8 +433,6 @@ function selectTable(table, ctx) {
         const isMaster = (table.activeBills || []).some(b => b.billID === billId && b.colorIndex !== 5);
         linkBtn.style.display = isMaster ? 'inline-block' : 'none';
     }
-    const area = document.getElementById('rest-waiter-pos-area');
-    area.style.opacity = '1'; area.style.pointerEvents = 'auto';
     if (!preserveCart) cart = [];
     preserveCart = false;
     renderTableSidebar();
@@ -441,10 +446,14 @@ function renderMenu(search = '') {
     const grid = document.getElementById('rest-waiter-menu-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    const filtered = menu.filter(i =>
-        (i.name.toLowerCase().includes(search.toLowerCase()) || (i.category || '').toLowerCase().includes(search.toLowerCase()))
-        && i.isAvailable !== false && !unavailableItems.includes(i.id)
-    );
+    const filtered = menu.filter(i => {
+        const name = (i.name || '').toLowerCase();
+        const cat = (i.category || '').toLowerCase();
+        const s = search.toLowerCase();
+        const matchesSearch = name.includes(s) || cat.includes(s);
+        const available = i.isAvailable !== false && !unavailableItems.includes(i.id);
+        return matchesSearch && available;
+    });
     if (filtered.length === 0) {
         grid.innerHTML = '<div style="text-align:center;padding:2rem;color:gray;grid-column:1/-1;">No items found</div>';
         return;
@@ -462,9 +471,9 @@ function renderMenu(search = '') {
                     <div class="menu-icon">${item.icon || '🍽'}</div>
                     <div class="menu-price">&#8377;${item.price}</div>
                 </div>
-                <div class="menu-name">${item.name}</div>
-                <div style="font-size:0.7rem;color:var(--color-slate-400);height:30px;overflow:hidden;">${item.description || ''}</div>
-                <button class="menu-add-btn" onclick="window.waiterApp.promptVariant({id:'${item.id}',name:'${item.name}',price:${item.price}})">Add</button>`;
+                <div class="menu-name">${item.name || 'Unnamed Item'}</div>
+                <div style="font-size:0.75rem;color:var(--color-slate-400);height:32px;line-height:1.2;overflow:hidden;margin-bottom:0.8rem;">${item.description || ''}</div>
+                <button class="menu-add-btn" onclick="window.waiterApp.promptVariant({id:'${item.id}',name:'${(item.name || '').replace(/'/g,"\\'")}',price:${item.price || 0}})">Add Item</button>`;
             grid.appendChild(el);
         });
     });
@@ -652,8 +661,6 @@ function showSuccessOverlay(order, isAddon) {
     setTimeout(() => {
         ov.style.display = 'none';
         activeTableId = null;
-        const area = document.getElementById('rest-waiter-pos-area');
-        if (area) { area.style.opacity = '0.5'; area.style.pointerEvents = 'none'; }
         document.getElementById('rest-waiter-pos-title').innerText = 'Select a table';
         document.getElementById('rest-waiter-table-info').innerText = '';
         document.getElementById('rest-waiter-cart-items').innerHTML = '';

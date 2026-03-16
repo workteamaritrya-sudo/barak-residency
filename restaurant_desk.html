@@ -17,14 +17,16 @@
         </div>
     </div>
     <div class="portal-top-bar">
-        <div class="d-flex" style="gap:1rem;align-items:center;">
-            <span style="color:var(--color-slate-400);font-size:0.85rem;">Daily Revenue:</span>
-            <span id="revenue-display" class="revenue-display" onclick="toggleRevenue(this)">₹ ****</span>
-            <button class="btn btn-outline" style="padding:0.3rem 0.8rem;font-size:0.8rem;" onclick="toggleRevenue(document.getElementById('revenue-display'))">👁</button>
-        </div>
-        <div style="display:flex;gap:0.75rem;">
-            <button class="btn btn-primary" onclick="newPickupOrder()">🥡 New Pickup Order</button>
-            <button class="btn btn-outline" onclick="window.close()">✕ Close</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <div class="d-flex" style="gap:1.5rem;align-items:center;">
+                <div class="d-flex" style="gap:0.5rem;align-items:center;">
+                    <span style="color:var(--color-slate-400);font-size:0.85rem;">Daily Revenue:</span>
+                    <span id="desk-revenue-display" class="revenue-display" onclick="window.deskApp.toggleRevVisibility(this)" style="cursor:pointer; font-weight:bold; color:var(--gold-primary);">₹ ****</span>
+                    <button class="btn btn-outline" style="padding:0.2rem 0.5rem;font-size:0.7rem;border-color:rgba(212,175,55,0.3);" onclick="window.deskApp.toggleRevVisibility(this)">👁</button>
+                </div>
+                <button class="btn btn-outline" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="window.deskApp.openAvailabilityModal()">🍽 Menu Availability</button>
+            </div>
+            <button class="btn btn-primary" style="padding:0.6rem 1.2rem;" onclick="window.deskApp.generatePickupOrder()">🥡 New Pickup Order</button>
         </div>
     </div>
 
@@ -34,20 +36,20 @@
             <div class="kpi-grid">
                 <div class="kpi-card glass-panel">
                     <div class="kpi-title">Active Tables</div>
-                    <div class="kpi-value" id="kpi-active-tables">0</div>
+                    <div class="kpi-value" id="rest-desk-active-tables">0</div>
                 </div>
                 <div class="kpi-card glass-panel">
                     <div class="kpi-title">Seats Occupied</div>
-                    <div class="kpi-value" id="kpi-pax">0</div>
+                    <div class="kpi-value" id="rest-desk-pax">0</div>
                 </div>
             </div>
             <div class="table-grid-wrap glass-panel">
                 <h3 style="margin-bottom:1rem;">Live Table Grid</h3>
-                <div class="table-grid" id="table-grid"></div>
+                <div class="table-grid" id="rest-desk-table-grid"></div>
             </div>
             <div class="pickup-section glass-panel">
                 <h3 style="margin-bottom:1rem;">🥡 Active Pickup Orders</h3>
-                <div id="pickup-list"><div class="text-gray" style="padding:1rem;text-align:center;">No active pickups</div></div>
+                <div id="rest-desk-pickup-list"><div class="text-gray" style="padding:1rem;text-align:center;">No active pickups</div></div>
             </div>
         </div>
 
@@ -60,9 +62,9 @@
             <div class="notif-panel glass-panel">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid var(--glass-border);padding-bottom:1rem;">
                     <h3>Notifications</h3>
-                    <button class="btn btn-outline" style="padding:0.3rem 0.8rem;font-size:0.75rem;" onclick="clearNotifs()">Clear</button>
+                    <button class="btn btn-outline" style="padding:0.3rem 0.8rem;font-size:0.75rem;" onclick="window.deskApp.clearNotifications()">Clear</button>
                 </div>
-                <div id="notif-list" style="flex:1;overflow-y:auto;"></div>
+                <div id="desk-notifications-list" style="flex:1;overflow-y:auto;"></div>
 
             </div>
         </div>
