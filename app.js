@@ -661,7 +661,7 @@ class PMSApp {
         if (activeTab) activeTab.classList.add('active');
 
         if (tabId === 'kitchen') this.renderKDS();
-        if (tabId === 'financials') this.renderFinancials();
+        if (tabId === 'financials') this.renderOwnerHub();
         if (tabId === 'inventory') this.renderInventoryManagement();
     }
 
@@ -740,6 +740,54 @@ class PMSApp {
             console.error("System Reset Failed:", err);
             this.showToast("Reset failed: " + err.message, "error");
         }
+    }
+
+    async hardReset() {
+        const confirmed = confirm("💣 HARD RESET: This will permanently wipe ALL active guests, ALL orders, ALL reservations, and reset billing to #1.\n\nThis CANNOT be undone. Type CONFIRM to proceed.");
+        if (!confirmed) return;
+        const typed = prompt('Type CONFIRM (all caps) to execute the full wipe:');
+        if (typed !== 'CONFIRM') { this.showToast('Hard Reset cancelled.', 'info'); return; }
+
+        this.showToast('Executing Hard Reset...', 'info');
+        try {
+            const { collection, getDocs, deleteDoc, updateDoc, setDoc, doc, serverTimestamp } = window.firebaseHooks;
+            const db = window.firebaseFS;
+
+            // 1. Wipe all collections
+            const cols = ['orders', 'guests', 'serviceRequests', 'ledger', 'billing', 'police_logs'];
+            for (const c of cols) {
+                const snap = await getDocs(collection(db, c));
+                await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+            }
+
+            // 2. Reset all rooms to available
+            const roomsSnap = await getDocs(collection(db, 'rooms'));
+            await Promise.all(roomsSnap.docs.map(d => updateDoc(d.ref, {
+                status: 'available', guest: null, currentGuestId: null,
+                guestName: null, guestPhone: null, salutation: null,
+                orderSerial: 0, billGenerated: false, arrivalDate: null,
+                last_updated: serverTimestamp()
+            })));
+
+            // 3. Reset billing serial counter
+            await setDoc(doc(db, 'settings', 'billing'), { lastOrderSerial: 0, lastReset: serverTimestamp() });
+
+            // 4. Clear localStorage billing data
+            ['br_rooms', 'br_room_ledger', 'yukt_last_order_id', 'br_menu'].forEach(k => localStorage.removeItem(k));
+            Object.keys(localStorage).filter(k => k.startsWith('br_room_serial') || k.startsWith('br_active_order')).forEach(k => localStorage.removeItem(k));
+
+            this.showToast('Hard Reset Complete. System is fresh.', 'success');
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (err) {
+            console.error('Hard Reset failed:', err);
+            this.showToast('Hard Reset failed: ' + err.message, 'error');
+        }
+    }
+
+    syncMenuFromCloud() {
+        this.showToast('Pulling menu from Firestore...', 'info');
+        // Piggy-back on the existing Firestore listener
+        this.fetchMenuFromCloud();
     }
 
     async toggleOrderHistory() {
@@ -3054,8 +3102,16 @@ class PMSApp {
     }
 
     async placeOrder(context) {
+        // DEBOUNCE: Prevent duplicate orders from double-tap/lag
+        if (this._isPlacingOrder) {
+            console.warn('[placeOrder] Already placing, ignoring duplicate call');
+            return;
+        }
+        this._isPlacingOrder = true;
+        const releaseLock = () => { this._isPlacingOrder = false; };
+
         const targetId = this.db.activeRoomContext;
-        if (!targetId) return;
+        if (!targetId) { releaseLock(); return; }
 
         let total = 0;
         const itemsList = [];
@@ -3187,9 +3243,9 @@ class PMSApp {
         this.db.cart = [];
         this.db.editingOrderId = null;
         this.syncState();
-
         this.db.editingOrderId = null;
         this.syncState();
+        releaseLock();
     }
 
     triggerSuccessOverlay(context, orderDetails = null, isAddon = false) {
@@ -4792,7 +4848,7 @@ class PMSApp {
         if (ebitdaEl) ebitdaEl.innerText = `₹${Math.round(approxEbitda).toLocaleString()}`;
 
         // 2. Render Charts
-        this.renderChart(totalIncome, approxEbitda);
+        // Chart rendering was moved to renderOwnerHub
 
         // 3. Render Sales History Table
         const tbody = document.getElementById('sales-history-body');
@@ -4813,65 +4869,68 @@ class PMSApp {
         });
     }
 
-    renderChart(revProp, ebitdaProp) {
-        // Revenue Bar Chart
-        const ctxRev = document.getElementById('revenueChart');
-        if (ctxRev) {
-            if (this.revenueChart) this.revenueChart.destroy();
-            this.revenueChart = new Chart(ctxRev, {
-                type: 'bar',
-                data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
-                    datasets: [{
-                        label: 'Daily Revenue (₹)',
-                        data: [25000, 32000, 28000, 41000, 39000, 48000, revProp],
-                        backgroundColor: '#6366F1',
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
-                        x: { grid: { display: false }, ticks: { color: '#94A3B8' } }
-                    }
-                }
+    renderOwnerHub() {
+        // KPIs
+        const rooms = Object.values(this.db.rooms);
+        const total = rooms.length;
+        const occupied = rooms.filter(r => r.status === 'occupied').length;
+        const reserved = rooms.filter(r => r.status === 'reserved').length;
+        const pending = (this.db.kitchenOrders || []).filter(o => o.status === 'Pending' || o.status === 'Kitchen').length;
+
+        let roomRevenue = 0;
+        rooms.filter(r => r.status === 'occupied').forEach(r => {
+            const g = r.guest;
+            if (g) roomRevenue += (Number(g.tariff || 0) * this.calculateBilledDays(g.checkInTimestamp || g.checkInTime || Date.now()));
+        });
+
+        const setEl = (id, v) => { const el = document.getElementById(id); if(el) el.innerText = v; };
+        setEl('kpi-occupied', `${occupied} / ${total}`);
+        setEl('kpi-room-revenue', `₹${roomRevenue.toLocaleString()}`);
+        setEl('kpi-pending-orders', pending);
+        const ebitda = roomRevenue - (42000/30); // rough daily salary cost
+        setEl('kpi-ebitda', `₹${Math.max(0, Math.round(ebitda)).toLocaleString()}`);
+
+        // Room Mini-Grid
+        const grid = document.getElementById('owner-room-grid');
+        if (grid) {
+            grid.innerHTML = '';
+            rooms.sort((a,b) => Number(a.number) - Number(b.number)).forEach(room => {
+                const color = room.status === 'occupied' ? '#D4AF37' : room.status === 'reserved' ? '#a855f7' : '#4ade80';
+                const icon = room.status === 'occupied' ? '🛏️' : room.status === 'reserved' ? '📅' : '✅';
+                const name = room.guestName ? `<div style="font-size:0.7rem; color:${color}; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${room.salutation || ''} ${room.guestName}</div>` : '';
+                grid.innerHTML += `<div style="background:rgba(255,255,255,0.04); border:1px solid ${color}33; border-top:3px solid ${color}; border-radius:8px; padding:0.75rem; cursor:pointer;" onclick="app.selectRoom('${room.number}'); app.switchTab('dashboard');">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:900; font-size:1rem;">${room.number}</span> <span>${icon}</span>
+                    </div>
+                    <div style="font-size:0.65rem; color:${color}; font-weight:700; margin-top:2px;">${room.status.toUpperCase()}</div>
+                    ${name}
+                </div>`;
             });
         }
 
-        // EBITDA Profitability Line Chart
-        const ctxPft = document.getElementById('profitabilityChart');
-        if (ctxPft) {
-            if (this.profitabilityChart) this.profitabilityChart.destroy();
-            this.profitabilityChart = new Chart(ctxPft, {
-                type: 'line',
-                data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
-                    datasets: [{
-                        label: 'EBITDA Margin',
-                        data: [12000, 15000, 13000, 22000, 19000, 25000, Math.round(ebitdaProp)],
-                        borderColor: '#52ffae',
-                        backgroundColor: 'rgba(82, 255, 174, 0.1)',
-                        borderWidth: 3,
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
-                        x: { grid: { display: false }, ticks: { color: '#94A3B8' } }
-                    }
-                }
-            });
+        // Live Kitchen Order Feed
+        const feed = document.getElementById('owner-order-feed');
+        if (feed) {
+            const orders = (this.db.kitchenOrders || []).slice(-20).reverse();
+            if (orders.length === 0) {
+                feed.innerHTML = '<div style="color:var(--color-slate-400); text-align:center; padding:1rem;">No orders yet</div>';
+            } else {
+                feed.innerHTML = orders.map(o => {
+                    const statusColor = { Pending:'#f59e0b', Kitchen:'#6366f1', Served:'#22c55e', 'On the Way':'#3b82f6', Delivered:'#6b7280' }[o.status] || '#94a3b8';
+                    const items = (o.items||[]).map(i => `${typeof i==='object' ? i.name : i} x${typeof i==='object' ? (i.qty||1) : 1}`).join(', ');
+                    const t = o.timestamp ? new Date(typeof o.timestamp==='object'&&o.timestamp.seconds ? o.timestamp.seconds*1000 : o.timestamp).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) : '';
+                    return `<div style="border-bottom:1px solid rgba(255,255,255,0.06); padding:0.4rem 0; display:flex; flex-direction:column; gap:2px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="font-weight:700;">Room ${o.roomNumber||o.roomId} &nbsp;·&nbsp; ${o.order_id||o.id}</span>
+                            <span style="color:${statusColor}; font-size:0.75rem; font-weight:700;">${o.status}</span>
+                        </div>
+                        <div style="color:var(--color-slate-400); font-size:0.78rem;">${items}</div>
+                        <div style="font-size:0.7rem; color:var(--color-slate-400);">₹${o.total_price||0} &nbsp;·&nbsp; ${t}</div>
+                    </div>`;
+                }).join('');
+            }
         }
     }
-
 
     // --- DATE ENGINES ---
 

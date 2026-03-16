@@ -114,7 +114,13 @@ h1, h2, h3 { font-weight: 600; }
     padding: 1.5rem 0;
     z-index: 1000;
     transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+    contain: layout style;
 }
+
+/* Prevent FOUC (flash of unstyled content) */
+body { background: #050B1A; }
+#app-container { opacity: 0; transition: opacity 0.2s ease; }
+#app-container[style*='flex'] { opacity: 1; }
 
 .sidebar-logo {
     padding: 0 1.5rem 2rem;

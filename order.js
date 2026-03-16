@@ -478,12 +478,36 @@ class GuestPortal {
 
         const type = item.portionType;
 
-        // For Quantity/Cup — add directly, no modal
-        if (type === 'Quantity' || type === 'Cup' || !type) {
+        // For Quantity/Cup/Drinks — show quantity counter directly
+        if (type === 'Quantity' || type === 'Cup' || type === 'Drinks' || type === 'Drink' || !type) {
             this.promptQuantity(item, 'Regular', 'Standard', item.price);
             return;
         }
 
+        // For Bottles (Water, etc.) — show SIZE options first
+        if (type === 'Bottle') {
+            document.getElementById('pm-item-name').innerText = item.name;
+            document.getElementById('pm-item-desc').innerText = 'Select size';
+            const container = document.getElementById('pm-options-container');
+            container.innerHTML = '';
+            const sizes = [
+                { label: '1L Bottle', val: '1L', price: item.price },
+                { label: '750ml', val: '750ml', price: Math.floor(item.price * 0.85) },
+                { label: '500ml', val: '500ml', price: Math.floor(item.price * 0.65) }
+            ];
+            sizes.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'reorder-btn tint-blur';
+                btn.style.marginBottom = '0.5rem';
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
+                btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
+                container.appendChild(btn);
+            });
+            document.getElementById('portion-modal').style.display = 'flex';
+            return;
+        }
+
+        // Plate type — show Full/Half options
         document.getElementById('pm-item-name').innerText = item.name;
         document.getElementById('pm-item-desc').innerText = 'Select preferred size';
         const container = document.getElementById('pm-options-container');
@@ -600,6 +624,20 @@ class GuestPortal {
     async placeOrder() {
         if (this.cart.length === 0) return;
 
+        // DEBOUNCE: Prevent double-tap duplicate orders
+        if (this._isOrdering) { console.warn('[placeOrder] Already processing'); return; }
+        this._isOrdering = true;
+
+        // Disable the order button visually
+        const btn = document.querySelector('.cart-bar-btn, .place-order-btn');
+        if (btn) { btn.disabled = true; btn.innerText = 'Sending...'; }
+
+        const releaseLock = () => {
+            this._isOrdering = false;
+            if (btn) { btn.disabled = false; btn.innerText = 'ORDER NOW'; }
+        };
+
+        try {
         const orderId = await window.FirebaseSync.getNextOrderSerial(this.roomNumber);
         this.activeOrderId = orderId;
         localStorage.setItem(`br_active_order_${this.roomNumber}`, orderId);
@@ -639,6 +677,11 @@ class GuestPortal {
 
         this.updateActivePreview(true);
         this.fetchGuestData(); // Refresh tracking
+        releaseLock();
+        } catch(e) {
+            console.error('[placeOrder] failed:', e);
+            releaseLock();
+        }
     }
 
     updateTrackingUI(status) {
