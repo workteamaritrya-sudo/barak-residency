@@ -24,7 +24,7 @@ const firebaseConfig = {
     appId: "1:3871550492:web:2cf49bc0a963b4888f43d9"
 };
 
-const firebaseApp = initializeApp(firebaseConfig, 'waiter-app');
+const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
 
@@ -49,11 +49,12 @@ async function getNextOrderSerial(tableId) {
     try {
         const tableRef = doc(db, 'tables', String(tableId));
         let nextSerial = 1;
-        // runTransaction was removed from imports, using direct read/write for simplicity
-        const snap = await getDoc(tableRef);
-        const curr = snap.exists() ? (snap.data().lifetimeOrderCount || 0) : 0;
-        nextSerial = curr + 1;
-        await updateDoc(tableRef, { lifetimeOrderCount: nextSerial });
+        await runTransaction(db, async (tx) => {
+            const snap = await tx.get(tableRef);
+            const curr = snap.exists() ? (snap.data().lifetimeOrderCount || 0) : 0;
+            nextSerial = curr + 1;
+            tx.update(tableRef, { lifetimeOrderCount: nextSerial });
+        });
         return `${tableId}-${nextSerial}`;
     } catch (e) {
         return `${tableId}-${Date.now().toString().slice(-4)}`;
@@ -113,8 +114,13 @@ function startListeners() {
 
     onSnapshot(collection(db, 'menuItems'), (snap) => {
         const newMenu = [];
-        snap.forEach(d => newMenu.push({ id: d.id, ...d.data() }));
-        if (newMenu.length > 0) menu = newMenu.filter(i => i.isAvailable !== false);
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.name) newMenu.push({ id: d.id, ...data });
+        });
+        if (newMenu.length > 0) {
+            menu = newMenu.filter(i => i.isAvailable !== false);
+        }
         renderMenu(document.getElementById('rest-waiter-menu-search')?.value || '');
     });
 }
