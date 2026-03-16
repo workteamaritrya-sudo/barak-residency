@@ -114,7 +114,7 @@ function startListeners() {
         const newMenu = [];
         snap.forEach(d => newMenu.push({ id: d.id, ...d.data() }));
         if (newMenu.length > 0) menu = newMenu.filter(i => i.isAvailable !== false);
-        if (activeTableId) renderMenu('');
+        renderMenu(document.getElementById('rest-waiter-menu-search')?.value || '');
     });
 }
 
@@ -459,21 +459,39 @@ function renderMenu(search = '') {
         return;
     }
     const cats = {};
-    filtered.forEach(i => { const c = i.category || 'General'; if (!cats[c]) cats[c] = []; cats[c].push(i); });
-    Object.keys(cats).forEach(cat => {
+    filtered.forEach(item => { 
+        const c = item.category || 'General'; 
+        if (!cats[c]) cats[c] = []; 
+        cats[c].push(item); 
+    });
+    
+    // Sort categories (Main Course first, etc)
+    const sortedCats = Object.keys(cats).sort((a,b) => {
+        if (a === 'Main Course') return -1;
+        if (b === 'Main Course') return 1;
+        return a.localeCompare(b);
+    });
+
+    sortedCats.forEach(cat => {
         const h = document.createElement('div');
         h.className = 'menu-category-header'; h.innerText = cat.toUpperCase(); grid.appendChild(h);
         cats[cat].forEach(item => {
             const el = document.createElement('div'); el.className = 'menu-item';
-            const photo = item.imageUrl ? `<img src="${item.imageUrl}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-bottom:5px;">` : '';
-            el.innerHTML = `${photo}
-                <div style="display:flex;justify-content:space-between;align-items:start;">
+            const photo = item.imageUrl ? `<img src="${item.imageUrl}" style="width:100%;height:140px;object-fit:cover;border-radius:12px;margin-bottom:8px;box-shadow:0 4px 8px rgba(0,0,0,0.3);">` : '';
+            el.innerHTML = `
+                ${photo}
+                <div style="display:flex;justify-content:space-between;align-items:center;">
                     <div class="menu-icon">${item.icon || '🍽'}</div>
-                    <div class="menu-price">&#8377;${item.price}</div>
+                    <div class="menu-price">&#8377;${item.price || 0}</div>
                 </div>
                 <div class="menu-name">${item.name || 'Unnamed Item'}</div>
-                <div style="font-size:0.75rem;color:var(--color-slate-400);height:32px;line-height:1.2;overflow:hidden;margin-bottom:0.8rem;">${item.description || ''}</div>
-                <button class="menu-add-btn" onclick="window.waiterApp.promptVariant({id:'${item.id}',name:'${(item.name || '').replace(/'/g,"\\'")}',price:${item.price || 0}})">Add Item</button>`;
+                <div class="menu-desc">${item.description || 'No description available.'}</div>
+                <div style="margin-top:auto; padding-top:10px;">
+                    <button class="menu-add-btn" style="position:static; width:100%; border-radius:8px; padding:0.6rem;" 
+                        onclick="window.waiterApp.promptVariant({id:'${item.id}',name:'${(item.name || '').replace(/'/g,"\\'")}',price:${item.price || 0}})">
+                        Add to Order
+                    </button>
+                </div>`;
             grid.appendChild(el);
         });
     });
