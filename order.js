@@ -238,7 +238,6 @@ class GuestPortal {
             }
         });
 
-
         // 2. Room & Guest Listener
         onSnapshot(doc(window.firebaseFS, 'rooms', this.roomNumber.toString()), (d) => {
             if (d.exists()) {
@@ -246,70 +245,78 @@ class GuestPortal {
                 this.roomStatus = data.status || 'available';
                 this.guestName = data.guestName || 'Guest';
                 this.salutation = data.salutation || '';
+                this.stayID = data.currentStayId || null;
                 this.updateBranding();
+                this.setupOrdersListener(); // Re-setup with stayID if it changed
             }
         });
+    }
 
-        // 3. Active Order Tracking — listen to this room's orders in real-time
-        const { query: qFn, where: wFn } = window.firebaseHooks;
-        const roomOrdersQuery = qFn(
-            collection(window.firebaseFS, 'orders'),
-            wFn('roomNumber', '==', String(this.roomNumber))
-        );
-        onSnapshot(roomOrdersQuery, (snap) => {
+    setupOrdersListener() {
+        if (this.ordersUnsubscribe) this.ordersUnsubscribe();
+
+        const { collection, onSnapshot, query: qFn, where: wFn } = window.firebaseHooks;
+        let roomOrdersQuery;
+
+        if (this.stayID) {
+            roomOrdersQuery = qFn(
+                collection(window.firebaseFS, 'orders'),
+                wFn('roomNumber', '==', String(this.roomNumber)),
+                wFn('stayID', '==', this.stayID)
+            );
+        } else {
+            roomOrdersQuery = qFn(
+                collection(window.firebaseFS, 'orders'),
+                wFn('roomNumber', '==', String(this.roomNumber))
+            );
+        }
+
+        this.ordersUnsubscribe = onSnapshot(roomOrdersQuery, (snap) => {
             if (snap.empty) {
                 const tbox = document.querySelector('.tracker-box');
                 if (tbox) tbox.style.display = 'none';
                 this.renderSessionHistory([]);
                 return;
             }
-            
+
             const allOrders = snap.docs.map(d => d.data());
+            // Sort by true timestamp
+            allOrders.sort((a, b) => {
+                const ta = a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.timestamp || 0);
+                const tb = b.timestamp?.toMillis ? b.timestamp.toMillis() : (b.timestamp || 0);
+                return tb - ta;
+            });
+
             this.renderSessionHistory(allOrders);
 
             // Pick the most recent non-delivered order
             const active = allOrders
-                .filter(o => o.status !== 'Delivered' && o.status !== 'delivered' && o.status !== 'Cancelled' && o.status !== 'cancelled')
-                .sort((a, b) => {
-                    const ta = a.timestamp?.seconds ? a.timestamp.seconds*1000 : (a.timestamp || 0);
-                    const tb = b.timestamp?.seconds ? b.timestamp.seconds*1000 : (b.timestamp || 0);
-                    return tb - ta;
-                });
+                .filter(o => o.status !== 'Delivered' && o.status !== 'delivered' && o.status !== 'Cancelled' && o.status !== 'cancelled');
 
             if (active.length > 0) {
                 const latest = active[0];
                 this.activeOrderId = latest.order_id || latest.id;
                 localStorage.setItem(`br_active_order_${this.roomNumber}`, this.activeOrderId);
-                
+
                 // Set the ID display in Tracker
                 const tid = document.getElementById('order-id-display');
                 if (tid) tid.innerText = `ID: #${this.activeOrderId}`;
-                
+
                 const tbox = document.querySelector('.tracker-box');
                 if (tbox) tbox.style.display = 'block';
 
                 this.updateTrackingUI(latest.status);
                 this.updateActivePreview(true);
             } else {
-                // All orders delivered or none active — clear tracker
-                const clearTracker = () => {
-                    this.activeOrderId = null;
-                    localStorage.removeItem(`br_active_order_${this.roomNumber}`);
-                    const tbox = document.querySelector('.tracker-box');
-                    if (tbox) tbox.style.display = 'none';
-                    this.updateActivePreview(false);
-                };
-
-                // Only delay hiding if we transition FROM an active order (so they see 'Delivered')
-                const wasActive = localStorage.getItem(`br_active_order_${this.roomNumber}`);
-                if (wasActive) {
-                    setTimeout(clearTracker, 5000);
-                } else {
-                    clearTracker();
-                }
+                this.activeOrderId = null;
+                localStorage.removeItem(`br_active_order_${this.roomNumber}`);
+                const tbox = document.querySelector('.tracker-box');
+                if (tbox) tbox.style.display = 'none';
+                this.updateActivePreview(false);
             }
         });
     }
+
 
     renderSessionHistory(orders) {
         const listContainer = document.getElementById('session-items-list');
@@ -650,12 +657,13 @@ class GuestPortal {
             id: orderId,
             roomNumber: String(this.roomNumber),
             roomId: String(this.roomNumber),
+            stayID: this.stayID,
             guestName: this.guestName || 'Guest',
             salutation: this.salutation || '',
             items: this.cart,
             total_price: total,
             status: 'Pending',
-            timestamp: Date.now(),
+            timestamp: window.firebaseHooks.serverTimestamp(),
             orderType: 'Room'
         };
 

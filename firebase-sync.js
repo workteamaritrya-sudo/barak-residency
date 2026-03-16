@@ -265,6 +265,7 @@ class FirebaseSyncEngine {
                 if (window.app.currentPortal === 'reception') {
                     window.app.syncState();
                     window.app.renderRoomOrderPanel();
+                    window.app.updateCommandCenter();
                 }
             }
         });
@@ -288,10 +289,19 @@ class FirebaseSyncEngine {
     }
 
     playReceptionAlert() {
+        if (!this.audioUnlocked) return;
         const app = window.app;
         if (app && (app.currentPortal === 'reception' || app.currentTab === 'dashboard' || app.currentTab === 'reception')) {
             new Audio('receptionnotificationalert.mp3.mpeg').play().catch(() => {});
         }
+    }
+
+    unlockAudio() {
+        this.audioUnlocked = true;
+        const btn = document.getElementById('audio-unlock-btn');
+        if (btn) btn.innerHTML = "🔊 ALERTS ACTIVE";
+        // Play a silent pip to unlock
+        new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==').play().catch(() => {});
     }
 
     // --- WRITE OPERATIONS (Firestore Transition) ---
@@ -529,29 +539,25 @@ class FirebaseSyncEngine {
 
     async getNextOrderSerial(roomId) {
         try {
-            // Use Firestore atomic counter in the room document — reliable sequential IDs
-            const roomRef = doc(window.firebaseFS, 'rooms', String(roomId));
-            let nextSerial = 1;
+            const { doc, runTransaction, increment } = window.firebaseHooks;
+            const counterRef = doc(window.firebaseFS, 'metadata', 'counters');
+            let nextGlobalId = 1000;
+            
             await runTransaction(window.firebaseFS, async (tx) => {
-                const roomSnap = await tx.get(roomRef);
-                const current = roomSnap.exists() ? (roomSnap.data().orderSerial || 0) : 0;
-                nextSerial = current + 1;
-                tx.update(roomRef, { orderSerial: nextSerial });
+                const snap = await tx.get(counterRef);
+                if (!snap.exists()) {
+                    tx.set(counterRef, { lastOrderId: 1000 });
+                    nextGlobalId = 1001;
+                } else {
+                    nextGlobalId = (snap.data().lastOrderId || 1000) + 1;
+                }
+                tx.update(counterRef, { lastOrderId: nextGlobalId });
             });
-            return `${roomId}${nextSerial}`;
+            
+            return String(nextGlobalId);
         } catch(e) {
-            console.error("Failed to get next serial", e);
-            // Fallback: count existing orders for this room
-            try {
-                const q = query(
-                    collection(window.firebaseFS, 'orders'),
-                    where('roomNumber', '==', String(roomId))
-                );
-                const snap = await getDocs(q);
-                return `${roomId}${snap.size + 1}`;
-            } catch(e2) {
-                return `${roomId}${Date.now().toString().slice(-4)}`;
-            }
+            console.error("Global sequence failed", e);
+            return String(Date.now()).slice(-6);
         }
     }
 

@@ -70,7 +70,8 @@
             <section id="tab-dashboard" class="portal-content active">
                 <div class="luxury-portal-header">
                     <div class="luxury-identity golden-brand">EXECUTIVE ROOM DASHBOARD</div>
-                    <div style="display: flex; align-items: center; gap: 2rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <button class="btn btn-outline btn-sm" id="audio-unlock-btn" onclick="app.unlockAudio()" style="border-color: var(--gold-primary); color: var(--gold-primary); font-size: 0.7rem;">🔊 ENABLE ALERTS</button>
                         <div class="portal-time-luxury" id="live-clock">--:-- --</div>
                         <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" id="header-logout" style="display: none; border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
                     </div>

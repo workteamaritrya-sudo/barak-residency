@@ -1381,6 +1381,13 @@ class PMSApp {
         document.getElementById('reserve-modal').style.display = 'flex';
     }
 
+    unlockAudio() {
+        if (window.FirebaseSync && window.FirebaseSync.unlockAudio) {
+            window.FirebaseSync.unlockAudio();
+            this.showToast("Audio Alerts Enabled", "success");
+        }
+    }
+
     async submitReservation() {
         const roomNum = this.selectedRoomId;
         const salutation = document.getElementById('res-salutation').value;
@@ -1716,6 +1723,7 @@ class PMSApp {
         }
 
         const roomNum = this.currentRoom;
+        const stayID = `room${roomNum}_${Date.now()}`;
         this.showToast("Executing Atomic Check-in Transaction...", "info");
 
         // Upload Guest Photo & IDs
@@ -1753,6 +1761,7 @@ class PMSApp {
             tariff: Number(tariff) || 0,
             checkInDate: (window.firebaseHooks && window.firebaseHooks.Timestamp) ? window.firebaseHooks.Timestamp.now() : new Date().toISOString(),
             checkInTimestamp: Date.now(),
+            stayID: stayID,
             foodOrders: [],
             billItems: [],
             foodSync: "active",
@@ -1794,6 +1803,7 @@ class PMSApp {
                     guestPhone: phone,
                     checkInDate: Timestamp.now(),
                     currentGuestId: cloudGuestId,
+                    currentStayId: stayID,
                     last_updated: serverTimestamp()
                 });
 
@@ -1814,8 +1824,9 @@ class PMSApp {
                 room.salutation = salutation;
                 room.guestName = name;
                 room.guestPhone = phone;
-                room.guest = { ...guestData, cloudId: cloudGuestId };
+                room.guest = { ...guestData, cloudId: cloudGuestId, stayID: stayID };
                 room.currentGuestId = cloudGuestId;
+                room.currentStayId = stayID;
                 // DO NOT RESET order sequence - preserving local serial
                 this.db.persistRooms();
             }
@@ -1891,11 +1902,15 @@ class PMSApp {
         const roomTotal = tariff * daysBilled;
         document.getElementById('cc-room-total').innerText = `₹${roomTotal}`;
 
-        // Mission: Instant Reception Sync (Live Query from Orders Collection)
+        // Mission: Instant Reception Sync + Strict stayID isolation
+        const stayID = room.currentStayId || guest.stayID;
         const sessionOrders = this.db.kitchenOrders.filter(o => {
             const oTime = o.timestamp && typeof o.timestamp === 'object' && o.timestamp.seconds ? o.timestamp.seconds * 1000 : (Number(o.timestamp) || 0);
-            return (o.roomNumber == room.number || o.roomId == room.number) && 
-                   oTime >= checkInTimeValue && 
+            const matchesRoom = (String(o.roomNumber) === String(room.number) || String(o.roomId) === String(room.number));
+            const matchesStay = stayID ? (o.stayID === stayID) : (oTime >= checkInTimeValue);
+            
+            return matchesRoom && 
+                   matchesStay && 
                    o.status !== 'Cancelled' &&
                    o.status !== 'cancelled';
         });
@@ -1927,24 +1942,43 @@ class PMSApp {
             finalizeBtn.style.cursor = isBillGen ? "pointer" : "not-allowed";
         }
 
-        // Render Itemized Food Orders
+        // Mission: Grouped Itemized Bill Rendering
         const itemsContainer = document.getElementById('cc-food-items-list');
         if (itemsContainer) {
             itemsContainer.innerHTML = '';
-            const ordersToDisplay = sessionOrders.length > 0 ? sessionOrders : (guest.foodOrders || []);
             
-            if (ordersToDisplay.length > 0) {
-                ordersToDisplay.forEach(order => {
-                    const row = document.createElement('div');
-                    row.className = 'd-flex justify-content-between text-xs mb-1';
-                    row.innerHTML = `
-                        <span>Order #${order.order_id || order.id || 'N/A'} [${order.status || 'Delivered'}]</span>
-                        <span>₹${Number(order.total_price || order.total || order.total_amount || 0).toLocaleString()}</span>
+            if (sessionOrders.length > 0) {
+                // Re-sort session orders by time ascending
+                sessionOrders.sort((a,b) => {
+                    const ta = a.timestamp?.seconds ? a.timestamp.seconds*1000 : (a.timestamp || 0);
+                    const tb = b.timestamp?.seconds ? b.timestamp.seconds*1000 : (b.timestamp || 0);
+                    return ta - tb;
+                });
+
+                sessionOrders.forEach(order => {
+                    const orderGroup = document.createElement('div');
+                    orderGroup.className = 'order-summary-group';
+                    orderGroup.style.cssText = 'margin-bottom: 0.8rem; padding: 0.5rem; border-radius: 6px; background: rgba(255,b,b,0.03); border: 1px solid rgba(212,175,55,0.1);';
+                    
+                    const timeStr = order.timestamp ? this.db.timeOnlyIST(order.timestamp) : '---';
+                    const itemsHtml = order.items.map(i => `
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color: #ddd;">
+                            <span>${i.qty}x ${i.name}</span>
+                            <span>₹${i.qty * i.price}</span>
+                        </div>
+                    `).join('');
+
+                    orderGroup.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; font-size: 0.65rem; color: var(--gold-primary); font-weight: 800; text-transform: uppercase; margin-bottom: 0.3rem;">
+                            <span>Order #${order.order_id || order.id}</span>
+                            <span>${timeStr}</span>
+                        </div>
+                        ${itemsHtml}
                     `;
-                    itemsContainer.appendChild(row);
+                    itemsContainer.appendChild(orderGroup);
                 });
             } else {
-                itemsContainer.innerHTML = '<span class="text-xs text-gray">No food orders.</span>';
+                itemsContainer.innerHTML = '<div class="text-gray text-center p-3 text-xs">No food orders recorded</div>';
             }
         }
     }
@@ -3202,6 +3236,7 @@ class PMSApp {
             roomNumber: isRoomOrder ? targetId.toString() : null,
             tableId: !isRoomOrder ? targetId.toString() : null,
             guestId: (isRoomOrder && activeRoom) ? activeRoom.currentGuestId : null,
+            stayID: (isRoomOrder && activeRoom) ? activeRoom.currentStayId : null,
             items: this.db.cart.map(c => ({
                 id: c.item.id,
                 name: c.item.name,
@@ -3212,7 +3247,7 @@ class PMSApp {
             total: Number(total),
             total_price: Number(total),
             status: 'Pending',
-            timestamp: Date.now(),
+            timestamp: (window.firebaseHooks && window.firebaseHooks.serverTimestamp) ? window.firebaseHooks.serverTimestamp() : Date.now(),
             orderType: isRoomOrder ? 'Room' : 'Table',
             guestName: isRoomOrder && activeRoom ? activeRoom.guestName : (this.db.restaurantTables[targetId]?.guestName || 'Walk-in')
         };
