@@ -182,13 +182,13 @@ function renderMenu(categoryFilter = 'All') {
         pills.innerHTML = cats.map(c => `<button class="waiter-cat-pill ${categoryFilter === c ? 'active' : ''}" onclick="window.renderMenu('${c}')">${c}</button>`).join('');
     }
 
-    const items = categoryFilter === 'All' ? filteredMenu : filteredMenu.filter(i => (i.category || i.Category) === categoryFilter);
+    const items = categoryFilter === 'All' ? filteredMenu : filteredMenu.filter(i => (i.category || i.Category || 'General') === categoryFilter);
 
     grid.innerHTML = items.map(i => {
-        const name = i.name || i.Name || 'Item';
-        const price = i.price || i.PriceFull || 0;
-        const priceH = i.priceHalf || 0;
-        const imgUrl = i.imageUrl || 'br.png';
+        const name = i.name || i.Name || i.itemName || 'Unnamed Item';
+        const price = i.price || i.PriceFull || i.Price || i.priceFull || 0;
+        const priceH = i.priceHalf || i.PriceHalf || 0;
+        const imgUrl = i.imageUrl || i.ImageURL || i.image || 'br.png';
         const halfLine = priceH ? `<div class="item-half-price">Half: ₹${priceH}</div>` : '';
         return `
             <div class="waiter-menu-card" onclick="window.promptPortion('${i.id}')">
@@ -207,16 +207,18 @@ window.promptPortion = function(itemId) {
     if (!item) return;
 
     const modal = document.getElementById('waiter-portion-modal');
-    document.getElementById('wpm-item-name').innerText = item.name || item.Name;
-    document.getElementById('wpm-item-desc').innerText = item.description || 'Select preference';
+    const name = item.name || item.Name || item.itemName || 'Item';
+    const desc = item.description || item.Description || 'Select preference';
+    document.getElementById('wpm-item-name').innerText = name;
+    document.getElementById('wpm-item-desc').innerText = desc;
     const ctn = document.getElementById('wpm-options-container');
     ctn.innerHTML = '';
 
-    const price = item.price || item.PriceFull || 0;
-    const type = item.portionType || 'Plate';
+    const price = item.price || item.PriceFull || item.Price || item.priceFull || 0;
+    const type = item.portionType || item.PortionType || 'Plate';
 
     if (type === 'Plate' || type === 'Portion') {
-        const halfPrice = item.priceHalf || 0;
+        const halfPrice = item.priceHalf || item.PriceHalf || 0;
         const opts = [{ label: 'Full', val: 'Full', price: price }];
         if (halfPrice > 0) opts.push({ label: 'Half', val: 'Half', price: halfPrice });
         opts.forEach(opt => {
@@ -234,7 +236,8 @@ window.promptPortion = function(itemId) {
 
 function promptQuantity(item, variant, label, price) {
     const ctn = document.getElementById('wpm-options-container');
-    document.getElementById('wpm-item-name').innerText = `${item.name || item.Name} (${label})`;
+    const name = item.name || item.Name || item.itemName || 'Item';
+    document.getElementById('wpm-item-name').innerText = `${name} (${label})`;
     ctn.innerHTML = '';
     let qty = 1;
 
@@ -251,9 +254,10 @@ function promptQuantity(item, variant, label, price) {
     addBtn.className = 'wpm-add-btn';
     addBtn.innerText = `ADD TO CART — ₹${price}`;
     addBtn.onclick = () => {
+        const name = item.name || item.Name || item.itemName || 'Item';
         const cartItem = {
             id: `${item.id}_${variant}`,
-            name: variant === 'Full' || variant === 'Regular' ? (item.name || item.Name) : `${item.name || item.Name} (${label})`,
+            name: variant === 'Full' || variant === 'Regular' ? name : `${name} (${label})`,
             price: price,
             qty: qty,
             variant: variant,

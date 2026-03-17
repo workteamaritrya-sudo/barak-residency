@@ -474,9 +474,9 @@ function renderPickupMenu(search = '') {
         el.className = 'waiter-menu-card'; // Reuse waiter card styles
         el.style.cssText = 'background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:12px; padding:1rem; cursor:pointer; text-align:center;';
         
-        const name = item.name || item.Name || 'Item';
-        const price = item.price || item.PriceFull || 0;
-        const img = item.imageUrl || 'br.png';
+        const name = item.name || item.Name || item.itemName || 'Item';
+        const price = item.price || item.PriceFull || item.Price || item.priceFull || 0;
+        const img = item.imageUrl || item.ImageURL || item.image || 'br.png';
 
         el.innerHTML = `
             <img src="${img}" onerror="this.src='br.png'" style="width:100%; height:80px; object-fit:cover; border-radius:8px; margin-bottom:0.5rem;">
@@ -495,16 +495,16 @@ function filterPickupMenu(val) {
 function promptPickupItem(item) {
     const modal = document.getElementById('pickup-item-modal');
     const container = document.getElementById('pim-options-container');
-    const name = item.name || item.Name || 'Item';
-    const price = item.price || item.PriceFull || 0;
+    const name = item.name || item.Name || item.itemName || 'Item';
+    const price = item.price || item.PriceFull || item.Price || item.priceFull || 0;
     
     document.getElementById('pim-item-name').innerText = name;
     container.innerHTML = '';
 
     const type = item.portionType || 'Plate';
     
-    if (type === 'Plate') {
-        const priceHalf = item.priceHalf || Math.floor(price * 0.6);
+    if (type === 'Plate' || type === 'Portion') {
+        const priceHalf = item.priceHalf || item.PriceHalf || Math.floor(price * 0.6);
         const options = [
             { label: 'Full Plate', val: 'Full', price: price },
             { label: 'Half Plate', val: 'Half', price: priceHalf }
@@ -549,10 +549,11 @@ function addToPickupCart(item, variant, label, price, qty) {
     if (existing) {
         existing.qty += qty;
     } else {
+        const name = item.name || item.Name || item.itemName || 'Item';
         pickupCart.push({
             id: id,
             itemId: item.id,
-            name: item.name || item.Name,
+            name: name,
             variant: variant,
             label: label,
             price: price,
@@ -787,8 +788,8 @@ function renderAvailabilityTool() {
     container.innerHTML = '';
     menu.forEach(item => {
         const isUnavail = unavailableItems.includes(item.id);
-        const itemName = item.name || item.Name || 'Unknown Item';
-        const itemPrice = item.price || item.PriceFull || item.Price || 0;
+        const itemName = item.name || item.Name || item.itemName || 'Unnamed Item';
+        const itemPrice = item.price || item.PriceFull || item.Price || item.priceFull || 0;
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:0.75rem;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:0.5rem;border:1px solid var(--glass-border);';
         row.innerHTML = `

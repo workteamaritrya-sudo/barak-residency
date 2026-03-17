@@ -116,10 +116,11 @@ function startListeners() {
         const newMenu = [];
         snap.forEach(d => {
             const data = d.data();
-            if (data.name && data.name.trim().length > 0) newMenu.push({ id: d.id, ...data });
+            const name = data.name || data.Name || data.itemName || '';
+            if (name.trim().length > 0) newMenu.push({ id: d.id, ...data });
         });
         if (newMenu.length > 0) {
-            menu = newMenu.filter(i => i.isAvailable !== false);
+            menu = newMenu;
         }
         renderMenu(document.getElementById('rest-waiter-menu-search')?.value || '');
     });
@@ -146,14 +147,14 @@ async function loadInitialData() {
         }
     }
 
-    const menuSnap = await getDocs(collection(db, 'menuItems'));
     if (!menuSnap.empty) {
         const cloudMenu = [];
         menuSnap.forEach(d => {
             const data = d.data();
-            if (data.name && data.name.trim().length > 0) cloudMenu.push({ id: d.id, ...data });
+            const name = data.name || data.Name || data.itemName || '';
+            if (name.trim().length > 0) cloudMenu.push({ id: d.id, ...data });
         });
-        menu = cloudMenu.filter(i => i.isAvailable !== false);
+        menu = cloudMenu;
         console.log('[Menu] Loaded from Cloud:', menu.length);
     } 
     
@@ -457,8 +458,8 @@ function renderMenu(search = '') {
     if (!grid) return;
     grid.innerHTML = '';
     const filtered = menu.filter(i => {
-        const name = (i.name || '').toLowerCase();
-        const cat = (i.category || '').toLowerCase();
+        const name = (i.name || i.Name || i.itemName || '').toLowerCase();
+        const cat = (i.category || i.Category || '').toLowerCase();
         const s = search.toLowerCase();
         const matchesSearch = name.includes(s) || cat.includes(s);
         const available = i.isAvailable !== false && !unavailableItems.includes(i.id);
@@ -487,10 +488,10 @@ function renderMenu(search = '') {
         h.className = 'menu-category-header'; h.innerText = cat.toUpperCase(); grid.appendChild(h);
         cats[cat].forEach(item => {
             const el = document.createElement('div'); el.className = 'menu-item';
-            const img = item.imageUrl || 'br.png';
-            const name = item.name || 'Unnamed Item';
-            const price = item.price || 0;
-            const desc = item.description || 'Special';
+            const img = item.imageUrl || item.ImageURL || item.image || 'br.png';
+            const name = item.name || item.Name || item.itemName || 'Unnamed Item';
+            const price = item.price || item.PriceFull || item.Price || item.priceFull || 0;
+            const desc = item.description || item.Description || 'Special';
 
             el.innerHTML = `
                 <img src="${img}" onerror="this.src='br.png'">
