@@ -119,11 +119,30 @@ function startListeners() {
     });
 
     // Menu items
-    onSnapshot(collection(db, 'menuItems'), snap => {
-        const newMenu = [];
-        snap.forEach(d => newMenu.push({ id: d.id, ...d.data() }));
-        if (newMenu.length > 0) menu = newMenu;
-        renderAvailabilityTool();
+    onSnapshot(collection(db, 'menuItems'), async snap => {
+        if (!snap.empty) {
+            const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
+            // Auto-repair if junk
+            const isJunk = docs.some(d => {
+                const name = d.name || d.Name || d.itemName;
+                const price = d.price || d.PriceFull || d.Price;
+                return !name || price == null || price === 0;
+            });
+
+            if (isJunk) {
+                console.warn("[Menu] Junk detected. Repairing...");
+                for(const item of getDefaultMenu()) {
+                   await setDoc(doc(db, 'menuItems', item.id), item);
+                }
+                return;
+            }
+            menu = docs;
+            renderAvailabilityTool();
+            if (document.getElementById('pickup-modal')?.style.display === 'flex') {
+                renderPickupMenu(document.getElementById('pickup-menu-search')?.value || '');
+            }
+        }
     });
 }
 

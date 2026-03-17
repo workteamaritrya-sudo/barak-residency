@@ -89,16 +89,35 @@ function startListeners() {
         populateRoomSelect();
     });
 
-    // Listen to Menu (Firestore takes priority if populated)
-    onSnapshot(collection(db, 'menuItems'), (snap) => {
+    // Listen to Menu (Firestore takes priority if populated and valid)
+    onSnapshot(collection(db, 'menuItems'), async (snap) => {
+        const { setDoc, doc } = hooks;
         if (!snap.empty) {
-            const newMenu = [];
-            snap.forEach(d => {
-                const data = d.data();
-                newMenu.push({ id: d.id, ...data });
+            const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
+            // Check if Firestore data is "junk" (missing names or prices)
+            const isJunk = docs.some(d => {
+                const name = d.name || d.Name || d.itemName;
+                const price = d.price || d.PriceFull || d.Price;
+                return !name || price == null || price === 0;
             });
-            menu = newMenu;
+
+            if (isJunk) {
+                console.warn("[Menu] Junk detected in Firestore. Repairing...");
+                for (const item of BARAK_MENU) {
+                    await setDoc(doc(db, 'menuItems', item.id), item);
+                }
+                return; // Let the next snapshot handle it
+            }
+
+            menu = docs;
             renderMenu();
+        } else {
+            // Firestore empty? Push fallback
+            console.warn("[Menu] Firestore empty. Population fallback...");
+            for (const item of BARAK_MENU) {
+                await setDoc(doc(db, 'menuItems', item.id), item);
+            }
         }
     });
 
@@ -254,11 +273,12 @@ function promptQuantity(item, variant, label, price) {
     addBtn.className = 'wpm-add-btn';
     addBtn.innerText = `ADD TO CART — ₹${price}`;
     addBtn.onclick = () => {
-        const name = item.name || item.Name || item.itemName || 'Item';
+        const nameFallback = item.name || item.Name || item.itemName || 'Item';
+        const finalName = variant === 'Full' || variant === 'Regular' ? nameFallback : `${nameFallback} (${label})`;
         const cartItem = {
             id: `${item.id}_${variant}`,
-            name: variant === 'Full' || variant === 'Regular' ? name : `${name} (${label})`,
-            price: price,
+            name: finalName || 'Unknown Item',
+            price: price || 0,
             qty: qty,
             variant: variant,
             timestamp: Date.now()
