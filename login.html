@@ -197,7 +197,9 @@
                 
                 // 3. Redirect based on role
                 const role = (userData.role || "").toLowerCase();
-                if (role.includes("rest") && role.includes("waiter")) {
+                if (role.includes("hotel") && role.includes("waiter")) {
+                    window.location.href = 'hotel_waiter.html';
+                } else if (role.includes("rest") && role.includes("waiter")) {
                     window.location.href = 'restaurant_waiter.html';
                 } else if (role.includes("rest") && role.includes("desk")) {
                     window.location.href = 'restaurant_desk.html';
