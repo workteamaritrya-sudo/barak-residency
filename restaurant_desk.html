@@ -93,13 +93,53 @@
 </div>
 
 <!-- ════════════════════════════════════
-     AVAILABILITY MODAL
+     PICKUP ORDER MENU MODAL
      ════════════════════════════════════ -->
-<div id="availability-modal" class="modal-overlay" style="display:none;">
+<div id="pickup-modal" class="modal-overlay" style="display:none; z-index:10015;">
+    <div class="security-box" style="width:900px; max-width:98vw; height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden;">
+        <div class="luxury-portal-header" style="padding:1rem 1.5rem; border-bottom:1px solid var(--glass-border);">
+            <div style="font-weight:800; color:var(--gold-primary);">NEW PICKUP ORDER</div>
+            <button onclick="document.getElementById('pickup-modal').style.display='none'" style="background:transparent; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        
+        <div style="display:grid; grid-template-columns: 1fr 320px; flex:1; overflow:hidden;">
+            <!-- Menu Area -->
+            <div style="display:flex; flex-direction:column; border-right:1px solid var(--glass-border); background:rgba(0,0,0,0.2);">
+                <div style="padding:1rem; border-bottom:1px solid var(--glass-border);">
+                    <input type="search" id="pickup-menu-search" class="form-control" placeholder="Search menu..." oninput="window.deskApp.filterPickupMenu(this.value)">
+                </div>
+                <div id="pickup-menu-grid" style="flex:1; overflow-y:auto; padding:1.5rem; display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:1rem;"></div>
+            </div>
+            
+            <!-- Cart Area -->
+            <div style="display:flex; flex-direction:column; background:rgba(0,0,0,0.3);">
+                <div style="padding:1rem; border-bottom:1px solid var(--glass-border); font-weight:700; font-size:0.9rem; color:var(--color-slate-400);">CART</div>
+                <div id="pickup-cart-items" style="flex:1; overflow-y:auto; padding:1rem;"></div>
+                <div style="padding:1.5rem; border-top:1px solid var(--glass-border); background:rgba(0,0,0,0.4);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:1rem; font-size:1.2rem; font-weight:800;">
+                        <span>Total</span>
+                        <span style="color:#4ADE80;">₹<span id="pickup-cart-total">0</span></span>
+                    </div>
+                    <button class="btn btn-primary btn-block" style="padding:1rem; font-size:1.1rem;" onclick="window.deskApp.submitPickupOrder()">PLACE PICKUP ORDER</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Item Variant/Quantity Prompt -->
+<div id="pickup-item-modal" class="modal-overlay" style="display:none; z-index:10020;">
+    <div class="security-box" style="width:400px; padding:2rem; text-align:center;">
+        <h3 id="pim-item-name" style="color:var(--gold-primary); margin-bottom:1rem;"></h3>
+        <div id="pim-options-container" style="display:flex; flex-direction:column; gap:0.8rem;"></div>
+        <button class="btn btn-outline mt-4" onclick="document.getElementById('pickup-item-modal').style.display='none'">Cancel</button>
+    </div>
+</div>
+
+<div id="availability-modal" class="modal-overlay" style="display:none; z-index:10010;">
     <div class="security-box" style="width:620px; max-height:80vh; display:flex; flex-direction:column;">
         <h3>Menu Item Availability</h3>
         <p class="text-sm text-gray mb-4">Toggle items that are currently out of stock. Changes reflect instantly on all waiter portals.</p>
-        <!-- ✅ Correct ID that renderAvailabilityTool() uses -->
         <div id="availability-list" style="flex:1; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:1rem;"></div>
         <button class="btn btn-outline mt-4" onclick="document.getElementById('availability-modal').style.display='none'">Close</button>
     </div>

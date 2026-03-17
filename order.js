@@ -79,7 +79,7 @@ class GuestPortal {
             document.getElementById('room-display').innerText = `Room ${this.roomNumber}`;
             this.activeOrderId = localStorage.getItem(`br_active_order_${this.roomNumber}`);
 
-            // Clear stale cached menu (might have old broken 'Dish/&#8377;0' data)
+            // Clear stale cached menu (might have old broken 'Dish/₹0' data)
             const cachedRaw = localStorage.getItem('br_menu');
             if (cachedRaw) {
                 try {
@@ -350,7 +350,7 @@ class GuestPortal {
                 <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); padding: 10px; border-radius: 12px; margin-bottom: 8px;">
                     <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; margin-bottom: 4px;">
                         <span>Order #${o.order_id || o.id}</span>
-                        <span>&#8377;${total}</span>
+                        <span>₹${total}</span>
                     </div>
                     <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 4px;">${itemsList}</div>
                     <div style="font-size: 0.75rem; color: ${statColor}; font-weight: bold;">Status: ${stat}</div>
@@ -417,7 +417,7 @@ class GuestPortal {
                     <div class="food-info">
                         <div class="food-name">${name}</div>
                         <div class="food-desc">${desc}</div>
-                        <div class="food-price">&#8377;${price}</div>
+                        <div class="food-price">₹${price}</div>
                     </div>
                     <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
                 `;
@@ -461,7 +461,7 @@ class GuestPortal {
                 <div class="food-info">
                     <div class="food-name">${name}</div>
                     <div class="food-desc">${desc}</div>
-                    <div class="food-price">&#8377;${price}</div>
+                    <div class="food-price">₹${price}</div>
                 </div>
                 <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
             `;
@@ -508,7 +508,7 @@ class GuestPortal {
                 const btn = document.createElement('button');
                 btn.className = 'reorder-btn tint-blur';
                 btn.style.marginBottom = '0.5rem';
-                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">&#8377;${opt.price}</span></div>`;
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
                 btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
                 container.appendChild(btn);
             });
@@ -534,7 +534,7 @@ class GuestPortal {
                 const btn = document.createElement('button');
                 btn.className = 'reorder-btn tint-blur';
                 btn.style.marginBottom = '0.5rem';
-                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">&#8377;${opt.price}</span></div>`;
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
                 btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
                 container.appendChild(btn);
             });
@@ -548,7 +548,7 @@ class GuestPortal {
                 const btn = document.createElement('button');
                 btn.className = 'reorder-btn tint-blur';
                 btn.style.marginBottom = '0.5rem';
-                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">&#8377;${opt.price}</span></div>`;
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
                 btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
                 container.appendChild(btn);
             });
@@ -638,15 +638,15 @@ class GuestPortal {
         
         itemsList.innerHTML = '';
         const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
-        totalEl.innerHTML = '&#8377;' + total;
+        totalEl.innerHTML = '₹' + total;
         
         this.cart.forEach((c, index) => {
             itemsList.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.8rem;">
                 <div style="flex:1;">
                     <div style="font-weight:bold;">${c.name}</div>
-                    <div style="color:var(--color-slate-400); font-size:0.9rem;">${c.qty} x &#8377;${c.price}</div>
+                    <div style="color:var(--color-slate-400); font-size:0.9rem;">${c.qty} x ₹${c.price}</div>
                 </div>
-                <div style="font-weight:bold; color:var(--gold-primary); margin-right:1rem;">&#8377;${c.qty * c.price}</div>
+                <div style="font-weight:bold; color:var(--gold-primary); margin-right:1rem;">₹${c.qty * c.price}</div>
                 <button onclick="portal.removeFromCart(${index})" style="background:transparent; border:none; color:var(--color-red-500); font-size:1.5rem; cursor:pointer;">&times;</button>
             </div>`;
         });

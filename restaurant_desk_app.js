@@ -38,6 +38,7 @@ let unavailableItems = [];
 let restaurantRevenue = 0;
 let activePickups = [];
 let pickupCounter = 0;
+let pickupCart = [];
 
 // ── Firebase Helpers ──────────────────────────────────────
 
@@ -447,12 +448,189 @@ function printBill(tableId, total) {
 
 // ── Pickup Orders ─────────────────────────────────────────
 
+// ── Pickup Orders ─────────────────────────────────────────
+
 async function generatePickupOrder() {
+    pickupCart = [];
+    renderPickupCart();
+    renderPickupMenu('');
+    document.getElementById('pickup-modal').style.display = 'flex';
+}
+
+function renderPickupMenu(search = '') {
+    const grid = document.getElementById('pickup-menu-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    const filtered = menu.filter(i => {
+        const name = (i.name || i.Name || '').toLowerCase();
+        const cat = (i.category || i.Category || '').toLowerCase();
+        const s = search.toLowerCase();
+        return (name.includes(s) || cat.includes(s)) && (i.isAvailable !== false && !unavailableItems.includes(i.id));
+    });
+
+    filtered.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'waiter-menu-card'; // Reuse waiter card styles
+        el.style.cssText = 'background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:12px; padding:1rem; cursor:pointer; text-align:center;';
+        
+        const name = item.name || item.Name || 'Item';
+        const price = item.price || item.PriceFull || 0;
+        const img = item.imageUrl || 'br.png';
+
+        el.innerHTML = `
+            <img src="${img}" onerror="this.src='br.png'" style="width:100%; height:80px; object-fit:cover; border-radius:8px; margin-bottom:0.5rem;">
+            <div style="font-weight:bold; font-size:0.9rem; margin-bottom:0.3rem; height:2.4rem; overflow:hidden;">${name}</div>
+            <div style="color:var(--gold-primary); font-weight:800;">₹${price}</div>
+        `;
+        el.onclick = () => promptPickupItem(item);
+        grid.appendChild(el);
+    });
+}
+
+function filterPickupMenu(val) {
+    renderPickupMenu(val);
+}
+
+function promptPickupItem(item) {
+    const modal = document.getElementById('pickup-item-modal');
+    const container = document.getElementById('pim-options-container');
+    const name = item.name || item.Name || 'Item';
+    const price = item.price || item.PriceFull || 0;
+    
+    document.getElementById('pim-item-name').innerText = name;
+    container.innerHTML = '';
+
+    const type = item.portionType || 'Plate';
+    
+    if (type === 'Plate') {
+        const priceHalf = item.priceHalf || Math.floor(price * 0.6);
+        const options = [
+            { label: 'Full Plate', val: 'Full', price: price },
+            { label: 'Half Plate', val: 'Half', price: priceHalf }
+        ];
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-outline';
+            btn.style.width = '100%';
+            btn.innerHTML = `<span>${opt.label}</span> <span style="margin-left:auto; font-weight:bold;">₹${opt.price}</span>`;
+            btn.onclick = () => { addToPickupCart(item, opt.val, opt.label, opt.price, 1); modal.style.display = 'none'; };
+            container.appendChild(btn);
+        });
+    } else if (type === 'Bottle') {
+        const options = [
+            { label: '1L Bottle', val: '1L', price: price },
+            { label: '750ml', val: '750ml', price: Math.floor(price * 0.8) },
+            { label: '500ml', val: '500ml', price: Math.floor(price * 0.6) }
+        ];
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-outline';
+            btn.style.width = '100%';
+            btn.innerHTML = `<span>${opt.label}</span> <span style="margin-left:auto; font-weight:bold;">₹${opt.price}</span>`;
+            btn.onclick = () => { addToPickupCart(item, opt.val, opt.label, opt.price, 1); modal.style.display = 'none'; };
+            container.appendChild(btn);
+        });
+    } else {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-primary';
+        btn.style.width = '100%';
+        btn.innerHTML = `Add Standard Portion — ₹${price}`;
+        btn.onclick = () => { addToPickupCart(item, 'Regular', 'Standard', price, 1); modal.style.display = 'none'; };
+        container.appendChild(btn);
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function addToPickupCart(item, variant, label, price, qty) {
+    const id = `${item.id}_${variant}`;
+    const existing = pickupCart.find(i => i.id === id);
+    if (existing) {
+        existing.qty += qty;
+    } else {
+        pickupCart.push({
+            id: id,
+            itemId: item.id,
+            name: item.name || item.Name,
+            variant: variant,
+            label: label,
+            price: price,
+            qty: qty
+        });
+    }
+    renderPickupCart();
+}
+
+function removeFromPickupCart(idx) {
+    pickupCart.splice(idx, 1);
+    renderPickupCart();
+}
+
+function renderPickupCart() {
+    const container = document.getElementById('pickup-cart-items');
+    const totalEl = document.getElementById('pickup-cart-total');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    let total = 0;
+    
+    pickupCart.forEach((item, idx) => {
+        const itemTotal = item.price * item.qty;
+        total += itemTotal;
+        
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; background:rgba(255,255,255,0.03); padding:0.6rem; border-radius:8px;';
+        row.innerHTML = `
+            <div style="flex:1;">
+                <div style="font-weight:bold; font-size:0.85rem;">${item.name} (${item.label})</div>
+                <div style="font-size:0.75rem; color:var(--color-slate-400);">${item.qty} x ₹${item.price}</div>
+            </div>
+            <div style="font-weight:bold; margin-right:1rem;">₹${itemTotal}</div>
+            <button onclick="window.deskApp.removeFromPickupCart(${idx})" style="background:transparent; border:none; color:#F43F5E; cursor:pointer; font-size:1.2rem;">&times;</button>
+        `;
+        container.appendChild(row);
+    });
+    
+    totalEl.innerText = total.toLocaleString();
+}
+
+async function submitPickupOrder() {
+    if (pickupCart.length === 0) { showToast('Cart is empty', 'warning'); return; }
+    
     pickupCounter++;
     localStorage.setItem('br_pickup_counter', pickupCounter);
-    const id = `P${pickupCounter}`;
-    showToast(`Pickup Order ${id} created. Open Waiter portal to add items.`, 'info');
-    await pushNotification('order', `New Pickup Order ${id} initiated`, 'desk');
+    const pid = `P${pickupCounter}`;
+    const total = pickupCart.reduce((s, i) => s + (i.price * i.qty), 0);
+    
+    const orderObj = {
+        order_id: pid,
+        id: pid,
+        items: pickupCart,
+        total_price: total,
+        total: total,
+        status: 'preparing',
+        orderType: 'Pickup',
+        timestamp: Date.now(),
+        paymentStatus: 'pending'
+    };
+
+    try {
+        await setDoc(doc(db, 'orders', pid), orderObj);
+        
+        // Also update the desk UI's activePickups
+        activePickups.push(orderObj);
+        localStorage.setItem('yukt_active_pickups', JSON.stringify(activePickups));
+        
+        await pushNotification('order', `New Pickup Order ${pid} — ₹${total}`, 'desk');
+        
+        document.getElementById('pickup-modal').style.display = 'none';
+        renderPickupList();
+        showToast(`Pickup Order ${pid} placed!`, 'success');
+    } catch (e) {
+        console.error('Pickup failed', e);
+        showToast('Failed to place pickup order', 'error');
+    }
 }
 
 function renderPickupList() {
@@ -609,12 +787,14 @@ function renderAvailabilityTool() {
     container.innerHTML = '';
     menu.forEach(item => {
         const isUnavail = unavailableItems.includes(item.id);
+        const itemName = item.name || item.Name || 'Unknown Item';
+        const itemPrice = item.price || item.PriceFull || item.Price || 0;
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:0.75rem;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:0.5rem;border:1px solid var(--glass-border);';
         row.innerHTML = `
             <div><span style="font-size:1.2rem;margin-right:0.5rem;">${item.icon || '🍽'}</span>
-            <span>${item.name}</span>
-            <span style="color:var(--color-slate-400);margin-left:0.5rem;font-size:0.85rem;">₹${item.price}</span></div>
+            <span>${itemName}</span>
+            <span style="color:var(--color-slate-400);margin-left:0.5rem;font-size:0.85rem;">₹${itemPrice}</span></div>
             <label class="switch"><input type="checkbox" ${!isUnavail ? 'checked' : ''}
                 onchange="window.deskApp.toggleItemAvailability('${item.id}',this.checked)">
             <span class="slider"></span></label>`;
@@ -647,7 +827,8 @@ window.deskApp = {
     generatePickupOrder, markPickupPaid, markPickupDelivered,
     renderNotificationSidebar, printKOT, clearNotifications,
     toggleRevVisibility, openAvailabilityModal, renderAvailabilityTool,
-    toggleItemAvailability, handleLogout
+    toggleItemAvailability, handleLogout,
+    filterPickupMenu, removeFromPickupCart, submitPickupOrder
 };
 
 // Legacy onclick compatibility

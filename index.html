@@ -66,19 +66,13 @@
                     <span>ðŸ³</span> Kitchen (KDS)
                 </div>
                 <div class="side-item" id="side-inventory" onclick="app.switchTab('inventory')">
-                    <span>ðŸ“¦</span> Menu & Inventory
+                    <span>📦</span> Menu & Inventory
                 </div>
                 <div class="side-item" id="side-financials" onclick="app.switchTab('financials')">
-                    <span>ðŸ“Š</span> Financial Analytics
-                </div>
-                <div class="side-item" id="side-ordering" onclick="app.switchTab('ordering')">
-                    <span>&#128716;</span> Waiter Portal
+                    <span>📊</span> Financial Analytics
                 </div>
                 <div class="side-item" id="side-rest-desk" onclick="app.switchTab('rest-desk')">
-                    <span>&#127861;</span> Restaurant Desk
-                </div>
-                <div class="side-item" id="side-rest-waiter" onclick="app.switchTab('rest-waiter')">
-                    <span>&#129489;&#8205;&#127859;</span> Rest. Waiter
+                    <span>🍹</span> Restaurant Desk
                 </div>
             </div>
 
@@ -177,16 +171,16 @@
                                 <h3>&#128184; Financial Ledger</h3>
                                 <div class="ledger-pill mb-3">
                                     <span>Base Tariff</span>
-                                    <span id="cc-tariff">&#8377; 0</span>
+                                    <span id="cc-tariff">₹ 0</span>
                                 </div>
                                 <div class="metadata-grid mb-4">
-                                    <div class="meta-item"><span class="meta-label">Room (x<span id="cc-ledger-days">0</span>)</span><span class="meta-value" id="cc-room-total">&#8377; 0</span></div>
-                                    <div class="meta-item"><span class="meta-label">Food/Other</span><span class="meta-value" id="cc-food-total">&#8377; 0</span></div>
-                                    <div class="meta-item"><span class="meta-label">Advance</span><span class="meta-value" style="color: #4ade80;">- &#8377; <span id="cc-advance-amt">0</span></span></div>
+                                    <div class="meta-item"><span class="meta-label">Room (x<span id="cc-ledger-days">0</span>)</span><span class="meta-value" id="cc-room-total">₹ 0</span></div>
+                                    <div class="meta-item"><span class="meta-label">Food/Other</span><span class="meta-value" id="cc-food-total">₹ 0</span></div>
+                                    <div class="meta-item"><span class="meta-label">Advance</span><span class="meta-value" style="color: #4ade80;">- ₹ <span id="cc-advance-amt">0</span></span></div>
                                 </div>
                                 <div class="ledger-pill luxury-glow">
                                     <span>Net Payable</span>
-                                    <span id="cc-total-bill">&#8377; 0</span>
+                                    <span id="cc-total-bill">₹ 0</span>
                                 </div>
                             </div>
                             <div class="cc-actions mt-4" style="border-top: 1px solid var(--glass-border); padding-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
@@ -253,131 +247,7 @@
                 </div>
             </section>
             
-            <!-- 5. WAITER ORDERING PORTAL -->
-            <section id="tab-ordering" class="portal-content waiter-fullscreen">
 
-                <!-- TOP BAR -->
-                <div class="waiter-topbar">
-                    <div class="waiter-brand">
-                        <span style="font-size:1.4rem;">&#128718;&#65039;</span>
-                        <div>
-                            <div class="waiter-brand-title">WAITER SERVICE</div>
-                            <div id="ordering-room-display" class="waiter-brand-sub">SELECT A ROOM TO BEGIN</div>
-                        </div>
-                    </div>
-                    <div class="waiter-topbar-right">
-                        <select id="waiter-room-select" class="waiter-room-select" onchange="app.selectWaiterRoom(this.value)">
-                            <option value="">&#128203; Choose Room...</option>
-                        </select>
-                        <div id="waiter-addon-badge" style="display:none; background:#EF4444; color:#fff; border-radius:8px; padding:0.4rem 0.8rem; font-size:0.75rem; font-weight:900; animation: addonPulse 1s infinite;">
-                            &#128308; ADD-ON MODE: <span id="addon-target-id"></span>
-                        </div>
-                        <button class="waiter-btn-new" onclick="app.newWaiterOrder()" id="waiter-new-btn" disabled>
-                            &#10133; NEW ORDER
-                        </button>
-                        <button class="waiter-btn-place" onclick="app.placeWaiterOrder()" id="waiter-place-btn" disabled>
-                            &#128640; PLACE ORDER
-                        </button>
-                        <button onclick="app.handleLogout()" style="background:rgba(239,68,68,0.2);border:1px solid #EF4444;color:#FCA5A5;border-radius:10px;padding:0 1rem;height:44px;font-weight:700;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">
-                            &#128682; LOGOUT
-                        </button>
-                    </div>
-                </div>
-
-                <!-- MAIN BODY: 3 columns on tablet -->
-                <div class="waiter-body">
-
-                    <!-- MENU PANEL -->
-                    <div class="waiter-menu-panel">
-                        <div id="order-categories" class="waiter-cats"></div>
-                        <div id="order-menu-grid" class="waiter-menu-grid">
-                            <div style="color:var(--text-gray); padding:2rem; text-align:center;">Loading menu...</div>
-                        </div>
-                    </div>
-
-                    <!-- CART PANEL -->
-                    <div class="waiter-cart-panel">
-                        <div class="waiter-panel-header">&#128716; CART</div>
-                        <div id="waiter-cart-items" class="waiter-cart-items">
-                            <div style="color:var(--text-gray); text-align:center; padding:2rem; font-size:0.85rem;">Add items from the menu</div>
-                        </div>
-                        <div class="waiter-cart-footer">
-                            <div class="waiter-total-row">
-                                <span>TOTAL</span>
-                                <span class="waiter-total-amt">&#8377; <span id="waiter-total-amt">0</span></span>
-                            </div>
-                            <button class="waiter-btn-place w-full mt-2" onclick="app.placeWaiterOrder()" id="waiter-place-btn2" disabled>
-                                &#128640; CONFIRM ORDER
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- LIVE ORDERS PANEL -->
-                    <div class="waiter-live-panel">
-                        <div class="waiter-panel-header">&#128203; LIVE ORDERS</div>
-                        <div id="waiter-live-orders" class="waiter-live-orders">
-                            <div style="color:var(--text-gray); text-align:center; padding:2rem; font-size:0.85rem;">Select a room to see orders</div>
-                        </div>
-                    </div>
-
-                </div>
-            </section>
-
-            <!-- 5b. RESTAURANT WAITER PORTAL -->
-            <section id="tab-rest-waiter" class="portal-content waiter-fullscreen">
-
-                <!-- TOP BAR -->
-                <div class="waiter-topbar">
-                    <div class="waiter-brand">
-                        <span style="font-size:1.4rem;">&#129489;&#8205;&#127859;</span>
-                        <div>
-                            <div class="waiter-brand-title">RESTAURANT WAITER</div>
-                            <div id="rw-table-display" class="waiter-brand-sub">SELECT A TABLE TO BEGIN</div>
-                        </div>
-                    </div>
-                    <div class="waiter-topbar-right">
-                        <button onclick="app.handleLogout()" style="background:rgba(239,68,68,0.2);border:1px solid #EF4444;color:#FCA5A5;border-radius:10px;padding:0 1rem;height:44px;font-weight:700;font-size:0.8rem;cursor:pointer;letter-spacing:1px;">
-                            &#128682; LOGOUT
-                        </button>
-                    </div>
-                </div>
-
-                <!-- MAIN BODY: 3 columns -->
-                <div class="waiter-body" style="grid-template-columns: 220px 1fr 300px;">
-
-                    <!-- TABLE LIST PANEL -->
-                    <div style="display:flex;flex-direction:column;background:var(--glass-bg);border-right:1px solid var(--glass-border);overflow-y:auto;padding:1rem;gap:0.8rem;">
-                        <div style="color:var(--gold-primary);font-size:0.75rem;font-weight:700;letter-spacing:2px;margin-bottom:0.5rem;">TABLES</div>
-                        <div id="rest-waiter-table-list" style="display:flex;flex-direction:column;gap:0.8rem;"></div>
-                    </div>
-
-                    <!-- MENU PANEL -->
-                    <div class="waiter-menu-panel">
-                        <div id="rw-order-categories" class="waiter-cats"></div>
-                        <div id="rw-menu-grid" class="waiter-menu-grid">
-                            <div style="color:var(--text-gray); padding:2rem; text-align:center;">Select a table first</div>
-                        </div>
-                    </div>
-
-                    <!-- CART PANEL -->
-                    <div class="waiter-cart-panel">
-                        <div class="waiter-panel-header">&#128716; CART</div>
-                        <div id="rw-cart-items" class="waiter-cart-items">
-                            <div style="color:var(--text-gray); text-align:center; padding:2rem; font-size:0.85rem;">Select a table and add items</div>
-                        </div>
-                        <div class="waiter-cart-footer">
-                            <div class="waiter-total-row">
-                                <span>Total</span>
-                                <span id="rw-cart-total">&#8377; 0</span>
-                            </div>
-                            <button class="waiter-btn-place" style="width:100%;margin-top:0.5rem;" onclick="app.placeRestWaiterOrder()" id="rw-place-btn" disabled>
-                                &#128640; PLACE ORDER
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
-            </section>
 
             <!-- 6. RESTAURANT DESK PORTAL -->
             <section id="tab-rest-desk" class="portal-content">
@@ -385,7 +255,7 @@
                     <div class="luxury-identity golden-brand">RESTAURANT DESK &#8226; LIVE TABLES</div>
                     <div style="display: flex; gap: 1rem; align-items: center;">
                         <button class="btn btn-outline btn-sm" onclick="app.renderRestDesk()">&#128260; REFRESH</button>
-                        <div id="desk-revenue-display" class="luxury-pill" style="min-width: 150px; text-align: center; cursor:pointer;" onclick="app.toggleRestRevVisibility(this)">&#8377; ****</div>
+                        <div id="desk-revenue-display" class="luxury-pill" style="min-width: 150px; text-align: center; cursor:pointer;" onclick="app.toggleRestRevVisibility(this)">₹ ****</div>
                         <button onclick="app.handleLogout()" style="background:rgba(239,68,68,0.2);border:1px solid #EF4444;color:#FCA5A5;border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.75rem;cursor:pointer;letter-spacing:1px;">&#128682; LOGOUT</button>
                     </div>
                 </div>
@@ -460,7 +330,7 @@
                     </div>
                     <div class="kpi-card glass-panel luxury-glow">
                         <div class="kpi-title">Room Revenue (Est.)</div>
-                        <div class="kpi-value" id="kpi-room-revenue">&#8377; 0</div>
+                        <div class="kpi-value" id="kpi-room-revenue">₹ 0</div>
                     </div>
                     <div class="kpi-card glass-panel luxury-glow">
                         <div class="kpi-title">Pending Orders</div>
@@ -468,7 +338,7 @@
                     </div>
                     <div class="kpi-card glass-panel luxury-glow">
                         <div class="kpi-title">EBITDA (Est.)</div>
-                        <div class="kpi-value" id="kpi-ebitda">&#8377; 0</div>
+                        <div class="kpi-value" id="kpi-ebitda">₹ 0</div>
                     </div>
                 </div>
 
@@ -656,7 +526,7 @@
                         <p style="margin-bottom:0.5rem;"><strong>Guest:</strong> <span id="summary-name" style="color: var(--gold-primary);">--</span></p>
                         <p style="margin-bottom:0.5rem;"><strong>Contact:</strong> <span id="summary-phone">--</span></p>
                         <p style="margin-bottom:0.5rem;"><strong>Room:</strong> <span id="summary-room-view">--</span></p>
-                        <p style="margin-bottom:0.8rem;"><strong>Stay Total:</strong> &#8377;<span id="summary-tariff">--</span> / night</p>
+                        <p style="margin-bottom:0.8rem;"><strong>Stay Total:</strong> ₹<span id="summary-tariff">--</span> / night</p>
                         <button class="btn btn-outline btn-block" style="font-size:0.8rem; padding:0.5rem;" onclick="app.viewCapturedMedia()">View Photo & IDs</button>
                     </div>
                     <button class="btn btn-primary btn-block" style="padding:1.5rem; font-size:1.2rem;" onclick="app.submitCheckIn()">CONFIRM CHECK-IN</button>

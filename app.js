@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Barak Residency Pro PMS
  * Central Shared Data State & Ecosystem Logic
  */
@@ -920,7 +920,7 @@ class PMSApp {
                     <div class="glass-panel mb-3" style="padding:1.25rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03);">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span style="color: var(--gold-primary); font-weight: 800; font-size: 1.1rem;">Stay: ${date}</span>
-                            <span style="color: #4ade80; font-weight: 900; font-size: 1.1rem;">&#8377;${total.toLocaleString()}</span>
+                            <span style="color: #4ade80; font-weight: 900; font-size: 1.1rem;">₹${total.toLocaleString()}</span>
                         </div>
                         <div class="text-xs text-gray">
                             <strong>Room:</strong> ${data.roomNum} | 
@@ -956,7 +956,7 @@ class PMSApp {
             tr.innerHTML = `
                 <td>${item.name}</td>
                 <td>${item.category}</td>
-                <td>&#8377;${item.price}</td>
+                <td>₹${item.price}</td>
                 <td>
                     <span class="status-badge" style="background:${isAvail ? '#4ade8020' : '#ef444420'}; color:${isAvail ? '#4ade80' : '#ef4444'}">
                         ${isAvail ? 'Live' : 'Hidden'}
@@ -1981,11 +1981,11 @@ class PMSApp {
         document.getElementById('cc-stay-days').innerText = daysBilled;
 
         const tariff = Number(guest.tariff) || Number(room.tariff) || 0;
-        document.getElementById('cc-tariff').textContent = `â‚¹${tariff}`;
+        document.getElementById('cc-tariff').textContent = `₹${tariff}`;
         document.getElementById('cc-ledger-days').innerText = daysBilled;
 
         const roomTotal = tariff * daysBilled;
-        document.getElementById('cc-room-total').textContent = `â‚¹${roomTotal}`;
+        document.getElementById('cc-room-total').textContent = `₹${roomTotal}`;
 
         // Mission: Instant Reception Sync + Strict stayID isolation
         const stayID = room.currentStayId || guest.stayID;
@@ -2005,7 +2005,7 @@ class PMSApp {
             return sum + (Number(o.total_price) || Number(o.total) || Number(o.total_amount) || 0);
         }, 0);
 
-        document.getElementById('cc-food-total').textContent = `â‚¹${foodTotal.toLocaleString()}`;
+        document.getElementById('cc-food-total').textContent = `₹${foodTotal.toLocaleString()}`;
 
         // Robust Advance Lookup (Firestore stores as advancePaid usually)
         const advance = Number(guest.advance) || Number(guest.advancePaid) || Number(room.advancePaid) || 0;
@@ -2015,7 +2015,7 @@ class PMSApp {
         const balance = (Number(roomTotal) || 0) + (Number(foodTotal) || 0) - (Number(advance) || 0);
         const balanceEl = document.getElementById('cc-total-bill');
         if (balanceEl) {
-            balanceEl.textContent = `â‚¹${balance.toLocaleString()}`;
+            balanceEl.textContent = `₹${balance.toLocaleString()}`;
             balanceEl.style.color = balance > 0 ? '#f43f5e' : '#4ade80';
         }
 
@@ -2043,13 +2043,13 @@ class PMSApp {
                 sessionOrders.forEach(order => {
                     const orderGroup = document.createElement('div');
                     orderGroup.className = 'order-summary-group';
-                    orderGroup.style.cssText = 'margin-bottom: 0.8rem; padding: 0.5rem; border-radius: 6px; background: rgba(255,b,b,0.03); border: 1px solid rgba(212,175,55,0.1);';
+                    orderGroup.style.cssText = 'margin-bottom: 0.8rem; padding: 0.5rem; border-radius: 6px; background: rgba(212,175,55,0.03); border: 1px solid rgba(212,175,55,0.1);';
 
                     const timeStr = order.timestamp ? this.db.timeOnlyIST(order.timestamp) : '---';
                     const itemsHtml = order.items.map(i => `
                         <div style="display:flex; justify-content:space-between; font-size:0.75rem; color: #ddd;">
                             <span>${i.qty}x ${i.name}</span>
-                            <span>&#8377;${i.qty * i.price}</span>
+                            <span>₹${i.qty * i.price}</span>
                         </div>
                     `).join('');
 
@@ -2949,7 +2949,7 @@ class PMSApp {
                     ${photoHtml}
                     <div style="display:flex; justify-content:space-between; align-items:start;">
                         <div class="menu-icon">${item.icon || '&#127828;'}</div>
-                        <div class="menu-price">&#8377;${price}</div>
+                        <div class="menu-price">₹${price}</div>
                     </div>
                     <div class="menu-name" style="font-weight:bold;">${name}</div>
                     <div class="menu-desc" style="font-size:0.7rem; color:var(--color-slate-400); height:30px; overflow:hidden; line-height: 1.2;">${desc}</div>
@@ -3125,7 +3125,7 @@ class PMSApp {
             total += itemTotal;
             const el = document.createElement('div');
             el.className = 'cart-item';
-            el.innerHTML = `<div><span class="cart-item-qty">${cartItem.qty}x</span><span>${cartItem.item.name}</span></div><span>&#8377;${itemTotal}</span>`;
+            el.innerHTML = `<div><span class="cart-item-qty">${cartItem.qty}x</span><span>${cartItem.item.name}</span></div><span>₹${itemTotal}</span>`;
             cartEl.appendChild(el);
         });
 
@@ -3137,7 +3137,7 @@ class PMSApp {
             const el = document.getElementById('rest-waiter-table-info');
             if (el && el.innerText) {
                 const baseText = el.innerText.split(' | Total:')[0];
-                el.innerHTML = `${baseText} <span class="color-success font-bold" style="margin-left: 0.5rem;">| Total: &#8377;${total}</span>`;
+                el.innerHTML = `${baseText} <span class="color-success font-bold" style="margin-left: 0.5rem;">| Total: ₹${total}</span>`;
 
                 // Recalculate global total for sync
                 this.db.totalPrice = total;
@@ -3247,11 +3247,11 @@ class PMSApp {
             orderIdStr = `ROOM ${targetId}-${nextId}`;
         }
 
-        const itemsListHTML = this.db.cart.map(c => `<div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;"><span style="color:var(--color-slate-400)">${c.qty}x</span> <span>${c.item.name}</span> <span class="color-primary">&#8377;${c.qty * c.item.price}</span></div>`).join('');
+        const itemsListHTML = this.db.cart.map(c => `<div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;"><span style="color:var(--color-slate-400)">${c.qty}x</span> <span>${c.item.name}</span> <span class="color-primary">₹${c.qty * c.item.price}</span></div>`).join('');
         const total = this.db.cart.reduce((sum, c) => sum + (c.item.price * c.qty), 0);
 
         document.getElementById('confirm-order-id').innerText = orderIdStr;
-        document.getElementById('confirm-order-items').innerHTML = itemsListHTML + `<div style="margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--glass-border); display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem;"><span>Total</span><span class="color-success">&#8377;${total}</span></div>`;
+        document.getElementById('confirm-order-items').innerHTML = itemsListHTML + `<div style="margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--glass-border); display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem;"><span>Total</span><span class="color-success">₹${total}</span></div>`;
 
         this.pendingOrderContext = context;
         document.getElementById('order-confirm-modal').style.display = 'flex';
@@ -3457,7 +3457,7 @@ class PMSApp {
                     <div class="order-payload text-md mt-4 text-left glass-panel" style="background:rgba(0,0,0,0.5); padding:1.5rem; border-radius:12px; max-width: 400px; max-height: 250px; overflow-y:auto; font-family: monospace;">
                         ${orderDetails.items.map(i => `<div style="margin-bottom:0.4rem;">${i}</div>`).join('')}
                     </div>
-                    <div class="mt-4 font-bold text-xl color-primary">${isAddon ? 'Delta Sync Complete' : 'Total: &#8377;' + orderDetails.total}</div>
+                    <div class="mt-4 font-bold text-xl color-primary">${isAddon ? 'Delta Sync Complete' : 'Total: ₹' + orderDetails.total}</div>
                 `;
             }
             overlay.style.display = 'flex';
@@ -3569,7 +3569,7 @@ class PMSApp {
                 return `<tr style="border-bottom:1px dotted #ccc;">
                     <td style="padding:5px 6px; font-size:0.95rem;">&#8226; ${name}${variant}</td>
                     <td style="padding:5px 6px; text-align:center; font-weight:900;">${qty}</td>
-                    <td style="padding:5px 6px; text-align:right;">&#8377;${(item.price || 0) * qty}</td>
+                    <td style="padding:5px 6px; text-align:right;">₹${(item.price || 0) * qty}</td>
                 </tr>${addons}`;
             }).join('');
 
@@ -3596,7 +3596,7 @@ class PMSApp {
                         ${itemsHtml}
                         <tr style="border-top:2px solid #000; font-weight:900; font-size:1rem;">
                             <td colspan="2" style="padding:6px; text-align:right;">TOTAL:</td>
-                            <td style="padding:6px; text-align:right;">&#8377;${total}</td>
+                            <td style="padding:6px; text-align:right;">₹${total}</td>
                         </tr>
                     </table>
                     <div style="text-align:center; margin-top:8px; font-size:0.7rem; border-top:1px dashed #ccc; padding-top:5px;">Thank you! &#8226; ${new Date().toLocaleTimeString()}</div>
@@ -3750,9 +3750,9 @@ class PMSApp {
                                     <tr>
                                         <td style="padding: 12px; border: 1px solid #eee;">Luxury Room Accommodation <br><small>${tariff} x ${days} Nights</small></td>
                                         <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${days}</td>
-                                        <td style="padding: 12px; text-align: right; border: 1px solid #eee;">&#8377;${roomSubtotal.toFixed(2)}</td>
+                                        <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${roomSubtotal.toFixed(2)}</td>
                                         <td style="padding: 12px; text-align: center; border: 1px solid #eee;">${roomGSTPerc}%</td>
-                                        <td style="padding: 12px; text-align: right; border: 1px solid #eee;">&#8377;${(roomSubtotal + roomGSTValue).toFixed(2)}</td>
+                                        <td style="padding: 12px; text-align: right; border: 1px solid #eee;">₹${(roomSubtotal + roomGSTValue).toFixed(2)}</td>
                                     </tr>
 
                                     ${itemizedFood.length > 0 ? (() => {
@@ -3785,9 +3785,9 @@ class PMSApp {
                                                             &#8226; ${item.name} ${item.variant && item.variant !== 'Full' ? `(${item.variant})` : ''}
                                                         </td>
                                                         <td style="padding:10px 12px; text-align:center; border:1px solid #eee;">${qty}</td>
-                                                        <td style="padding:10px 12px; text-align:right; border:1px solid #eee;">&#8377;${price.toFixed(2)}</td>
+                                                        <td style="padding:10px 12px; text-align:right; border:1px solid #eee;">₹${price.toFixed(2)}</td>
                                                         <td style="padding:10px 12px; text-align:center; border:1px solid #eee;">5%</td>
-                                                        <td style="padding:10px 12px; text-align:right; border:1px solid #eee;">&#8377;${(amount * 1.05).toFixed(2)}</td>
+                                                        <td style="padding:10px 12px; text-align:right; border:1px solid #eee;">₹${(amount * 1.05).toFixed(2)}</td>
                                                     </tr>`;
                                 }).join('')}
                                             `;
@@ -3805,19 +3805,19 @@ class PMSApp {
                                 <div style="width: 350px; background: #fff8e1; border: 2px solid #D4AF37; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
                                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;">
                                         <span>Subtotal:</span>
-                                        <span>&#8377;${(roomSubtotal + foodSubtotal).toFixed(2)}</span>
+                                        <span>₹${(roomSubtotal + foodSubtotal).toFixed(2)}</span>
                                     </div>
                                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #666;">
                                         <span>Tax (GST):</span>
-                                        <span>&#8377;${(roomGSTValue + foodGSTValue).toFixed(2)}</span>
+                                        <span>₹${(roomGSTValue + foodGSTValue).toFixed(2)}</span>
                                     </div>
                                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #2e7d32;">
                                         <span>Advance Paid:</span>
-                                        <span>- &#8377;${advance.toFixed(2)}</span>
+                                        <span>- ₹${advance.toFixed(2)}</span>
                                     </div>
                                     <div style="border-top: 2px solid #D4AF37; margin-top: 12px; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
                                         <span style="font-weight: 900; font-size: 1.1rem; color: #1a237e;">TOTAL AMOUNT</span>
-                                        <span style="font-weight: 900; font-size: 1.5rem; color: #c62828;">&#8377;${safeBalance.toFixed(2)}</span>
+                                        <span style="font-weight: 900; font-size: 1.5rem; color: #c62828;">₹${safeBalance.toFixed(2)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -4314,7 +4314,7 @@ class PMSApp {
                 <div style="font-size:0.75rem; color:${st.color}; font-weight:800; margin:4px 0;">Status: ${st.label} &nbsp;&#8226;&nbsp; ${orderTime}</div>
                 <div style="padding:6px 8px; background:rgba(212,175,55,0.06); border-left:3px solid ${st.color}; border-radius:4px; font-size:0.78rem; margin:6px 0; max-height:140px; overflow-y:auto;">
                     ${itemStrings.map(i => `<div>&#8226; ${i}</div>`).join('')}
-                    <div style="margin-top:5px; font-weight:800; color:var(--gold-primary);">Total: &#8377;${total}</div>
+                    <div style="margin-top:5px; font-weight:800; color:var(--gold-primary);">Total: ₹${total}</div>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:6px;">
                     <button class="btn btn-primary" style="font-size:0.7rem; padding:0.3rem;" onclick="app.kotFromOrder('${orderId}','${roomNumber}')">&#128424; PRINT KOT</button>
@@ -4474,7 +4474,7 @@ class PMSApp {
                         let isLinkedObj = b.colorIndex === 5 ? `ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â€ ${b.linkGroupId || 'L'}:` : '';
                         guestDetailsDivs += `
                             <div class="split-bill-row" onclick="event.stopPropagation(); app.selectDeskCheckout('${table.id}', '${b.billID}');" style="color: ${nameColor}; font-weight: bold; margin-bottom: 0.3rem; cursor: pointer; padding: 0.2rem; border-radius: 4px; border: 1px solid ${b.colorIndex === 5 ? '#A020F0' : 'transparent'};">
-                                ${isLinkedObj} ${b.billID} | ${b.guestName} <span class="color-success">&#8377;${billTotal}</span>
+                                ${isLinkedObj} ${b.billID} | ${b.guestName} <span class="color-success">₹${billTotal}</span>
                             </div>`;
                     });
                 } else {
@@ -4530,7 +4530,7 @@ class PMSApp {
                         </div>
                     </div>
                     <div class="text-sm mt-3 text-center text-gray">${table.pax} / 4 Seats Occupied</div>
-                    <div class="text-xl font-bold mt-2 text-center color-primary">&#8377;${table.total}</div>
+                    <div class="text-xl font-bold mt-2 text-center color-primary">₹${table.total}</div>
                 `;
                 // Add Glow to Card if Linked
                 const isLinkedTable = activeBills.some(b => b.colorIndex === 5);
@@ -4589,7 +4589,7 @@ class PMSApp {
                             <span class="text-xs text-gray ml-2">${this.db.timeOnlyIST(p.timestamp)}</span>
                         </div>
                         <div class="d-flex align-center gap-3">
-                            <span class="font-bold color-success">&#8377;${p.total}</span>
+                            <span class="font-bold color-success">₹${p.total}</span>
                             ${!isPaid ? `<button class="btn btn-success" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;" onclick="app.markPickupPaid('${p.id}')">PAY</button>` : ''}
                             ${isPaid ? `<button class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;" onclick="app.markPickupDelivered('${p.id}')">DELIVERED</button>` : ''}
                         </div>
@@ -4713,7 +4713,7 @@ class PMSApp {
                 return `
                     <button class="btn btn-block" style="background: rgba(0,0,0,0.4); border: 1px solid ${btnColor}; color: ${btnColor}; padding: 1rem; margin-bottom: 0.8rem; text-align: left; font-size: 1.1rem; display: flex; justify-content: space-between;" onclick="app.selectDeskCheckout('${table.id}', '${b.billID}')">
                         <span>${b.billID} - ${b.guestName}</span>
-                        <span class="font-bold">&#8377;${targetTotal}</span>
+                        <span class="font-bold">₹${targetTotal}</span>
                     </button>
                 `;
             }).join('');
@@ -4746,14 +4746,14 @@ class PMSApp {
                 <div style="max-height: 200px; overflow-y: auto;">
                     ${ordersToShow.map(o => `
                         <div class="text-sm mb-2 text-gray">
-                            [${this.db.timeOnlyIST(o.timestamp)}] &#8377;${o.total}<br>
+                            [${this.db.timeOnlyIST(o.timestamp)}] ₹${o.total}<br>
                             ${o.items.join(', ')}
                         </div>
                     `).join('')}
                 </div>
                 <div class="d-flex justify-between mt-4 pt-3 border-top" style="border-top: 1px solid var(--glass-border); font-size: 1.25rem;">
                     <span>Grand Total</span>
-                    <span class="color-primary font-bold">&#8377;${displayTotal}</span>
+                    <span class="color-primary font-bold">₹${displayTotal}</span>
                 </div>
             </div>
             
@@ -4788,12 +4788,12 @@ class PMSApp {
                 ${ordersToShow.map(o => `
                     <tr><td colspan="2" style="padding-top:10px; font-weight:bold;">Order ${o.id}</td></tr>
                     ${o.items.map(i => `<tr><td>${i}</td><td style="text-align:right">-</td></tr>`).join('')}
-                    <tr><td style="color:#666;">Subtotal</td><td style="text-align:right">&#8377;${o.total}</td></tr>
+                    <tr><td style="color:#666;">Subtotal</td><td style="text-align:right">₹${o.total}</td></tr>
                 `).join('')}
             </table>
             <div style="margin-top:2rem; border-top: 2px solid #000; padding-top:10px; font-size: 1.25rem; font-weight: bold; display: flex; justify-content: space-between;">
                 <span>GRAND TOTAL</span>
-                <span>&#8377;${displayTotal}</span>
+                <span>₹${displayTotal}</span>
             </div>
             <div style="margin-top: 1.5rem; background: #f8f8f8; padding: 1rem; border-radius: 8px;">
                 <label style="display: block; font-weight: bold; margin-bottom: 0.5rem; color: #333;">Select Payment Mode:</label>
@@ -4852,7 +4852,7 @@ class PMSApp {
         localStorage.setItem('yukt_rest_rev', this.db.restaurantRevenue);
         localStorage.setItem('yukt_rest_pax', this.db.restaurantCustomersToday);
 
-        this.db.addNotification('checkout', `Payment Received: &#8377;${billTotal.toFixed(2)} [${paymentMode}] from ${targetOrderId || tableId} `);
+        this.db.addNotification('checkout', `Payment Received: ₹${billTotal.toFixed(2)} [${paymentMode}] from ${targetOrderId || tableId} `);
 
         // MASS CLEAR LINKED TABLES
         if (targetOrderId) {
@@ -4952,7 +4952,7 @@ class PMSApp {
                 </div>
                 <div class="d-flex justify-between border-top pt-3 font-bold text-lg">
                     <span>Grand Total</span>
-                    <span class="color-success">&#8377;${p.total}</span>
+                    <span class="color-success">₹${p.total}</span>
                 </div>
             </div>
             <button class="btn btn-success btn-block mt-4" onclick="app.processPickupPayment('${p.id}')">RECEIVE CASH/UPI & CLOSE</button>
@@ -5050,9 +5050,9 @@ class PMSApp {
                 <tr>
                     <td class="font-bold color-primary">${emp.name}</td>
                     <td><span class="status-badge" style="background:rgba(148, 163, 184, 0.1); color:var(--color-slate-200);">${emp.role}</span></td>
-                    <td>&#8377;${emp.baseSalary.toLocaleString()}</td>
-                    <td style="color:var(--color-yellow-500)">- &#8377;${emp.advances.toLocaleString()}</td>
-                    <td class="font-bold color-success">&#8377;${netPayable.toLocaleString()}</td>
+                    <td>₹${emp.baseSalary.toLocaleString()}</td>
+                    <td style="color:var(--color-yellow-500)">- ₹${emp.advances.toLocaleString()}</td>
+                    <td class="font-bold color-success">₹${netPayable.toLocaleString()}</td>
                 </tr>
             `;
         });
@@ -5123,7 +5123,7 @@ class PMSApp {
                 <tr>
                     <td>${this.db.timeOnlyIST(sale.timestamp)}</td>
                     <td>${label}</td>
-                    <td class="font-bold color-primary">&#8377;${sale.total}</td>
+                    <td class="font-bold color-primary">₹${sale.total}</td>
                 </tr>
             `;
         });
@@ -5185,7 +5185,7 @@ class PMSApp {
                             <span style="color:${statusColor}; font-size:0.75rem; font-weight:700;">${o.status}</span>
                         </div>
                         <div style="color:var(--color-slate-400); font-size:0.78rem;">${items}</div>
-                        <div style="font-size:0.7rem; color:var(--color-slate-400);">&#8377;${o.total_price || 0} &nbsp;Ãƒâ€šÃ‚Â·&nbsp; ${t}</div>
+                        <div style="font-size:0.7rem; color:var(--color-slate-400);">₹${o.total_price || 0} &nbsp;Ãƒâ€šÃ‚Â·&nbsp; ${t}</div>
                     </div>`;
                 }).join('');
             }
@@ -5329,405 +5329,14 @@ class PMSApp {
         await window.FirebaseSync.pushBillingToCloud(billObj);
     }
 
-    // =======================================================
-    //  WAITER PORTAL ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â COMPLETE LOGIC
-    // =======================================================
-
-    populateWaiterRoomSelect() {
-        const select = document.getElementById('waiter-room-select');
-        if (!select) return;
-        const currentVal = select.value;
-        select.innerHTML = '<option value="">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Choose Room...</option>';
-        Object.values(this.db.rooms).filter(r => r.status === 'occupied').forEach(r => {
-            const opt = document.createElement('option');
-            opt.value = r.number;
-            opt.innerText = `Room ${r.number} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${r.guestName || 'Active Guest'}`;
-            select.appendChild(opt);
-        });
-        if (currentVal) select.value = currentVal;
-    }
-
-    async selectWaiterRoom(roomNum) {
-        this.selectedWaiterRoom = roomNum;
-        this.waiterAddOnOrderId = null;  // clear any addon mode when room changes
-
-        const display = document.getElementById('ordering-room-display');
-        const newBtn = document.getElementById('waiter-new-btn');
-        const badge = document.getElementById('waiter-addon-badge');
-
-        if (display) display.innerText = roomNum ? `ROOM ${roomNum} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â NEW ORDER` : 'SELECT A ROOM TO BEGIN';
-        if (newBtn) newBtn.disabled = !roomNum;
-        if (badge) badge.style.display = 'none';
-
-        // Clear cart
-        this.waiterCart = [];
-        this.updateWaiterCartUI();
-
-        // Load live orders for this room
-        if (roomNum) this.renderWaiterLiveOrders(roomNum);
-    }
-
-    /** Switch to add-on mode for an existing order */
-    startWaiterAddon(orderId) {
-        this.waiterAddOnOrderId = orderId;
-        this.waiterCart = [];
-        this.updateWaiterCartUI();
-
-        const display = document.getElementById('ordering-room-display');
-        const badge = document.getElementById('waiter-addon-badge');
-        const target = document.getElementById('addon-target-id');
-
-        if (display) display.innerText = `ROOM ${this.selectedWaiterRoom} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ADD-ON: ${orderId}`;
-        if (badge) badge.style.display = 'flex';
-        if (target) target.innerText = orderId;
-
-        // Highlight the selected addon card
-        document.querySelectorAll('.waiter-addon-btn').forEach(b => b.classList.remove('active-addon'));
-        const activeBtn = document.querySelector(`.waiter-addon-btn[data-oid="${orderId}"]`);
-        if (activeBtn) activeBtn.classList.add('active-addon');
-
-        this.showToast(`ADD-ON MODE: Items will be added to ${orderId}`, 'info');
-    }
-
-    /** Cancel addon mode, start a fresh new order */
-    newWaiterOrder() {
-        this.waiterAddOnOrderId = null;
-        this.waiterCart = [];
-        this.updateWaiterCartUI();
-
-        const display = document.getElementById('ordering-room-display');
-        const badge = document.getElementById('waiter-addon-badge');
-        if (display && this.selectedWaiterRoom) display.innerText = `ROOM ${this.selectedWaiterRoom} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â NEW ORDER`;
-        if (badge) badge.style.display = 'none';
-        document.querySelectorAll('.waiter-addon-btn').forEach(b => b.classList.remove('active-addon'));
-        this.showToast('New order mode ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â build your cart', 'success');
-    }
-
-    /** Render the menu grid with correct field fallbacks */
-    renderWaiterPortal(categoryFilter = 'All') {
-        const grid = document.getElementById('order-menu-grid');
-        const pills = document.getElementById('order-categories');
-        if (!grid || !pills) return;
-
-        this.populateWaiterRoomSelect();
-
-        const menu = this.db.menu || [];
-        if (menu.length === 0) {
-            grid.innerHTML = '<div style="color:var(--text-gray);padding:2rem;text-align:center;">Menu loading ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â please wait...</div>';
-            return;
-        }
-
-        // Categories
-        const cats = ['All', ...new Set(menu.map(i => i.category || i.Category || 'General').filter(Boolean))];
-        pills.innerHTML = cats.map(c => `<button class="waiter-cat-pill ${categoryFilter === c ? 'active' : ''}" onclick="app.renderWaiterPortal('${c}')">${c}</button>`).join('');
-
-        // Filtered items
-        const items = categoryFilter === 'All' ? menu : menu.filter(i => (i.category || i.Category) === categoryFilter);
-
-        grid.innerHTML = items.map(i => {
-            const name = i.name;
-            const price = i.price;
-            const priceH = i.priceHalf;
-            const imgUrl = i.imageUrl;
-            const itemId = i.id;
-            const imgTag = imgUrl
-                ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextSibling.style.display='block'" style="width:100%;height:80px;object-fit:cover;border-radius:8px;" /><span class="item-icon" style="display:none">🍽️</span>`
-                : `<span class="item-icon">🍽️</span>`;
-            const halfLine = priceH ? `<div class="item-half-price">Half: ₹${priceH}</div>` : '';
-            return `
-                <div class="waiter-menu-card" onclick="app.waiterPromptPortion('${itemId}')">
-                    ${imgTag}
-                    <div class="item-name">${name}</div>
-                    <div class="item-price">₹${price}</div>
-                    ${halfLine}
-                </div>`;
-        }).join('');
-    }
-
-    waiterPromptPortion(itemId) {
-        if (!this.selectedWaiterRoom) { this.showToast('Please select a room first!', 'warning'); return; }
-        const item = this.db.menu.find(i => i.id === itemId);
-        if (!item) { this.showToast('Item not found', 'error'); return; }
-
-        const modal = document.getElementById('waiter-portion-modal');
-        const nameEl = document.getElementById('wpm-item-name');
-        const descEl = document.getElementById('wpm-item-desc');
-        const imgEl = document.getElementById('wpm-item-img');
-        const ctn = document.getElementById('wpm-options-container');
-
-        nameEl.innerText = item.name;
-        descEl.innerText = item.description || 'Select your preference';
-        if (item.imageUrl) { imgEl.src = item.imageUrl; imgEl.style.display = 'block'; }
-        else { imgEl.style.display = 'none'; }
-        ctn.innerHTML = '';
-
-        const type = item.portionType || 'Plate';
-
-        if (type === 'Quantity' || type === 'Cup' || type === 'Drink') {
-            this.waiterPromptQuantity(item, 'Regular', 'Standard', item.price);
-        } else if (type === 'Bottle') {
-            const sizes = [
-                { label: 'Full Bottle', val: 'Full', price: item.price },
-                { label: '500ml', val: '500ml', price: Math.floor(item.price * 0.65) }
-            ];
-            sizes.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.style.cssText = 'width:100%;padding:0.9rem;margin-bottom:0.5rem;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:12px;color:white;font-family:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:0.95rem;';
-                btn.innerHTML = `<span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">&#8377;${opt.price}</span>`;
-                btn.onclick = () => this.waiterPromptQuantity(item, opt.val, opt.label, opt.price);
-                ctn.appendChild(btn);
-            });
-            modal.style.display = 'flex';
-        } else {
-            // Plate ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Full / Half
-            const halfPrice = item.priceHalf > 0 ? item.priceHalf : Math.floor(item.price * 0.6);
-            const opts = [{ label: 'Full Plate', val: 'Full', price: item.price }];
-            if (halfPrice > 0) opts.push({ label: 'Half Plate', val: 'Half', price: halfPrice });
-            opts.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.style.cssText = 'width:100%;padding:0.9rem;margin-bottom:0.5rem;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:12px;color:white;font-family:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:0.95rem;';
-                btn.innerHTML = `<span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">&#8377;${opt.price}</span>`;
-                btn.onclick = () => this.waiterPromptQuantity(item, opt.val, opt.label, opt.price);
-                ctn.appendChild(btn);
-            });
-            modal.style.display = 'flex';
-        }
-    }
-
-    waiterPromptQuantity(item, variant, label, price) {
-        const ctn = document.getElementById('wpm-options-container');
-        const nameEl = document.getElementById('wpm-item-name');
-        const descEl = document.getElementById('wpm-item-desc');
-        const modal = document.getElementById('waiter-portion-modal');
-
-        nameEl.innerText = `${item.name} (${label})`;
-        descEl.innerText = 'How many portions?';
-        ctn.innerHTML = '';
-        let qty = 1;
-
-        const counter = document.createElement('div');
-        counter.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:2rem;margin:1.5rem 0;';
-        counter.innerHTML = `
-            <button id="wpm-dec" style="width:50px;height:50px;border-radius:50%;background:var(--glass-bg);border:1px solid var(--glass-border);color:white;font-size:1.5rem;cursor:pointer;">-</button>
-            <div id="wpm-qty" style="font-size:2.5rem;font-weight:900;color:white;">1</div>
-            <button id="wpm-inc" style="width:50px;height:50px;border-radius:50%;background:var(--glass-bg);border:1px solid var(--glass-border);color:white;font-size:1.5rem;cursor:pointer;">+</button>
-        `;
-        ctn.appendChild(counter);
-
-        const addBtn = document.createElement('button');
-        addBtn.style.cssText = 'width:100%;padding:1rem;background:linear-gradient(135deg,#22C55E,#16A34A);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:800;cursor:pointer;margin-top:0.5rem;';
-        addBtn.innerText = `ADD TO CART — ₹${price}`;
-        ctn.appendChild(addBtn);
-
-        const updateTotal = () => { addBtn.innerText = `ADD TO CART — ₹${price * qty}`; };
-
-        document.getElementById('wpm-dec').onclick = () => { if (qty > 1) { qty--; document.getElementById('wpm-qty').innerText = qty; updateTotal(); } };
-        document.getElementById('wpm-inc').onclick = () => { qty++; document.getElementById('wpm-qty').innerText = qty; updateTotal(); };
-        addBtn.onclick = () => {
-            const cartItem = {
-                id: `${item.id}_${variant}`,
-                name: variant === 'Full' || variant === 'Regular' || variant === 'Standard' ? item.name : `${item.name} (${label})`,
-                price: price,
-                qty: qty,
-                variant: variant
-            };
-            // Check existing
-            const existing = this.waiterCart.find(c => c.id === cartItem.id);
-            if (existing) existing.qty += qty;
-            else this.waiterCart.push(cartItem);
-            this.updateWaiterCartUI();
-            this.closeWaiterPortionModal();
-            this.showToast(`Added ${cartItem.name} &#215; ${qty}`, 'success');
-        };
-
-        modal.style.display = 'flex';
-    }
-
-    closeWaiterPortionModal() {
-        const modal = document.getElementById('waiter-portion-modal');
-        if (modal) modal.style.display = 'none';
-    }
-
-
-
-    removeFromWaiterCart(itemId) {
-        if (!this.waiterCart) return;
-        const idx = this.waiterCart.findIndex(c => c.id === itemId);
-        if (idx !== -1) {
-            if (this.waiterCart[idx].qty > 1) this.waiterCart[idx].qty--;
-            else this.waiterCart.splice(idx, 1);
-            this.updateWaiterCartUI();
-        }
-    }
-
-    updateWaiterCartUI() {
-        const container = document.getElementById('waiter-cart-items');
-        if (!container) return;
-        const cart = this.waiterCart || [];
-        let total = 0;
-
-        if (cart.length === 0) {
-            container.innerHTML = '<div style="color:var(--text-gray);text-align:center;padding:1.5rem;font-size:0.85rem;">Cart is empty</div>';
-        } else {
-            container.innerHTML = cart.map(item => {
-                total += item.price * item.qty;
-                return `
-                    <div class="waiter-cart-row">
-                        <div class="cart-info">
-                            <div class="cart-name">${item.name}</div>
-                            <div class="cart-sub">&#8377;${item.price} &#215; ${item.qty} = &#8377;${item.price * item.qty}</div>
-                        </div>
-                        <div class="cart-controls">
-                            <button class="waiter-cart-qty-btn" onclick="app.removeFromWaiterCart('${item.id}')">ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢</button>
-                            <span style="min-width:22px;text-align:center;font-weight:700;color:white">${item.qty}</span>
-                            <button class="waiter-cart-qty-btn" onclick="app.addToWaiterCart('${item.id}')">+</button>
-                        </div>
-                    </div>`;
-            }).join('');
-        }
-
-        const totalEl = document.getElementById('waiter-total-amt');
-        if (totalEl) totalEl.innerText = total;
-
-        const hasRoom = !!this.selectedWaiterRoom;
-        const hasItems = cart.length > 0;
-        ['waiter-place-btn', 'waiter-place-btn2'].forEach(id => {
-            const btn = document.getElementById(id);
-            if (btn) btn.disabled = !(hasRoom && hasItems);
-        });
-    }
-
-    /** Render live orders for quick add-on access */
-    renderWaiterLiveOrders(roomNum) {
-        const container = document.getElementById('waiter-live-orders');
-        if (!container) return;
-
-        const roomOrders = (this.db.kitchenOrders || []).filter(o => {
-            const match = String(o.roomNumber || o.roomId) === String(roomNum);
-            const active = !['completed', 'cancelled', 'Cancelled'].includes(o.status);
-            return match && active;
-        }).sort((a, b) => {
-            const ta = a.timestamp?.seconds ? a.timestamp.seconds * 1000 : (a.timestamp || 0);
-            const tb = b.timestamp?.seconds ? b.timestamp.seconds * 1000 : (b.timestamp || 0);
-            return tb - ta; // newest first
-        });
-
-        if (roomOrders.length === 0) {
-            container.innerHTML = '<div style="color:var(--text-gray);text-align:center;padding:2rem;font-size:0.85rem;">No active orders for this room</div>';
-            return;
-        }
-
-        container.innerHTML = roomOrders.map(o => {
-            const oid = o.order_id || o.id;
-            const statusCls = {
-                'Pending': 'status-pending', 'Kitchen': 'status-preparing',
-                'preparing': 'status-preparing', 'Served': 'status-ready', 'ready': 'status-ready'
-            }[o.status] || 'status-pending';
-            const statusLabel = o.status;
-            const isAddon = o.isAddon;
-            const itemsHtml = (o.items || []).map(i => {
-                const n = typeof i === 'object' ? (i.name || '?') : i;
-                const q = typeof i === 'object' ? (i.qty || 1) : 1;
-                return `<div class="waiter-live-order-item">&#8226; ${n} &#215; ${q}</div>`;
-            }).join('');
-            return `
-                <div class="waiter-live-order-card${isAddon ? ' kds-addon-glow' : ''}">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                        <span class="live-order-id">${oid}${isAddon ? ' ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´' : ''}</span>
-                        <span class="${statusCls}">${statusLabel}</span>
-                    </div>
-                    ${itemsHtml}
-                    <button class="waiter-addon-btn" data-oid="${oid}" onclick="app.startWaiterAddon('${oid}')">
-                        ÃƒÂ¢Ã…Â¾Ã¢â‚¬Â¢ ADD ITEMS TO THIS ORDER
-                    </button>
-                </div>`;
-        }).join('');
-    }
-
-    async placeWaiterOrder() {
-        const cart = this.waiterCart || [];
-        if (cart.length === 0 || !this.selectedWaiterRoom) return;
-
-        ['waiter-place-btn', 'waiter-place-btn2'].forEach(id => {
-            const b = document.getElementById(id);
-            if (b) { b.disabled = true; b.innerText = 'ÃƒÂ¢Ã‚ÂÃ‚Â³ PROCESSING...'; }
-        });
-
-        try {
-            const roomNum = this.selectedWaiterRoom;
-            const room = this.db.rooms[roomNum] || {};
-            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            const { serverTimestamp, doc, updateDoc, arrayUnion, increment, setDoc } = window.firebaseHooks;
-
-            if (this.waiterAddOnOrderId) {
-                // ---- ADD-ON MODE: merge into existing order ----
-                const oid = this.waiterAddOnOrderId;
-                const orderRef = doc(window.firebaseFS, 'orders', String(oid));
-                const addOnItems = cart.map(i => ({ ...i, addedAt: Date.now(), addedBy: 'waiter' }));
-
-                await updateDoc(orderRef, {
-                    items: arrayUnion(...addOnItems),
-                    total_price: increment(total),
-                    isAddon: true,
-                    lastAddonAt: serverTimestamp(),
-                    status: 'Pending'   // re-trigger kitchen
-                });
-
-                // Notify kitchen and reception with ADD-ON flag
-                const addonNotifRef = doc(window.firebaseFS, 'orders', `${oid}_ADDON_${Date.now()}`);
-                await setDoc(addonNotifRef, {
-                    order_id: `${oid}_ADDON`,
-                    parentOrderId: oid,
-                    isAddon: true,
-                    roomNumber: String(roomNum),
-                    roomId: String(roomNum),
-                    stayID: room.currentStayId || '',
-                    guestName: room.guestName || 'Guest',
-                    items: addOnItems,
-                    total_price: total,
-                    status: 'Pending',
-                    timestamp: serverTimestamp(),
-                    orderType: 'Room'
-                });
-
-                this.showToast(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Add-on added to ${oid}!`, 'success');
-                this.newWaiterOrder();
-
-            } else {
-                // ---- NEW ORDER ----
-                const orderId = await window.FirebaseSync.getNextOrderSerial(roomNum);
-                const orderObj = {
-                    order_id: orderId, id: orderId,
-                    roomNumber: String(roomNum), roomId: String(roomNum),
-                    stayID: room.currentStayId || '',
-                    guestName: room.guestName || 'Guest',
-                    items: cart,
-                    total_price: total,
-                    status: 'Pending',
-                    timestamp: serverTimestamp(),
-                    orderType: 'Room'
-                };
-                await window.FirebaseSync.pushOrderToCloud(orderObj);
-                this.showToast(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order ${orderId} placed!`, 'success');
-                this.waiterCart = [];
-                this.updateWaiterCartUI();
-            }
-
-            // Refresh live orders
-            setTimeout(() => this.renderWaiterLiveOrders(roomNum), 1500);
-
-        } catch (err) {
-            console.error('Waiter order failed', err);
-            this.showToast('Order failed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â check console', 'error');
-        } finally {
-            ['waiter-place-btn', 'waiter-place-btn2'].forEach(id => {
-                const b = document.getElementById(id);
-                if (b) { b.disabled = false; b.innerText = 'ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ PLACE ORDER'; }
-            });
-        }
+    initializeSession() {
+        const overlay = document.getElementById('system-init-overlay');
+        if (overlay) overlay.style.display = 'none';
+        this.switchTab('dashboard');
     }
 
 }
+
 
 
 
