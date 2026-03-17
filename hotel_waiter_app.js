@@ -14,6 +14,20 @@ function refreshFirebaseRefs() {
     hooks = window.firebaseHooks;
 }
 
+async function pushNotification(type, message, target, data = null) {
+    const { collection, addDoc } = hooks;
+    try {
+        const nRef = collection(db, 'notifications');
+        await addDoc(nRef, {
+            id: Date.now().toString(),
+            type, message, target,
+            timestamp: Date.now(),
+            status: 'new',
+            data
+        });
+    } catch (e) { console.warn('[Notification] Push failed', e); }
+}
+
 // ── Master Menu Fallback ──────────────────────────────────
 const BARAK_MENU = [
     {id:'m1-basmat',name:'Basmati Rice',category:'Main Course',price:80,priceHalf:50,description:'Premium long grain steamed rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
@@ -444,6 +458,13 @@ window.placeOrder = async function() {
         addonOrderId = null;
         document.getElementById('waiter-addon-badge').style.display = 'none';
         document.getElementById('ordering-room-display').innerText = `ROOM ${selectedRoom} — NEW ORDER`;
+
+        await pushNotification(
+            'order',
+            `ROOM ORDER: Room ${roomNum} — ${room.guestName || 'Guest'}`,
+            'desk',
+            { type: 'room', roomNumber: roomNum, orderId: addonOrderId || 'New' }
+        );
         
     } catch (e) {
         console.error(e);
@@ -453,6 +474,13 @@ window.placeOrder = async function() {
         btn.innerText = '🚀 PLACE ORDER';
     }
 };
+
+window.placeOrder = placeOrder;
+window.selectRoom = selectRoom;
+window.filterByCategory = filterByCategory;
+window.addToCart = addToCart;
+window.updateQty = updateQty;
+window.confirmSelection = confirmSelection;
 
 window.handleLogout = async () => {
     if (confirm('Logout from Waiter Portal?')) {

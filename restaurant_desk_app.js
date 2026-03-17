@@ -430,49 +430,96 @@ function selectDeskCheckout(tableId, billId = null) {
     const ab = table.activeBills || [];
     let billsHtml = '';
 
-    if (billId) {
-        const bill = ab.find(b => b.billID === billId);
-        const orders = (table.orders || []).filter(o => o.id === billId || o.order_id === billId);
-        const total = orders.reduce((s, o) => s + (o.total || o.total_price || 0), 0);
-        billsHtml += `<div style="margin-bottom:1rem;">
-            <strong style="color:var(--gold-primary);">Bill ${billId} — ${bill?.guestName || 'Guest'}</strong>`;
-        orders.forEach(o => {
-            billsHtml += `<div style="margin-top:0.5rem;padding:0.5rem;background:rgba(255,255,255,0.05);border-radius:4px;">`;
-            (o.items || []).forEach(item => {
-                const nm = typeof item === 'object' ? `${item.qty}x ${item.name}` : item;
-                billsHtml += `<div>• ${nm}</div>`;
-            });
-            billsHtml += `</div>`;
-        });
-        billsHtml += `<div style="margin-top:0.75rem;font-weight:bold;font-size:1.1rem;color:#4ADE80;">Total: ₹${total}</div></div>`;
-        document.getElementById('checkout-modal-title').innerText = `Bill ${billId} — ${bill?.guestName || 'Guest'}`;
-    } else {
-        ab.forEach(b => {
-            const orders = (table.orders || []).filter(o => o.id === b.billID || o.order_id === b.billID);
-            const total = orders.reduce((s, o) => s + (o.total || o.total_price || 0), 0);
-            billsHtml += `<div style="margin-bottom:1.5rem;border-bottom:1px dashed rgba(255,255,255,0.1);padding-bottom:1rem;">
-                <strong style="color:var(--gold-primary);">Bill ${b.billID} — ${b.guestName}</strong>`;
-            orders.forEach(o => {
-                billsHtml += `<div style="margin-top:0.5rem;padding:0.5rem;background:rgba(255,255,255,0.05);border-radius:4px;">`;
-                (o.items || []).forEach(item => {
-                    billsHtml += `<div>• ${typeof item === 'object' ? `${item.qty}x ${item.name}` : item}</div>`;
-                });
-                billsHtml += `</div>`;
-            });
-            billsHtml += `<div style="margin-top:0.5rem;font-weight:bold;color:#4ADE80;">Subtotal: ₹${total}</div></div>`;
-        });
-        document.getElementById('checkout-modal-title').innerText = `Table ${tableId} — Full Checkout`;
+    if (ab.length > 1) {
+        billsHtml += `<div style="padding:0.5rem;background:rgba(160,32,240,0.1);color:#d4a0f7;border-radius:8px;margin-bottom:1rem;font-size:0.8rem;text-align:center;">
+            This table has multiple linked bills. You can checkout each separately.
+        </div>`;
     }
 
+    ab.forEach(b => {
+        const id = b.billID;
+        const orders = (table.orders || []).filter(o => o.id === id || o.order_id === id);
+        const total = orders.reduce((s, o) => s + (o.total || o.total_price || 0), 0);
+        
+        const isPaid = b.status === 'paid' || b.paid;
+
+        billsHtml += `
+            <div style="margin-bottom:1.5rem; border:1px solid ${isPaid?'#10B981':'var(--glass-border)'}; border-radius:12px; padding:1.2rem; background:rgba(0,0,0,0.2);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+                    <div>
+                        <div style="font-weight:900; color:var(--gold-primary); font-size:1rem;">BILL ${id}</div>
+                        <div style="font-size:0.8rem; color:var(--text-gray);">${b.guestName || 'Walk-in'} — ${b.pax || 1} PAX</div>
+                    </div>
+                    ${isPaid ? 
+                        `<span style="color:#10B981; font-weight:800; font-size:0.8rem;">PAID ✓</span>` : 
+                        `<button class="btn btn-primary" style="padding:0.4rem 0.8rem; font-size:0.75rem; background:#10B981; border:none;" 
+                            onclick="window.deskApp.checkoutBill('${tableId}', '${id}', ${total})">CHECKOUT</button>`
+                    }
+                </div>
+                <div style="font-size:0.85rem; border-top:1px dashed var(--glass-border); padding-top:0.8rem;">
+                    ${orders.length > 0 ? 
+                        orders.map(o => (o.items || []).map(i => `<div style="display:flex; justify-content:space-between; margin-bottom:0.2rem;">
+                            <span class="text-gray">${i.qty}x ${i.name}</span>
+                            <span>₹${i.qty * i.price}</span>
+                        </div>`).join('')).join('') : 
+                        '<div class="text-gray italic">No items found</div>'
+                    }
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:1rem; font-weight:bold; font-size:1.1rem; border-top:1px solid var(--glass-border); padding-top:0.8rem;">
+                    <span>Subtotal</span>
+                    <span style="color:#4ADE80;">₹${total}</span>
+                </div>
+            </div>`;
+    });
+
     const grandTotal = (table.orders || []).reduce((s, o) => s + (o.total || o.total_price || 0), 0);
-    billsHtml += `<div style="font-size:1.3rem;font-weight:bold;margin-top:1rem;padding-top:1rem;border-top:2px solid var(--gold-primary);display:flex;justify-content:space-between;">
-        <span>Grand Total</span><span style="color:var(--gold-primary);">₹${grandTotal}</span></div>`;
+    const allPaid = ab.length > 0 && ab.every(b => b.status === 'paid' || b.paid);
+
+    billsHtml += `
+        <div style="margin-top:2rem; padding:1.5rem; background:var(--glass-bg); border-radius:12px; border:2px solid var(--gold-primary);">
+            <div style="display:flex; justify-content:space-between; font-weight:900; font-size:1.3rem; margin-bottom:1.5rem;">
+                <span>TABLE TOTAL</span>
+                <span style="color:var(--gold-primary);">₹${grandTotal}</span>
+            </div>
+            ${allPaid ? 
+                `<button class="btn btn-primary btn-block" style="padding:1rem; font-size:1.1rem;" onclick="window.deskApp.printAndCloseTable('${tableId}', ${grandTotal})">CLOSE TABLE & SYNC</button>` :
+                `<div style="font-size:0.8rem; color:#f43f5e; text-align:center;">All bills must be checked out to close table</div>`
+            }
+        </div>`;
 
     document.getElementById('checkout-modal-content').innerHTML = billsHtml;
-    // Store for print
-    document.getElementById('checkout-modal').dataset.tableId = tableId;
-    document.getElementById('checkout-modal').dataset.grandTotal = grandTotal;
-    document.getElementById('checkout-modal').style.display = 'flex';
+    document.getElementById('checkout-modal-title').innerText = `TABLE ${tableId} — DASHBOARD`;
+    
+    // Store for closing action
+    const modal = document.getElementById('checkout-modal');
+    modal.dataset.tableId = tableId;
+    modal.dataset.grandTotal = grandTotal;
+    modal.style.display = 'flex';
+}
+
+async function checkoutBill(tableId, billId, amount) {
+    const table = tables[tableId]; if (!table) return;
+    const bill = (table.activeBills || []).find(b => b.billID === billId);
+    if (!bill) return;
+
+    bill.status = 'paid';
+    bill.paid = true;
+    restaurantRevenue += amount;
+    localStorage.setItem('yukt_rest_rev', restaurantRevenue);
+    
+    try {
+        await setDoc(doc(db, 'tables', tableId), table, { merge: true });
+        await addDoc(collection(db, 'ledger'), {
+            tableId, billId, amount,
+            guestName: bill.guestName || 'Guest',
+            closedAt: serverTimestamp(),
+            logType: 'BILL_CHECKOUT'
+        });
+        showToast(`Bill ${billId} checked out`, 'success');
+        selectDeskCheckout(tableId);
+    } catch (e) {
+        showToast('Checkout failed', 'error');
+    }
 }
 
 async function printAndCloseTable() {
@@ -504,7 +551,7 @@ async function printAndCloseTable() {
     modal.style.display = 'none';
     updateRevDisplay();
     printBill(tableId, grandTotal);
-    showToast(`Table ${tableId} closed. ₹${grandTotal} collected.`, 'success');
+    showToast(`Table ${tableId} closed.`, 'success');
 }
 
 function printBill(tableId, total) {
@@ -518,8 +565,6 @@ function printBill(tableId, total) {
     </div>`;
     window.print();
 }
-
-// ── Pickup Orders ─────────────────────────────────────────
 
 // ── Pickup Orders ─────────────────────────────────────────
 
@@ -897,7 +942,7 @@ async function handleLogout() {
 
 // ── Expose to window ──────────────────────────────────────
 window.deskApp = {
-    selectDeskCheckout, printAndCloseTable, printBill,
+    selectDeskCheckout, checkoutBill, printAndCloseTable, printBill,
     generatePickupOrder, markPickupPaid, markPickupDelivered,
     renderNotificationSidebar, printKOT, clearNotifications,
     toggleRevVisibility, openAvailabilityModal, renderAvailabilityTool,

@@ -97,12 +97,12 @@
      ════════════════════════════════════ -->
 <div id="pickup-modal" class="modal-overlay" style="display:none; z-index:10015;">
     <div class="security-box" style="width:900px; max-width:98vw; height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden;">
-        <div class="luxury-portal-header" style="padding:1rem 1.5rem; border-bottom:1px solid var(--glass-border);">
+        <div class="luxury-portal-header" style="flex-shrink:0; padding:1rem 1.5rem; border-bottom:1px solid var(--glass-border);">
             <div style="font-weight:800; color:var(--gold-primary);">NEW PICKUP ORDER</div>
             <button onclick="document.getElementById('pickup-modal').style.display='none'" style="background:transparent; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
         
-        <div style="display:grid; grid-template-columns: 1fr 320px; flex:1; overflow:hidden;">
+        <div style="display:grid; grid-template-columns: 1fr 320px; flex:1; overflow:hidden; min-height:0;">
             <!-- Menu Area -->
             <div style="display:flex; flex-direction:column; border-right:1px solid var(--glass-border); background:rgba(0,0,0,0.2);">
                 <div style="padding:1rem; border-bottom:1px solid var(--glass-border);">
