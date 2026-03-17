@@ -11,7 +11,7 @@ import {
     onSnapshot, query, orderBy, limit, updateDoc, serverTimestamp,
     runTransaction, increment
 } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
 // ── Firebase Config ───────────────────────────────────────
 const firebaseConfig = {
@@ -138,9 +138,15 @@ function startListeners() {
 
 async function init() {
     startClock();
-    await loadInitialData();
-    startListeners();
-    showToast('Connected to Cloud', 'success');
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            window.location.href = 'login.html';
+        } else {
+            await loadInitialData();
+            startListeners();
+            showToast('Connected to Cloud', 'success');
+        }
+    });
 }
 
 async function loadInitialData() {

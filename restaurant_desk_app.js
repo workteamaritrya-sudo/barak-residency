@@ -12,7 +12,7 @@ import {
     onSnapshot, query, orderBy, limit, updateDoc, deleteDoc,
     serverTimestamp, where, increment, arrayUnion
 } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
 // ── Firebase Config ───────────────────────────────────────
 const firebaseConfig = {
@@ -205,9 +205,18 @@ function startListeners() {
 
 async function init() {
     startClock();
-    await loadInitialData();
-    startListeners();
-    showToast('Desk connected to Cloud', 'success');
+    
+    // Auth Check
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            window.location.href = 'login.html';
+        } else {
+            console.log("[Auth] Active as:", user.email);
+            await loadInitialData();
+            startListeners();
+            showToast('Desk connected to Cloud', 'success');
+        }
+    });
 }
 
 async function loadInitialData() {
@@ -601,13 +610,25 @@ function renderPickupMenu(search = '') {
             <div style="font-weight:bold; font-size:0.9rem; margin-bottom:0.3rem; height:2.4rem; overflow:hidden;">${name}</div>
             <div style="color:var(--gold-primary); font-weight:800;">₹${price}</div>
         `;
-        el.onclick = () => promptPickupItem(item);
+        el.onclick = () => window.deskApp.addVariantToPickupCart(item);
         grid.appendChild(el);
     });
 }
 
 function filterPickupMenu(val) {
     renderPickupMenu(val);
+}
+
+function addVariantToPickupCart(item) {
+    // Basic auto-add for now, can be expanded to modal if variants needed
+    pickupCart.push({
+        id: item.id,
+        name: item.name,
+        label: 'Full',
+        price: item.price,
+        qty: 1
+    });
+    renderPickupCart();
 }
 
 function promptPickupItem(item) {
@@ -947,7 +968,8 @@ window.deskApp = {
     renderNotificationSidebar, printKOT, clearNotifications,
     toggleRevVisibility, openAvailabilityModal, renderAvailabilityTool,
     toggleItemAvailability, handleLogout,
-    filterPickupMenu, removeFromPickupCart, submitPickupOrder
+    filterPickupMenu, removeFromPickupCart, submitPickupOrder,
+    addVariantToPickupCart
 };
 
 // Legacy onclick compatibility

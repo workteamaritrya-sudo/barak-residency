@@ -475,13 +475,7 @@ window.placeOrder = async function() {
     }
 };
 
-window.placeOrder = placeOrder;
-window.selectRoom = selectRoom;
-window.filterByCategory = filterByCategory;
-window.addToCart = addToCart;
-window.updateQty = updateQty;
-window.confirmSelection = confirmSelection;
-
+// ── Export ────────────────────────────────────────────────
 window.handleLogout = async () => {
     if (confirm('Logout from Waiter Portal?')) {
         await window.firebaseHooks.signOut(window.firebaseAuth);
