@@ -89,35 +89,27 @@ function startListeners() {
         populateRoomSelect();
     });
 
-    // Listen to Menu (Firestore takes priority if populated and valid)
+    // Listen to Menu (Merge Sync: Safety Guaranteed)
     onSnapshot(collection(db, 'menuItems'), async (snap) => {
-        const { setDoc, doc } = hooks;
         if (!snap.empty) {
-            const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            
-            // Check if Firestore data is "junk" (missing names or prices)
-            const isJunk = docs.some(d => {
-                const name = d.name || d.Name || d.itemName;
-                const price = d.price || d.PriceFull || d.Price;
-                return !name || price == null || price === 0;
+            const cloudItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // Merge cloud data into our healthy master base — Strictly mapping master only
+            const updatedMenu = BARAK_MENU.map(baseItem => {
+                const cloudItem = cloudItems.find(c => String(c.id) === String(baseItem.id));
+                if (!cloudItem) return baseItem;
+
+                return {
+                    ...baseItem,
+                    price: cloudItem.price || cloudItem.PriceFull || cloudItem.Price || baseItem.price,
+                    priceHalf: cloudItem.priceHalf || cloudItem.PriceHalf || baseItem.priceHalf,
+                    imageUrl: cloudItem.imageUrl || cloudItem.ImageURL || cloudItem.image || baseItem.imageUrl,
+                    isAvailable: cloudItem.isAvailable !== false
+                };
             });
 
-            if (isJunk) {
-                console.warn("[Menu] Junk detected in Firestore. Repairing...");
-                for (const item of BARAK_MENU) {
-                    await setDoc(doc(db, 'menuItems', item.id), item);
-                }
-                return; // Let the next snapshot handle it
-            }
-
-            menu = docs;
+            menu = updatedMenu;
             renderMenu();
-        } else {
-            // Firestore empty? Push fallback
-            console.warn("[Menu] Firestore empty. Population fallback...");
-            for (const item of BARAK_MENU) {
-                await setDoc(doc(db, 'menuItems', item.id), item);
-            }
         }
     });
 

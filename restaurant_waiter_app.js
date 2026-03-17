@@ -112,17 +112,25 @@ function startListeners() {
         }
     });
 
-    onSnapshot(collection(db, 'menuItems'), (snap) => {
-        const newMenu = [];
-        snap.forEach(d => {
-            const data = d.data();
-            const name = data.name || data.Name || data.itemName || '';
-            if (name.trim().length > 0) newMenu.push({ id: d.id, ...data });
-        });
-        if (newMenu.length > 0) {
-            menu = newMenu;
+    // Menu items — Merge Sync (Ground Truth Strategy)
+    onSnapshot(collection(db, 'menuItems'), snap => {
+        if (!snap.empty) {
+            const cloudItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
+            const updatedMenu = getDefaultMenu().map(baseItem => {
+                const cloudItem = cloudItems.find(c => c.id === baseItem.id);
+                if (!cloudItem) return baseItem;
+                return {
+                    ...baseItem,
+                    price: cloudItem.price || cloudItem.PriceFull || cloudItem.Price || baseItem.price,
+                    priceHalf: cloudItem.priceHalf || cloudItem.PriceHalf || baseItem.priceHalf,
+                    imageUrl: cloudItem.imageUrl || cloudItem.ImageURL || cloudItem.image || baseItem.imageUrl,
+                    isAvailable: cloudItem.isAvailable !== false
+                };
+            });
+            menu = updatedMenu;
+            renderMenu(document.getElementById('rest-waiter-menu-search')?.value || '');
         }
-        renderMenu(document.getElementById('rest-waiter-menu-search')?.value || '');
     });
 }
 
