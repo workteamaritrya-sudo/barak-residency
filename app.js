@@ -3811,34 +3811,37 @@ class PMSApp {
                                 </tfoot>
                             </table>
 
-                            <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
-                                <div style="width: 350px; background: #fff8e1; border: 2px solid #D4AF37; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;">
-                                        <span>Subtotal:</span>
-                                        <span>₹${(roomSubtotal + foodSubtotal).toFixed(2)}</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #666;">
-                                        <span>Tax (GST):</span>
-                                        <span>₹${(roomGSTValue + foodGSTValue).toFixed(2)}</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #2e7d32;">
-                                        <span>Advance Paid:</span>
-                                        <span>- ₹${advance.toFixed(2)}</span>
-                                    </div>
-                                    <div style="border-top: 2px solid #D4AF37; margin-top: 12px; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                        <span style="font-weight: 900; font-size: 1.1rem; color: #1a237e;">TOTAL AMOUNT</span>
-                                        <span style="font-weight: 900; font-size: 1.5rem; color: #c62828;">₹${safeBalance.toFixed(2)}</span>
+                            <!-- Summary Section with Page Break Avoidance or Isolation -->
+                            <div style="page-break-before: always; border-top: 1px solid #eee; padding-top: 40px;">
+                                <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                                    <div style="width: 350px; background: #fff8e1; border: 2px solid #D4AF37; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;">
+                                            <span>Subtotal:</span>
+                                            <span>₹${(roomSubtotal + foodSubtotal).toFixed(2)}</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #666;">
+                                            <span>Tax (GST):</span>
+                                            <span>₹${(roomGSTValue + foodGSTValue).toFixed(2)}</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #2e7d32;">
+                                            <span>Advance Paid:</span>
+                                            <span>- ₹${advance.toFixed(2)}</span>
+                                        </div>
+                                        <div style="border-top: 2px solid #D4AF37; margin-top: 12px; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="font-weight: 900; font-size: 1.1rem; color: #1a237e;">TOTAL AMOUNT</span>
+                                            <span style="font-weight: 900; font-size: 1.5rem; color: #c62828;">₹${safeBalance.toFixed(2)}</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div style="margin-top: 30px; margin-bottom: 30px; padding: 15px; border: 1px dashed #bbb; font-size: 0.85rem; border-radius: 6px;">
-                                <strong>Amount in Words:</strong> ${numberToWords(safeBalance)}
-                            </div>
+                                <div style="margin-top: 30px; margin-bottom: 30px; padding: 15px; border: 1px dashed #bbb; font-size: 0.85rem; border-radius: 6px;">
+                                    <strong>Amount in Words:</strong> ${numberToWords(safeBalance)}
+                                </div>
 
-                            <div style="display: flex; justify-content: space-between; margin-top: 60px;">
-                                <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 8px; font-size: 0.8rem;">Guest Signature</div>
-                                <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 8px; font-size: 0.8rem;">Authorized Signatory</div>
+                                <div style="display: flex; justify-content: space-between; margin-top: 60px;">
+                                    <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 8px; font-size: 0.8rem;">Guest Signature</div>
+                                    <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 8px; font-size: 0.8rem;">Authorized Signatory</div>
+                                </div>
                             </div>
                         </div>
                     `;

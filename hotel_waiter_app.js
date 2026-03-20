@@ -434,8 +434,10 @@ window.placeOrder = async function() {
             const orderId = await getNextGlobalSerial(roomNum);
             const orderObj = {
                 order_id: orderId,
+                id: orderId,
                 roomNumber: String(roomNum),
                 guestName: room.guestName || 'Guest',
+                stayID: room.currentStayId || "",
                 items: waiterCart,
                 total_price: total,
                 status: 'Pending',

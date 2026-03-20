@@ -125,9 +125,9 @@
 
         /* Branding */
         .brand-logo {
-            width: 590px;
+            width: 650px;
             height: auto;
-            margin-bottom: 2.5rem;
+            margin-bottom: 0.5rem;
             filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.5));
             animation: logo-pulse 4s ease-in-out infinite;
         }
@@ -146,13 +146,13 @@
 
         .brand-name-luxury {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 5.5rem;
+            font-size: 3.5rem;
             font-weight: 300;
             letter-spacing: 0.15em;
-            color: var(--gold);
+            color: #ffffff;
             line-height: 1;
             text-align: center;
-            animation: fade-slide-up 1s ease-out 0.2s both;
+            margin-top: 0.5rem;
         }
 
         .brand-subtitle {
@@ -251,7 +251,7 @@
         }
 
         .login-header img {
-            width: 83px;
+            width: 121px;
             /* Further increased by 25% from 66px */
             margin-bottom: 1rem;
             filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.4));
@@ -515,13 +515,12 @@
     <div class="page-left">
         <div class="deco-line deco-line-top"></div>
 
-        <div style="text-align:center; position: relative; z-index: 2;">
-            <img src="br.png" class="brand-logo" alt="Barak Residency" onerror="this.style.display='none'">
-            <div class="brand-subtitle" style="margin-top: 2rem;">Silchar · Assam · India</div>
-            <div class="brand-divider"></div>
-            <p class="brand-tagline">
-                Where every detail is crafted for<br>
-                your perfect stay experience.
+        <div style="text-align:center; position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem;">
+            <img src="br.png" class="brand-logo" alt="Barak Residency">
+            <h1 class="brand-name-luxury">BARAK RESIDENCY</h1>
+            <div class="brand-subtitle" style="margin-top: -0.2rem; color: rgba(255,255,255,0.7); letter-spacing: 0.3em;">EST. 2026 · SILCHAR · ASSAM · INDIA</div>
+            <p class="brand-tagline" style="margin-top: 0.5rem; color: rgba(255,255,255,0.4); font-size: 0.85rem;">
+                Where every detail is crafted for your perfect stay experience.
             </p>
         </div>
 
