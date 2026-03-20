@@ -10,14 +10,8 @@
     <script type="module">
         import { firebaseAuth, firebaseHooks } from './firebase-sync.js';
         
-        // Force login check on every page load
         firebaseHooks.onAuthStateChanged(firebaseAuth, (user) => {
-            if (!user) {
-                window.location.href = 'login.html';
-            } else {
-                // If logged in, show the hub
-                document.getElementById('hub-wrapper').style.display = 'block';
-            }
+            if (!user) window.location.href = 'login.html';
         });
     </script>
     <style>
@@ -48,7 +42,7 @@
 </head>
 <body>
 
-    <div id="hub-wrapper" style="display: none;">
+    <div class="management-hub" id="app-container" style="display: none; flex-direction: column;">
         <header class="top-navbar">
             <div class="navbar-brand">
                 <img src="br.png" alt="Barak Residency">
@@ -59,6 +53,12 @@
             </div>
             
             <div style="display: flex; align-items: center; gap: 2rem;">
+                <!-- Hidden components required by app.js logic -->
+                <div style="display: none;">
+                    <span id="user-display-name">Receptionist</span>
+                    <span id="user-display-role">Reception</span>
+                    <span id="user-avatar">??</span>
+                </div>
                 <div id="live-clock" style="font-family: 'Inter', sans-serif; font-weight: 800; font-size: 1.2rem; color: #D4AF37;">00:00 AM</div>
                 <button class="logout-pill" onclick="app.handleLogout()">🚪 SIGN OUT</button>
             </div>
@@ -133,7 +133,11 @@
                 <div id="cc-content-reserved" style="display: none;">
                     <div class="cc-section">
                         <h3 style="color: #a855f7; font-size: 0.7rem; text-transform: uppercase;">Reservation Data</h3>
-                        <div class="metadata-grid" id="cc-res-grid" style="margin-top: 0.8rem;"></div>
+                        <div class="metadata-grid" id="cc-res-grid" style="margin-top: 0.8rem;">
+                            <div class="meta-item"><span class="meta-label">Guest</span><span class="meta-value" id="cc-res-name">--</span></div>
+                            <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-value" id="cc-res-phone">--</span></div>
+                            <div class="meta-item"><span class="meta-label">Arrival</span><span class="meta-value" id="cc-res-arrival">--</span></div>
+                        </div>
                         <button class="btn btn-primary btn-block mt-6" onclick="app.convertResToCheckin()">CONVERT TO CHECK-IN</button>
                     </div>
                 </div>
@@ -141,17 +145,113 @@
         </aside>
     </div>
 
-    <!-- Check-in Modal Overlay -->
-    <div id="checkin-modal" class="modal-overlay" style="display:none; z-index:20000; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px);">
-        <div class="glass-panel" style="max-width:500px; width: 90%; padding:2.5rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 30px;">
-            <h2 style="font-family: 'Inter', sans-serif; font-weight: 800; color: #D4AF37; margin-bottom: 2rem;">GUEST CHECK-IN</h2>
-            <div id="checkin-form-container"></div>
-            <div style="display:flex; gap:1rem; margin-top:2rem;">
-                <button class="btn btn-primary flex-1" onclick="app.processCheckIn()">CONFIRM & SAVE</button>
-                <button class="btn btn-outline flex-1" onclick="app.closeCheckInForm()">CANCEL</button>
+    <!-- 1. SMART CHECK-IN MODAL (Full Implementation) -->
+    <div id="smart-checkin-modal" class="modal-overlay" style="display:none; z-index:20002; background:rgba(2,10,24,0.98); backdrop-filter:blur(15px);">
+        <div class="glass-panel" style="width:96%; max-width:850px; height:auto; display:flex; flex-direction:column; padding:2.5rem; border:1px solid rgba(212,175,55,0.3); border-radius:32px; box-shadow:0 0 100px rgba(212,175,55,0.1);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+                <h2 style="font-family:'Inter'; font-weight:900; color:var(--gold-primary); letter-spacing:2px; font-size:1.5rem;">EXECUTIVE ONBOARDING</h2>
+                <button class="btn btn-outline" onclick="document.getElementById('smart-checkin-modal').style.display='none'" style="border-radius:50%; width:40px; height:40px; padding:0;">✕</button>
+            </div>
+
+            <div class="smart-checkin-stepper" style="display:flex; gap:1rem; margin-bottom:2rem; justify-content:center; align-items:center;">
+                <div class="step-indicator active" id="ci-step-1">1. IDENTITY</div>
+                <div class="step-line" style="flex:1; height:2px; background:rgba(255,255,255,0.1);"></div>
+                <div class="step-indicator" id="ci-step-2">2. PHOTO</div>
+                <div class="step-line" style="flex:1; height:2px; background:rgba(255,255,255,0.1);"></div>
+                <div class="step-indicator" id="ci-step-3">3. DOCUMENTS</div>
+                <div class="step-line" style="flex:1; height:2px; background:rgba(255,255,255,0.1);"></div>
+                <div class="step-indicator" id="ci-step-4">4. FINANCE</div>
+                <div class="step-line" style="flex:1; height:2px; background:rgba(255,255,255,0.1);"></div>
+                <div class="step-indicator" id="ci-step-5">5. REVIEW</div>
+            </div>
+
+            <div id="sci-body" style="padding:1rem;">
+                <!-- Step 1 -->
+                <div class="ci-view active" id="ci-view-1">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+                        <div class="form-group"><label>Salutation</label><select id="sci-salutation" class="form-control"><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option></select></div>
+                        <div class="form-group"><label>Guest Name</label><input type="text" id="sci-name" class="form-control" placeholder="John Doe"></div>
+                        <div class="form-group"><label>Phone Number</label><input type="tel" id="sci-phone" class="form-control" placeholder="+91"></div>
+                        <div class="form-group"><label>Age</label><input type="number" id="sci-age" class="form-control" placeholder="25"></div>
+                    </div>
+                    <button class="btn btn-primary btn-block mt-8" onclick="app.sciNext(2)">PROCEED TO PHOTO CAPTURE</button>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="ci-view" id="ci-view-2" style="display:none; text-align:center;">
+                    <div id="sci-photo-container" style="width:100%; max-width:400px; margin:0 auto; background:#000; border-radius:12px; aspect-ratio:4/3; margin-bottom:1.5rem; overflow:hidden; border:2px solid var(--gold-primary);">
+                        <video id="sci-video" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+                        <canvas id="sci-canvas" style="display:none;"></canvas>
+                        <img id="sci-photo-preview" style="display:none; width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <div id="sci-photo-status" style="display:none; color:#4ade80; margin-bottom:1rem; font-weight:800;">✓ PHOTO CAPTURED</div>
+                    <div style="display:flex; gap:1rem; justify-content:center;">
+                        <button class="btn btn-outline" onclick="app.captureLivePhoto()">CAPTURE NOW</button>
+                        <button class="btn btn-outline" onclick="document.getElementById('sci-photo-upload').click()">BROWSE FILE</button>
+                        <input type="file" id="sci-photo-upload" style="display:none" accept="image/*" onchange="app.handlePhotoUpload(this)">
+                    </div>
+                    <button class="btn btn-primary btn-block mt-6" onclick="app.sciNext(3)">CONTINUE TO DOCUMENTS</button>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="ci-view" id="ci-view-3" style="display:none;">
+                    <div id="sci-id-list" style="background:rgba(255,255,255,0.02); min-height:120px; border-radius:12px; border:2px dashed rgba(255,255,255,0.1); padding:1rem; margin-bottom:1rem; text-align:center;">
+                        <span id="id-placeholder-text">NO DOCUMENTS ATTACHED</span>
+                    </div>
+                    <button class="btn btn-outline btn-block mb-4" onclick="document.getElementById('sci-id-upload').click()">+ ATTACH ID FILES (PDF/JPG)</button>
+                    <input type="file" id="sci-id-upload" style="display:none" multiple accept="image/*,pdf" onchange="app.handleMultiIdUpload(this)">
+                    <button class="btn btn-primary btn-block" onclick="app.sciNext(4)">PROCEED TO FINANCE</button>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="ci-view" id="ci-view-4" style="display:none;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+                        <div class="form-group"><label>Room Tariff</label><input type="number" id="sci-tariff" class="form-control" value="2500"></div>
+                        <div class="form-group"><label>Advance Payment</label><input type="number" id="sci-advance" class="form-control" value="0"></div>
+                        <div class="form-group"><label>Payment Method</label><select id="sci-payment-method" class="form-control"><option>UPI</option><option>Cash</option><option>Card</option></select></div>
+                    </div>
+                    <button class="btn btn-primary btn-block mt-8" onclick="app.sciNext(5)">REVIEW & CONFIRM</button>
+                </div>
+
+                <!-- Step 5 -->
+                <div class="ci-view" id="ci-view-5" style="display:none;">
+                    <div style="background:rgba(212,175,55,0.05); padding:1.5rem; border-radius:12px; margin-bottom:2rem; border:1px solid rgba(212,175,55,0.2);">
+                        <p><strong>GUEST:</strong> <span id="summary-name" style="color:var(--gold-primary);">--</span></p>
+                        <p><strong>PHONE:</strong> <span id="summary-phone">--</span></p>
+                        <p><strong>ROOM:</strong> <span id="summary-room">--</span></p>
+                        <p><strong>TOTAL PER NIGHT:</strong> ₹<span id="summary-tariff">--</span></p>
+                    </div>
+                    <button class="btn btn-primary btn-block" style="padding:1.5rem; font-size:1.2rem;" onclick="app.submitCheckIn()">CONFIRM FINAL CHECK-IN</button>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- 2. OTHER REQUIRED COMPONENTS -->
+    <div id="reserve-modal" class="modal-overlay" style="display:none; z-index:20003;">
+        <div class="glass-panel" style="max-width:450px; padding:2rem;">
+            <h2 style="color:var(--gold-primary); margin-bottom:1.5rem;">RESERVE ROOM</h2>
+            <div class="form-group mb-4"><label>Guest Name</label><input type="text" id="res-name" class="form-control"></div>
+            <div class="form-group mb-4"><label>Phone</label><input type="tel" id="res-phone" class="form-control"></div>
+            <div class="form-group mb-4"><label>Arrival Date</label><input type="datetime-local" id="res-arrival" class="form-control"></div>
+            <div style="display:flex; gap:1rem;">
+                <button class="btn btn-primary flex-1" onclick="app.submitReservation()">RESERVE</button>
+                <button class="btn btn-outline flex-1" onclick="app.closeReserveModal()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="invoice-preview-modal" class="modal-overlay" style="display:none; z-index:20004;">
+        <div class="glass-panel" style="max-width:600px; padding:2rem; max-height:90vh; overflow-y:auto;">
+            <div id="invoice-preview-content"></div>
+            <div style="display:flex; gap:1rem; margin-top:2rem;">
+                <button class="btn btn-primary flex-1" onclick="app.printInvoiceFromPreview()">PRINT BILL</button>
+                <button class="btn btn-outline flex-1" onclick="document.getElementById('invoice-preview-modal').style.display='none'">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="print-area" style="display:none;"></div>
 
     <script type="module">
         import { PMSApp } from './app.js';
