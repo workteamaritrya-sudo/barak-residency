@@ -836,10 +836,10 @@ window.updatePickupQty = function (delta) {
     document.querySelector('#pim-options-container button.btn-primary').innerText = `ADD TO CART — ₹${price}`;
 };
 
-function executeAddPickupToCart() {
+window.executeAddPickupToCart = function() {
     addToPickupCart(pendingPickupItem, pendingPickupVariant.variant, pendingPickupVariant.label, pendingPickupVariant.price, pendingPickupQty);
     document.getElementById('pickup-item-modal').style.display = 'none';
-}
+};
 
 
 function addToPickupCart(item, variant, label, price, qty) {
@@ -1165,6 +1165,8 @@ window.generatePickupOrder = generatePickupOrder;
 window.clearNotifications = clearNotifications;
 window.toggleRevVisibility = toggleRevVisibility;
 window.openAvailabilityModal = openAvailabilityModal;
+window.executeAddPickupToCart = executeAddPickupToCart; // Added for pickup modal
+window.updatePickupQty = updatePickupQty; // Added for pickup modal
 
 // ── Boot ──────────────────────────────────────────────────
 init().catch(e => console.error('[Desk Boot] Failed:', e));
