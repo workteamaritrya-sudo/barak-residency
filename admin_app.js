@@ -11,7 +11,22 @@ import {
 import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
 // --- Firebase Config ---
-import { FIREBASE_KEY, GEMINI_KEY } from './secrets.js';
+// --- Firebase Config (Keys imported dynamically to handle missing files on Git) ---
+let FIREBASE_KEY = "";
+let GEMINI_KEY = "";
+
+async function initConfig() {
+    try {
+        const secrets = await import('./secrets.js');
+        FIREBASE_KEY = secrets.FIREBASE_KEY;
+        GEMINI_KEY = secrets.GEMINI_KEY;
+        console.log("[Secrets] Dynamic link established.");
+    } catch (e) {
+        console.warn("[Secrets] Bridge failed. Advanced cloud features may be offline.");
+        // Fallback for demo if needed, or leave blank to see config alerts
+    }
+}
+await initConfig();
 
 const firebaseConfig = {
     apiKey: FIREBASE_KEY,
@@ -23,9 +38,19 @@ const firebaseConfig = {
     appId: "1:3871550492:web:2cf49bc0a963b4888f43d9"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+let app, db, auth;
+if (FIREBASE_KEY) {
+    try {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+    } catch (e) {
+        console.error("[Firebase] Init failure:", e);
+    }
+} else {
+    console.error("[Auth] Missing API Credentials. Cloud synchronization is inactive.");
+    alert("CRITICAL CONFIGURATION: Cloud API Credentials (secrets.js) missing. Advanced owner features are currently offline.");
+}
 
 // --- Gemini Config ---
 const GEMINI_API_KEY = GEMINI_KEY;

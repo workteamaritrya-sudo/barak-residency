@@ -1,5 +1,5 @@
 # Firebase Security Keys
-secrets.js
+# secrets.js - included for live browser access
 firebase-key.json
 backend/firebase-key.json
 *.pem
