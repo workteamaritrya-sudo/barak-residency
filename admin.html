@@ -149,11 +149,11 @@
         <h1>BARAK</h1>
     </div>
 
-    <div class="nav-item active"><i>🏠</i> Dashboard</div>
-    <div class="nav-item"><i>🛎️</i> Hotel Overview</div>
-    <div class="nav-item"><i>🍽️</i> Restaurant Stats</div>
-    <div class="nav-item"><i>📋</i> Financial Reports</div>
-    <div class="nav-item"><i>⚙️</i> System Settings</div>
+    <div class="nav-item active" onclick="window.switchAdminTab('dashboard-view', this)"><i>🏠</i> Dashboard</div>
+    <div class="nav-item" onclick="window.switchAdminTab('hotel-view', this)"><i>🛎️</i> Hotel Overview</div>
+    <div class="nav-item" onclick="window.switchAdminTab('rest-view', this)"><i>🍽️</i> Restaurant Stats</div>
+    <div class="nav-item" onclick="window.switchAdminTab('finance-view', this)"><i>📋</i> Financial Reports</div>
+    <div class="nav-item" onclick="window.switchAdminTab('settings-view', this)"><i>⚙️</i> System Settings</div>
     
     <div style="margin-top: auto;">
         <div class="nav-item" onclick="window.handleLogout()"><i>🚪</i> Sign Out</div>
@@ -196,24 +196,45 @@
     </div>
 
     <div class="content-body">
-        <div class="body-section">
-            <div class="section-header">
-                <h3>Table turnaround analytics</h3>
-                <div style="color: rgba(255,255,255,0.4); font-size: 0.8rem;">Average: 42 mins / seating</div>
-            </div>
-            <div class="table-analytics">
-                <div class="analytics-card">
-                    <canvas id="revChart" height="150"></canvas>
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="admin-view">
+            <div class="body-section">
+                <div class="section-header">
+                    <h3>Table turnaround analytics</h3>
+                    <div style="color: rgba(255,255,255,0.4); font-size: 0.8rem;">Average: 42 mins / seating</div>
                 </div>
-                <div class="analytics-card turnaround-list" id="turnaround-list"></div>
+                <div class="table-analytics">
+                    <div class="analytics-card">
+                        <canvas id="revChart" height="150"></canvas>
+                    </div>
+                    <div class="analytics-card turnaround-list" id="turnaround-list"></div>
+                </div>
+            </div>
+
+            <div class="body-section">
+                <div class="section-header">
+                    <h3>Recent Hotel Activity</h3>
+                </div>
+                <div id="hotel-activity" style="display: flex; flex-direction: column; gap: 1rem;"></div>
             </div>
         </div>
 
-        <div class="body-section">
-            <div class="section-header">
-                <h3>Recent Hotel Activity</h3>
+        <!-- Hotel Overview View -->
+        <div id="hotel-view" class="admin-view" style="display:none;"></div>
+
+        <!-- Restaurant View -->
+        <div id="rest-view" class="admin-view" style="display:none;"></div>
+
+        <!-- Finance View -->
+        <div id="finance-view" class="admin-view" style="display:none;"></div>
+
+        <!-- Settings View -->
+        <div id="settings-view" class="admin-view" style="display:none;">
+            <div class="analytics-card">
+                <h3>System Properties</h3>
+                <p>Advanced owner controls for Barak Residency.</p>
+                <!-- Form logic could go here -->
             </div>
-            <div id="hotel-activity" style="display: flex; flex-direction: column; gap: 1rem;"></div>
         </div>
     </div>
 </main>
