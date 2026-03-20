@@ -100,46 +100,74 @@ window.sendToAI = async function() {
 
     appendMsg(msg, 'user');
     input.value = '';
+    
+    const aiLoaderId = 'ai-loading-' + Date.now();
+    appendMsg("Thinking...", 'ai', aiLoaderId);
 
-    // Logic: If Gemini Key is present, call Gemini. 
-    // If not, use simple local rule-based responses for fundamental commands.
-    if (GEMINI_API_KEY === 'REPLACEME_GEMINI_KEY') {
-        appendMsg("I'm ready to assist, but my advanced neural core needs the Gemini API key. For now, I'll use local processing.", 'ai');
+    if (GEMINI_API_KEY === 'REPLACEME_GEMINI_KEY' || !GEMINI_API_KEY) {
+        document.getElementById(aiLoaderId).remove();
+        appendMsg("Advanced AI requires a valid Gemini API Key. Switching to local processing.", 'ai');
         handleLocalAI(msg);
         return;
     }
 
     try {
-        const response = await fetch(GEMINI_URL, {
+        // Try Gemini 1.5 Flash (preferred) or fallback to Gemini Pro
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        
+        const response = await fetch(url, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: `Context: You are the AI Manager for Barak Residency. 
-                        Current System State: ${occupiedRooms()} occupied rooms, ${activeOrders()} active orders, total revenue ₹${revenue}.
-                        Goal: Help the owner manage the app. 
-                        Owner's Request: ${msg}`
-                    }]
-                }]
+                contents: [{ parts: [{ text: `You are the Executive Manager of Barak Residency. Stay professional. Business Status: Occupied Rooms ${occupiedRooms()} / 26, Dashboard Revenue ₹${revenue}. Assistant Task: Respond to owner: ${msg}` }] }]
             })
         });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            console.error("Gemini API Error:", errData);
+            throw new Error(`API ${response.status}: ${errData.error?.message || 'Unknown Failure'}`);
+        }
+
         const data = await response.json();
-        const text = data.candidates[0].content.parts[0].text;
-        appendMsg(text, 'ai');
-        handleAICommands(text); // Check if AI suggested an action
+        document.getElementById(aiLoaderId).remove();
+
+        if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+            const text = data.candidates[0].content.parts[0].text;
+            appendMsg(text, 'ai');
+            handleAICommands(text);
+        } else {
+            throw new Error("Empty AI response received.");
+        }
     } catch (e) {
-        appendMsg("I encountered an error connecting to my neural center. Local processing is active.", 'ai');
+        console.warn("AI System Fallback:", e.message);
+        if (document.getElementById(aiLoaderId)) document.getElementById(aiLoaderId).remove();
+        appendMsg(`AI Link Interrupted: ${e.message}. Using Local Manager.`, 'ai');
         handleLocalAI(msg);
     }
 };
 
-function appendMsg(text, role) {
+function appendMsg(text, role, id = null) {
     const container = document.getElementById('ai-messages');
     const div = document.createElement('div');
     div.className = `msg msg-${role}`;
+    if (id) div.id = id;
     div.innerText = text;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
+}
+
+function handleAICommands(text) {
+    const lower = text.toLowerCase();
+    // Example: "i'll mark the biryani as unavailable"
+    if (lower.includes('mark') && (lower.includes('unavailable') || lower.includes('out of stock'))) {
+        const match = text.match(/mark (.+?) (as unavailable|out of stock)/i);
+        if (match) {
+            const itemName = match[1].trim();
+            const item = menu.find(m => m.name.toLowerCase().includes(itemName.toLowerCase()));
+            if (item) toggleItemAvailability(item.id, false);
+        }
+    }
 }
 
 function handleLocalAI(msg) {

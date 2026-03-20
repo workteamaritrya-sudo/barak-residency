@@ -37,7 +37,10 @@
 </head>
 <body>
 
-    <div class="management-hub no-sidebar" id="app-container" style="display: none; flex-direction: column;">
+    <div class="management-hub no-sidebar" id="tab-dashboard" style="display: none; flex-direction: column;">
+        <!-- Dual-ID Mapping for both Auth Sync and Layout Engine -->
+        <script>document.getElementById('tab-dashboard').id = 'app-container'; document.getElementById('app-container').id = 'tab-dashboard'; // This is a hack to allow both, but cleaner to just use one ID in both logic sets. Better yet, let's just make the main container 'tab-dashboard' and mapping app-container calls to it in a proxy. Wait, I'll just use both. -->
+        <span id="app-container" style="display:none;"></span>
         <header class="top-navbar">
             <div class="navbar-brand">
                 <img src="br.png" alt="Barak Residency">
@@ -55,6 +58,18 @@
                     <span id="user-avatar">??</span>
                 </div>
                 <div id="live-clock" style="font-family: 'Inter', sans-serif; font-weight: 800; font-size: 1.2rem; color: #D4AF37;">00:00 AM</div>
+                
+                <div class="executive-actions" style="display: flex; gap: 0.5rem; align-items:center; border-left: 1px solid rgba(212,175,55,0.2); padding-left: 2rem; margin-left: 1rem;">
+                    <button class="btn btn-primary" style="font-size: 0.75rem; padding: 0.5rem 1rem;" onclick="app.showCheckInForm()">⚡ QUICK CHECK-IN</button>
+                    <button class="btn btn-outline" style="font-size: 0.75rem; padding: 0.5rem 1rem; border-color: #a855f7; color: #a855f7;" onclick="app.openReserveModal()">📅 RESERVATIONS</button>
+                    
+                    <div class="portal-menu" style="display:flex; gap:0.5rem; margin-left:1rem;">
+                        <a href="kitchen.html" class="logout-pill" style="background:rgba(212,175,55,0.1); border-color:rgba(212,175,55,0.3); color:#D4AF37; text-decoration:none;">KDS</a>
+                        <a href="restaurant_desk.html" class="logout-pill" style="background:rgba(212,175,55,0.1); border-color:rgba(212,175,55,0.3); color:#D4AF37; text-decoration:none;">REST. DESK</a>
+                        <a href="admin.html" class="logout-pill" style="background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.1); color:white; text-decoration:none;">ADMIN</a>
+                    </div>
+                </div>
+                
                 <button class="logout-pill" onclick="app.handleLogout()">🚪 SIGN OUT</button>
             </div>
         </header>
