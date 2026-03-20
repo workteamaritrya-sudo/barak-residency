@@ -7,13 +7,10 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="firebase-sync.js"></script>
-    <script type="module">
-        import { firebaseAuth, firebaseHooks } from './firebase-sync.js';
-        
-        // Removed duplicate auth watcher as PMSApp handles its own security checks
-    </script>
+    <script type="module" src="app.js"></script>
     <style>
-        body { background: #050B1A; overflow-x: hidden; }
+        :root { --gold-primary: #D4AF37; }
+        body { background: #050B1A !important; overflow-x: hidden; margin: 0; padding: 0; }
         .top-navbar {
             display: flex; justify-content: space-between; align-items: center;
             padding: 1rem 2rem; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
@@ -40,7 +37,7 @@
 </head>
 <body>
 
-    <div class="management-hub" id="app-container" style="display: none; flex-direction: column;">
+    <div class="management-hub no-sidebar" id="app-container" style="display: none; flex-direction: column;">
         <header class="top-navbar">
             <div class="navbar-brand">
                 <img src="br.png" alt="Barak Residency">
@@ -251,9 +248,5 @@
 
     <div id="print-area" style="display:none;"></div>
 
-    <script type="module">
-        import { PMSApp } from './app.js';
-        window.app = new PMSApp();
-    </script>
 </body>
 </html>
