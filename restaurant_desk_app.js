@@ -1153,7 +1153,8 @@ window.deskApp = {
     toggleRevVisibility, openAvailabilityModal, renderAvailabilityTool,
     toggleItemAvailability, handleLogout,
     filterPickupMenu, removeFromPickupCart, submitPickupOrder,
-    addVariantToPickupCart, promptPickupItem,
+    addVariantToPickupCart, promptPickupItem, updatePickupQty,
+    executeAddPickupToCart, promptPickupQuantity,
     showCheckInForm, openReserveModal, sciNext, captureLivePhoto,
     handleMultiIdUpload, submitCheckIn, submitReservation, verifyPasscode
 };

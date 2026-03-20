@@ -124,14 +124,26 @@ window.sendToAI = async function() {
     }
 
     try {
-        // Try Gemini 1.5 Flash (preferred) or fallback to Gemini Pro
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        // Try Gemini 1.5 Flash first, then fallback to 1.0 Pro if 400 occurs
+        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: `You are the AI Resident Manager at Barak Residency. Your role is to assist the owners in managing their business efficiently. Today's Statistics: ₹${revenue} revenue, ${orders.length} orders. Use a professional, executive tone. Request: ${msg}` }] }]
+                contents: [{ parts: [{ text: `Role: AI Resident Manager at Barak Residency. Task: Assist owners. Context: ₹${revenue} revenue, ${orders.length} orders. Request: ${msg}` }] }]
             })
         });
+
+        // Fallback to Gemini 1.0 Pro if 1.5 Flash fails with 400 or other errors
+        if (!res.ok) {
+            console.log("[AI] Falling back to Gemini 1.0 Pro...");
+            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `Role: Manager. Context: ₹${revenue} revenue. Request: ${msg}` }] }]
+                })
+            });
+        }
 
         if (document.getElementById(aiLoaderId)) document.getElementById(aiLoaderId).remove();
 
