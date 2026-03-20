@@ -125,7 +125,7 @@
 
         /* Branding */
         .brand-logo {
-            width: 613px;
+            width: 590px;
             height: auto;
             margin-bottom: 2.5rem;
             filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.5));
@@ -251,7 +251,8 @@
         }
 
         .login-header img {
-            width: 83px; /* Further increased by 25% from 66px */
+            width: 83px;
+            /* Further increased by 25% from 66px */
             margin-bottom: 1rem;
             filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.4));
         }
@@ -397,7 +398,8 @@
         }
 
         .loader-logo {
-            width: 610px; /* Further increased by 25% from 488px */
+            width: 610px;
+            /* Further increased by 25% from 488px */
             filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.6));
             animation: logo-pulse 1.5s ease-in-out infinite;
         }
@@ -586,7 +588,7 @@
                 // Try case-insensitive (check original, then check uppercase if no hit)
                 let q = firebaseHooks.query(usersRef, firebaseHooks.where('empId', '==', empId));
                 let snap = await firebaseHooks.getDocs(q);
-                
+
                 if (snap.empty) {
                     q = firebaseHooks.query(usersRef, firebaseHooks.where('empId', '==', empId.toUpperCase()));
                     snap = await firebaseHooks.getDocs(q);
