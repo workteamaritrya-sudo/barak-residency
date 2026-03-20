@@ -101,7 +101,7 @@ async function pushNotification(type, message, target, data = null) {
 
 function startListeners() {
     onSnapshot(collection(db, 'tables'), (snap) => {
-        snap.forEach(d => { tables[d.id] = d.data(); });
+        snap.forEach(d => { tables[d.id] = { ...d.data(), id: d.id }; });
         renderTableSidebar();
     });
 
@@ -112,7 +112,6 @@ function startListeners() {
         }
     });
 
-    // Menu items — Merge Sync (Ground Truth Strategy)
     onSnapshot(collection(db, 'menuItems'), snap => {
         if (!snap.empty) {
             const cloudItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -152,15 +151,16 @@ async function init() {
 async function loadInitialData() {
     const tablesSnap = await getDocs(collection(db, 'tables'));
     if (!tablesSnap.empty) {
-        tablesSnap.forEach(d => { tables[d.id] = d.data(); });
+        tablesSnap.forEach(d => { tables[d.id] = { ...d.data(), id: d.id }; });
     } else {
         const defaultTables = generateDefaultTables();
         for (const [id, t] of Object.entries(defaultTables)) {
             await setDoc(doc(db, 'tables', id), t);
-            tables[id] = t;
+            tables[id] = { ...t, id: id };
         }
     }
 
+    const menuSnap = await getDocs(collection(db, 'menuItems'));
     if (!menuSnap.empty) {
         const cloudMenu = [];
         menuSnap.forEach(d => {
