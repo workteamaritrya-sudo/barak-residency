@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitchen Display System | Barak Residency</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090E1A;
+            --surface: #12182B;
+            --accent: #F43F5E;
+            --success: #22C55E;
+            --warning: #F59E0B;
+            --text: #F8FAFC;
+            --text-dim: #94A3B8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        header {
+            padding: 1rem 2rem; background: var(--surface); border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .logo-area { display: flex; align-items: center; gap: 1rem; }
+        .logo-area h1 { font-size: 1.2rem; letter-spacing: 2px; color: var(--accent); font-weight: 800; }
+        
+        .logout-btn {
+            background: rgba(244,63,94,0.1); border: 1px solid var(--accent); color: var(--accent);
+            padding: 0.5rem 1.2rem; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s;
+        }
+        .logout-btn:hover { background: var(--accent); color: white; }
+
+        .kds-container { flex: 1; padding: 1.5rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+
+        .order-card { background: var(--surface); border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .order-header { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: flex-start; }
+        .order-header .target { font-weight: 800; font-size: 1.1rem; }
+        .order-header .time { font-size: 0.8rem; color: var(--text-dim); }
+
+        .order-items { flex: 1; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .item { display: flex; justify-content: space-between; font-size: 1rem; padding: 0.2rem 0; border-bottom: 1px solid rgba(255,255,255,0.02); }
+        .item .qty { font-weight: 800; color: var(--accent); margin-right: 0.5rem; }
+
+        .order-footer { padding: 1rem; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 0.5rem; }
+        .btn { flex: 1; padding: 0.8rem; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; color: white; transition: 0.3s; }
+        .btn-ready { background: var(--success); }
+        .btn-ready:hover { box-shadow: 0 0 20px rgba(34,197,94,0.4); }
+        .btn-served { background: #3B82F6; }
+
+        .kds-empty { grid-column: 1 / -1; height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.2; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo-area">
+        <h1>BARAK KITCHEN</h1>
+        <div style="font-size: 0.7rem; opacity: 0.5; padding: 0.2rem 0.6rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 20px;">KDS LIVE</div>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        <div id="clock" style="font-weight: 800; font-size: 1.1rem; opacity: 0.7;">12:00 PM</div>
+        <button class="logout-btn" onclick="handleLogout()">LOGOUT</button>
+    </div>
+</header>
+
+<div class="kds-container" id="kds-grid">
+    <div class="kds-empty">
+        <span style="font-size: 4rem;">🍳</span>
+        <h3>Waiting for orders...</h3>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo",
+        authDomain: "barak-residency-59405.firebaseapp.com",
+        projectId: "barak-residency-59405",
+        projectId: "barak-residency-59405",
+        storageBucket: "barak-residency-59405.firebasestorage.app",
+        messagingSenderId: "3871550492",
+        appId: "1:3871550492:web:2cf49bc0a963b4888f43d9"
+    };
+
+    const fb = initializeApp(firebaseConfig);
+    const db = getFirestore(fb);
+    const auth = getAuth(fb);
+
+    window.handleLogout = async () => {
+        await signOut(auth);
+        window.location.href = 'login.html';
+    };
+
+    onAuthStateChanged(auth, user => {
+        if (!user) window.location.href = 'login.html';
+    });
+
+    onSnapshot(collection(db, 'orders'), snap => {
+        const grid = document.getElementById('kds-grid');
+        const orders = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            .filter(o => o.status === 'Pending' || o.status === 'Processing' || o.status === 'Ready');
+        
+        if (orders.length === 0) {
+            grid.innerHTML = '<div class="kds-empty"><span style="font-size: 4rem;">🍳</span><h3>Waiting for orders...</h3></div>';
+            return;
+        }
+
+        grid.innerHTML = orders.map(o => `
+            <div class="order-card" style="border-top: 5px solid ${getStatusColor(o.status)}">
+                <div class="order-header">
+                    <div>
+                        <div class="target">ROOM ${o.roomNumber || 'T-'+o.tableId}</div>
+                        <div style="font-size: 0.7rem; opacity: 0.5;">ID: ${o.id.slice(-6)}</div>
+                    </div>
+                    <div class="time">${new Date(o.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                </div>
+                <div class="order-items">
+                    ${o.items.map(item => `
+                        <div class="item">
+                            <span><span class="qty">${item.qty}x</span> ${item.name}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="order-footer">
+                    ${o.status === 'Pending' || o.status === 'Processing' ? `
+                        <button class="btn btn-ready" onclick="updateOrderStatus('${o.id}', 'Ready')">READY</button>
+                    ` : `
+                        <button class="btn btn-served" onclick="updateOrderStatus('${o.id}', 'Served')">SERVED</button>
+                    `}
+                </div>
+            </div>
+        `).join('');
+    });
+
+    function getStatusColor(s) {
+        if (s === 'Pending') return '#F43F5E';
+        if (s === 'Processing') return '#F59E0B';
+        if (s === 'Ready') return '#22C55E';
+        return '#333';
+    }
+
+    window.updateOrderStatus = async (id, status) => {
+        await updateDoc(doc(db, 'orders', id), { status: status });
+    };
+
+    setInterval(() => {
+        document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }, 1000);
+</script>
+</body>
+</html>
