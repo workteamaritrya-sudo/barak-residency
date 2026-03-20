@@ -36,67 +36,26 @@
             <div id="wpm-options-container"></div>
         </div>
     </div>
-
-    <div class="management-hub" id="app-container" style="display: flex;">
-
-        <aside class="sidebar">
-            <div class="sidebar-logo">
-                <img src="br.png" alt="Barak Residency">
-                <div style="display:flex; flex-direction:column;">
-                    <span class="golden-brand" style="font-size: 0.9rem;">BARAK</span>
-                    <span class="golden-brand" style="font-size: 0.6rem; letter-spacing: 4px; opacity:0.7;">SILCHAR</span>
-                </div>
-            </div>
-
-            <div class="sidebar-nav">
-                <div class="side-item active" id="side-dashboard" onclick="app.switchTab('dashboard')">
-                    <span>ðŸ¨</span> Live Dashboard
-                </div>
-                <div class="side-item" id="side-kitchen" onclick="app.switchTab('kitchen')">
-                    <span>ðŸ³</span> Kitchen (KDS)
-                </div>
-                <div class="side-item" id="side-inventory" onclick="app.switchTab('inventory')">
-                    <span>📦</span> Menu & Inventory
-                </div>
-                <div class="side-item" id="side-financials" onclick="app.switchTab('financials')">
-                    <span>📊</span> Financial Analytics
-                </div>
-            </div>
-
-            <div class="sidebar-footer">
-                <div class="user-profile">
-                    <div class="user-avatar" id="user-avatar">??</div>
-                    <div class="user-info">
-                        <span class="user-name" id="user-display-name">Loading...</span>
-                        <span class="user-role" id="user-display-role">---</span>
-                    </div>
-                </div>
-                <button class="btn btn-outline btn-block text-sm" onclick="app.handleLogout()">
-                    &#128682; LOGOUT
-                </button>
-            </div>
-        </aside>
-
-        <main class="main-content" id="portal-view">
+    <div class="management-hub" id="app-container" style="display: flex; flex-direction: column;">
+        
+        <main class="main-content" id="portal-view" style="margin-left: 0; width: 100%; max-width: 1400px; margin: 0 auto; padding: 2rem;">
             <!-- 1. DASHBOARD TAB (RECEPTION) -->
-            <section id="tab-dashboard" class="portal-content active">
-                <div class="luxury-portal-header">
-                    <div class="luxury-identity golden-brand">EXECUTIVE ROOM DASHBOARD</div>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <div class="portal-time-luxury" id="live-clock">--:-- --</div>
-                        <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" id="header-logout" style="display: none; border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
-                    </div>
+            <section id="tab-dashboard" class="portal-content active" style="padding: 0;">
+                <div class="luxury-portal-header" style="justify-content: center; position: relative; margin-bottom: 2rem;">
+                    <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" style="position: absolute; left: 0; border: 1px solid rgba(255,255,255,0.1); color: var(--color-slate-400); font-size: 0.7rem; padding: 0.5rem 1.2rem; height: auto;">LOGOUT SYSTEM</button>
+                    <div class="luxury-identity golden-brand" style="font-size: 1.8rem; letter-spacing: 4px;">EXECUTIVE ROOM DASHBOARD</div>
+                    <div class="portal-time-luxury" id="live-clock" style="position: absolute; right: 0;">--:-- --</div>
                 </div>
                 
                 <div class="reception-split-container">
                     <div class="reception-rooms-area">
                         <section class="room-section">
-                            <div class="floor">
-                                <h2>First Floor</h2>
+                            <div class="floor" style="margin-bottom: 3rem;">
+                                <h1 style="color: rgba(212,175,55,0.4); font-family: 'Outfit'; font-size: 1.2rem; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 1.5rem; border-left: 4px solid var(--gold-primary); padding-left: 1rem;">First Floor</h1>
                                 <div class="room-grid" id="floor-1"></div>
                             </div>
-                            <div class="floor mt-4">
-                                <h2>Second Floor</h2>
+                            <div class="floor">
+                                <h1 style="color: rgba(212,175,55,0.4); font-family: 'Outfit'; font-size: 1.2rem; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 1.5rem; border-left: 4px solid var(--gold-primary); padding-left: 1rem;">Second Floor</h1>
                                 <div class="room-grid" id="floor-2"></div>
                             </div>
                         </section>
@@ -236,7 +195,6 @@
             
 
 
-            </div>
             
             <!-- 7. FINANCIAL ANALYTICS -->
             <section id="tab-financials" class="portal-content">

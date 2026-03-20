@@ -620,6 +620,7 @@ class PMSApp {
         await this.db.initDB();
         this.startLiveClock();
         this.observeMenuRealtime();
+        this.renderRoomGrid();
 
         // Step 2: Apply role-based UI AFTER data loads (so syncState can't override it)
         const profile = this.userProfile;
@@ -1342,7 +1343,6 @@ class PMSApp {
 
     renderRoomGrid() {
         if (this.isolatedView) return; // KILL-SWITCH: DO NOT RUN IF ISOLATED
-        if (this.currentPortal !== 'reception') return;
 
         const floor1 = document.getElementById('floor-1');
         if (!floor1) return;
