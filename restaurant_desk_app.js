@@ -821,25 +821,27 @@ function promptPickupQuantity(variant, label, price) {
     document.getElementById('pim-item-name').innerText = `${name} (${label})`;
     container.innerHTML = `
         <div style="display:flex;align-items:center;gap:1.5rem;justify-content:center;background:rgba(0,0,0,0.3);border-radius:12px;padding:1.5rem;margin:1rem 0;">
-            <button class="btn btn-outline" style="width:45px;height:45px;border-radius:50%;padding:0;font-size:1.5rem;" onclick="updatePickupQty(-1)">-</button>
+            <button class="btn btn-outline" style="width:45px;height:45px;border-radius:50%;padding:0;font-size:1.5rem;" onclick="window.deskApp.updatePickupQty(-1)">-</button>
             <div id="pim-qty-val" style="font-size:2.5rem;font-weight:900;color:white;width:60px;text-align:center;">1</div>
-            <button class="btn btn-outline" style="width:45px;height:45px;border-radius:50%;padding:0;font-size:1.5rem;" onclick="updatePickupQty(1)">+</button>
+            <button class="btn btn-outline" style="width:45px;height:45px;border-radius:50%;padding:0;font-size:1.5rem;" onclick="window.deskApp.updatePickupQty(1)">+</button>
         </div>
-        <button class="btn btn-primary" style="width:100%;padding:1.2rem;font-size:1.1rem;" onclick="executeAddPickupToCart()">ADD TO CART — ₹${price}</button>
+        <button class="btn btn-primary" style="width:100%;padding:1.2rem;font-size:1.1rem;" onclick="window.deskApp.executeAddPickupToCart()">ADD TO CART — ₹${price}</button>
     `;
 }
 
-window.updatePickupQty = function (delta) {
+function updatePickupQty(delta) {
     pendingPickupQty = Math.max(1, pendingPickupQty + delta);
     document.getElementById('pim-qty-val').innerText = pendingPickupQty;
     const price = pendingPickupVariant.price * pendingPickupQty;
-    document.querySelector('#pim-options-container button.btn-primary').innerText = `ADD TO CART — ₹${price}`;
-};
+    const btn = document.querySelector('#pim-options-container button.btn-primary');
+    if (btn) btn.innerText = `ADD TO CART — ₹${price}`;
+}
 
-window.executeAddPickupToCart = function() {
+function executeAddPickupToCart() {
     addToPickupCart(pendingPickupItem, pendingPickupVariant.variant, pendingPickupVariant.label, pendingPickupVariant.price, pendingPickupQty);
     document.getElementById('pickup-item-modal').style.display = 'none';
-};
+    renderPickupCart(); // Mission: Ensure cart UI refreshes
+}
 
 
 function addToPickupCart(item, variant, label, price, qty) {
