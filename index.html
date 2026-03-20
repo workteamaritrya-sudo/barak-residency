@@ -125,8 +125,8 @@
 
         /* Branding */
         .brand-logo {
-            width: 80px;
-            height: 80px;
+            width: 220px;
+            height: auto;
             margin-bottom: 2.5rem;
             filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.5));
             animation: logo-pulse 4s ease-in-out infinite;
@@ -397,7 +397,7 @@
         }
 
         .loader-logo {
-            width: 70px;
+            width: 180px;
             filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.6));
             animation: logo-pulse 1.5s ease-in-out infinite;
         }
@@ -499,7 +499,6 @@
     <div id="page-loader">
         <img src="br.png" class="loader-logo" alt="Barak Residency"
             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><text y=%221em%22 font-size=%2250%22>🏨</text></svg>'">
-        <div class="loader-name">BARAK RESIDENCY</div>
         <div class="loader-bar">
             <div class="loader-bar-fill"></div>
         </div>
@@ -516,8 +515,7 @@
 
         <div style="text-align:center; position: relative; z-index: 2;">
             <img src="br.png" class="brand-logo" alt="Barak Residency" onerror="this.style.display='none'">
-            <div class="brand-name-luxury">BARAK<br>RESIDENCY</div>
-            <div class="brand-subtitle">Silchar · Assam · India</div>
+            <div class="brand-subtitle" style="margin-top: 2rem;">Silchar · Assam · India</div>
             <div class="brand-divider"></div>
             <p class="brand-tagline">
                 Where every detail is crafted for<br>
@@ -585,29 +583,37 @@
 
             try {
                 const usersRef = firebaseHooks.collection(firebaseFS, 'users');
-                const q = firebaseHooks.query(usersRef, firebaseHooks.where('empId', '==', empId));
-                const snap = await firebaseHooks.getDocs(q);
+                // Try case-insensitive (check original, then check uppercase if no hit)
+                let q = firebaseHooks.query(usersRef, firebaseHooks.where('empId', '==', empId));
+                let snap = await firebaseHooks.getDocs(q);
+                
+                if (snap.empty) {
+                    q = firebaseHooks.query(usersRef, firebaseHooks.where('empId', '==', empId.toUpperCase()));
+                    snap = await firebaseHooks.getDocs(q);
+                }
 
-                if (snap.empty) throw new Error("User ID not found.");
+                if (snap.empty) throw new Error("User ID not found in system.");
                 const userData = snap.docs[0].data();
                 const email = userData.assignedEmail;
-                if (!email) throw new Error("Account configuration error.");
+                if (!email) throw new Error("Account has no linked email for sign-in.");
 
                 await firebaseHooks.signInWithEmailAndPassword(firebaseAuth, email, password);
 
-                const role = (userData.role || "").toLowerCase();
-                const currentEmpId = userData.empId || "";
+                // Ensure role is searchable string even if it was stored as array
+                const role = (Array.isArray(userData.role) ? userData.role.join(",") : (userData.role || "")).toLowerCase();
+                const currentEmpId = (userData.empId || "").toUpperCase();
+                console.log(`[Auth Success] User: ${currentEmpId}, Role: ${role}`);
 
-                if (currentEmpId === 'BR-ADM-001' || role.includes("admin") || role.includes("owner")) {
+                if (currentEmpId.includes('ADM') || role.includes("admin") || role.includes("owner")) {
                     window.location.href = 'admin.html';
-                } else if (currentEmpId.toLowerCase().includes('rw') || (role.includes("rest") && role.includes("waiter"))) {
+                } else if (currentEmpId.includes('RW') || (role.includes("rest") && role.includes("waiter"))) {
                     window.location.href = 'restaurant_waiter.html';
-                } else if (currentEmpId.toLowerCase().includes('rd') || (role.includes("rest") && role.includes("desk"))) {
+                } else if (currentEmpId.includes('RD') || (role.includes("rest") && role.includes("desk"))) {
                     window.location.href = 'restaurant_desk.html';
-                } else if (role.includes("kitchen") || role.includes("chef")) {
-                    window.location.href = 'kitchen.html';
-                } else if (role.includes("hotel") && role.includes("waiter")) {
+                } else if (currentEmpId.includes('HW') || (role.includes("hotel") && role.includes("waiter"))) {
                     window.location.href = 'hotel_waiter.html';
+                } else if (role.includes("kitchen") || role.includes("chef") || currentEmpId.includes("KIT")) {
+                    window.location.href = 'kitchen.html';
                 } else {
                     window.location.href = 'pms.html';
                 }
@@ -635,18 +641,18 @@
                     if (!snap.empty) {
                         const userData = snap.docs[0].data();
                         const role = (userData.role || "").toLowerCase();
-                        const empId = userData.empId || "";
+                        const empIdUpper = (userData.empId || "").toUpperCase();
 
-                        if (empId === 'BR-ADM-001' || role.includes("admin") || role.includes("owner")) {
+                        if (empIdUpper.includes('ADM') || role.includes("admin") || role.includes("owner")) {
                             window.location.href = 'admin.html'; return;
-                        } else if (empId.toLowerCase().includes('rw') || (role.includes("rest") && role.includes("waiter"))) {
+                        } else if (empIdUpper.includes('RW') || (role.includes("rest") && role.includes("waiter"))) {
                             window.location.href = 'restaurant_waiter.html'; return;
-                        } else if (empId.toLowerCase().includes('rd') || (role.includes("rest") && role.includes("desk"))) {
+                        } else if (empIdUpper.includes('RD') || (role.includes("rest") && role.includes("desk"))) {
                             window.location.href = 'restaurant_desk.html'; return;
-                        } else if (role.includes("kitchen") || role.includes("chef")) {
-                            window.location.href = 'kitchen.html'; return;
-                        } else if (role.includes("hotel") && role.includes("waiter")) {
+                        } else if (empIdUpper.includes('HW') || (role.includes("hotel") && role.includes("waiter"))) {
                             window.location.href = 'hotel_waiter.html'; return;
+                        } else if (role.includes("kitchen") || role.includes("chef") || empIdUpper.includes("KIT")) {
+                            window.location.href = 'kitchen.html'; return;
                         }
                     }
                     window.location.href = 'pms.html';

@@ -353,16 +353,16 @@ window.nuclearReset = nuclearReset;
 window.handleLogout = async function() {
     try {
         await signOut(auth);
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
     } catch (e) {
         console.error("Logout failed:", e);
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
     }
 };
 
 onAuthStateChanged(auth, user => {
     if (!user) {
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
     } else {
         console.log("[Auth] Owner authenticated.");
         startListeners();

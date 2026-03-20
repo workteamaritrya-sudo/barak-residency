@@ -1143,9 +1143,9 @@ async function toggleItemAvailability(id, available) {
 async function handleLogout() {
     try {
         await signOut(auth);
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
     } catch (e) {
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
     }
 }
 
