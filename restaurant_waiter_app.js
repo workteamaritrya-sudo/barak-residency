@@ -531,40 +531,39 @@ let pendingPortionItem = null;
 let pendingPortionVariant = null;
 let pendingPortionQty = 1;
 
-window.waiterApp = {
-    promptVariant: function(item) {
-        if (!activeTableId) { showToast('Select a table first', 'warning'); return; }
-        pendingPortionItem = item;
-        const modal = document.getElementById('quantity-prompt-modal');
-        const name = item.name || 'Item';
-        document.getElementById('qp-item-name').innerText = name;
-        
-        const type = item.portionType || 'Plate';
-        const viewVar = document.getElementById('qp-view-variant');
-        const viewQty = document.getElementById('qp-view-quantity');
-        
-        viewVar.style.display = 'flex';
-        viewQty.style.display = 'none';
+function promptVariant(item) {
+    if (!activeTableId) { showToast('Select a table first', 'warning'); return; }
+    pendingPortionItem = item;
+    const modal = document.getElementById('quantity-prompt-modal');
+    if (!modal) return;
+    const name = item.name || 'Item';
+    document.getElementById('qp-item-name').innerText = name;
+    
+    const type = item.portionType || 'Plate';
+    const viewVar = document.getElementById('qp-view-variant');
+    const viewQty = document.getElementById('qp-view-quantity');
+    
+    viewVar.style.display = 'flex';
+    viewQty.style.display = 'none';
 
-        if (type === 'Plate' || type === 'Portion') {
-            const price = item.price || 0;
-            const priceHalf = item.priceHalf || 0;
-            viewVar.innerHTML = `
-                <p class="text-sm text-gray">Select Portion Size</p>
-                <div style="display:flex;flex-direction:column;gap:1.2rem;margin-top:1rem;">
-                    <button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;" onclick="qpSelectVariant('Full', 'Full Plate', ${price})">Full Plate — ₹${price}</button>
-                    ${priceHalf > 0 ? `<button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;border-color:var(--color-indigo-400);" onclick="qpSelectVariant('Half', 'Half Plate', ${priceHalf})">Half Plate — ₹${priceHalf}</button>` : ''}
-                    <button class="btn btn-outline" style="border:none;text-decoration:underline;margin-top:1rem;" onclick="document.getElementById('quantity-prompt-modal').style.display='none'">Cancel</button>
-                </div>
-            `;
-        } else {
-            qpSelectVariant('Regular', 'Standard', item.price || 0);
-        }
-        modal.style.display = 'flex';
+    if (type === 'Plate' || type === 'Portion') {
+        const price = item.price || 0;
+        const priceHalf = item.priceHalf || 0;
+        viewVar.innerHTML = `
+            <p class="text-sm text-gray">Select Portion Size</p>
+            <div style="display:flex;flex-direction:column;gap:1.2rem;margin-top:1rem;">
+                <button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;" onclick="qpSelectVariant('Full', 'Full Plate', ${price})">Full Plate — ₹${price}</button>
+                ${priceHalf > 0 ? `<button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;border-color:var(--color-indigo-400);" onclick="qpSelectVariant('Half', 'Half Plate', ${priceHalf})">Half Plate — ₹${priceHalf}</button>` : ''}
+                <button class="btn btn-outline" style="border:none;text-decoration:underline;margin-top:1rem;" onclick="document.getElementById('quantity-prompt-modal').style.display='none'">Cancel</button>
+            </div>
+        `;
+    } else {
+        qpSelectVariant('Regular', 'Standard', item.price || 0);
     }
-};
+    modal.style.display = 'flex';
+}
 
-window.qpSelectVariant = function(variant, label, price) {
+function qpSelectVariant(variant, label, price) {
     pendingPortionVariant = { variant, label, price };
     pendingPortionQty = 1;
     
@@ -574,14 +573,14 @@ window.qpSelectVariant = function(variant, label, price) {
     
     document.getElementById('qp-selected-variant-text').innerText = label;
     document.getElementById('qp-qty').value = 1;
-};
+}
 
-window.qpBack = function() {
+function qpBack() {
     document.getElementById('qp-view-variant').style.display = 'flex';
     document.getElementById('qp-view-quantity').style.display = 'none';
-};
+}
 
-window.addToCartFromModal = function() {
+function addToCartFromModal() {
     const qty = parseInt(document.getElementById('qp-qty').value) || 1;
     const finalPrice = pendingPortionVariant.price;
     const finalName = pendingPortionVariant.variant === 'Full' || pendingPortionVariant.variant === 'Regular' ? pendingPortionItem.name : `${pendingPortionItem.name} (${pendingPortionVariant.label})`;
@@ -871,4 +870,7 @@ window.addToCartFromModal = addToCartFromModal;
 window.app = { promptVariant }; // For menu-add-btn onclick compatibility
 
 // ── Boot ──────────────────────────────────────────────────
-init().catch(e => console.error('[Boot] Failed:', e));
+init().catch(e => {
+    console.error('[Boot] Failed:', e);
+    showToast('App Boot Failure', 'warning');
+});
