@@ -1,11 +1,11 @@
 /**
- * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
- * BARAK RESIDENCY â€” Hotel Waiter App
- * Standalone Â· Firebase Firestore Â· Order for Hotel Rooms
- * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+ * ══════════════════════════════════════════════════════════════════════════════
+ * BARAK RESIDENCY — Hotel Waiter App
+ * Standalone · Firebase Firestore · Order for Hotel Rooms
+ * ══════════════════════════════════════════════════════════════════════════════
  */
 
-// â”€â”€ Global References (Late-bound) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Global References (Late-bound) ───────────────────────────
 let db, auth, hooks;
 
 function refreshFirebaseRefs() {
@@ -28,7 +28,7 @@ async function pushNotification(type, message, target, data = null) {
     } catch (e) { console.warn('[Notification] Push failed', e); }
 }
 
-// â”€â”€ Master Menu Fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Master Menu Fallback ──────────────────────────────────
 const BARAK_MENU = [
     {id:'m1-basmat',name:'Basmati Rice',category:'Main Course',price:80,priceHalf:50,description:'Premium long grain steamed rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
     {id:'m2-bhunak',name:'Bhuna Khichuri',category:'Main Course',price:180,priceHalf:100,description:'Ghee-laden yellow lentil rice',imageUrl:'https://images.unsplash.com/photo-1645177639578-56e89d924bb1?w=400',portionType:'Plate',isAvailable:true},
@@ -82,18 +82,16 @@ const BARAK_MENU = [
     {id:'m50-bhetf',name:'Bhetki Fry',category:'Starters',price:180,priceHalf:0,description:'Pure Bhetki fillet fry',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true}
 ];
 
-// â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── State ──────────────────────────────────────────────────
 let rooms = {};
-let menu = BARAK_MENU; // Start with fallback
+let menu = BARAK_MENU; 
 let waiterCart = [];
 let selectedRoom = null;
 let addonOrderId = null;
 let unavailableItems = [];
 let kitchenOrders = [];
 
-// â”€â”€ Listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â    // Listen to Menu (Ground Truth Sync)
-// ── Real-time Listeners ───────────────────────────────────
-
+// ── Listeners ──────────────────────────────────────────
 function startListeners() {
     const { collection, onSnapshot, query, orderBy, limit, doc } = hooks;
 
@@ -152,13 +150,13 @@ function startListeners() {
     });
 }
 
-// â”€â”€ UI Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── UI Logic ──────────────────────────────────────────
 
 function populateRoomSelect() {
     const select = document.getElementById('waiter-room-select');
     if (!select) return;
     const currentVal = select.value;
-    select.innerHTML = '<option value="">ðŸ“‹ Select Room...</option>';
+    select.innerHTML = '<option value="">📋 Select Room...</option>';
     
     // Sort room numbers naturally
     const sortedRooms = Object.values(rooms).sort((a,b) => Number(a.number) - Number(b.number));
@@ -166,7 +164,7 @@ function populateRoomSelect() {
     sortedRooms.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r.number;
-        opt.innerText = `Room ${r.number} ${r.status === 'occupied' ? `â€” ${r.guestName || 'Occupied'}` : '(Vacant)'}`;
+        opt.innerText = `Room ${r.number} ${r.status === 'occupied' ? `— ${r.guestName || 'Occupied'}` : '(Vacant)'}`;
         if (r.status !== 'occupied') opt.style.color = '#9CA3AF';
         select.appendChild(opt);
     });
@@ -178,22 +176,26 @@ window.selectRoom = function(roomNum) {
     addonOrderId = null;
     const room = rooms[roomNum] || {};
     
-    document.getElementById('ordering-room-display').innerText = roomNum ? `ROOM ${roomNum} â€” NEW ORDER` : 'SELECT A ROOM TO BEGIN';
-    document.getElementById('waiter-addon-badge').style.display = 'none';
+    const display = document.getElementById('ordering-room-display');
+    if (display) display.innerText = roomNum ? `ROOM ${roomNum} — NEW ORDER` : 'SELECT A ROOM TO BEGIN';
     
-    // Update Room Summary
+    const badge = document.getElementById('waiter-addon-badge');
+    if (badge) badge.style.display = 'none';
+    
     const summary = document.getElementById('room-summary');
     if (roomNum && room.status === 'occupied') {
-        summary.style.display = 'block';
-        document.getElementById('summary-guest-name').innerText = room.guestName || 'Active Guest';
+        if (summary) summary.style.display = 'block';
+        const gName = document.getElementById('summary-guest-name');
+        if (gName) gName.innerText = room.guestName || 'Active Guest';
         
-        // Calculate cumulative total from kitchenOrders
         const roomTotal = kitchenOrders
             .filter(o => String(o.roomNumber) === String(roomNum))
             .reduce((sum, o) => sum + (o.total_price || o.total || 0), 0);
-        document.getElementById('summary-total').innerText = `â‚¹${roomTotal}`;
+        
+        const sTotal = document.getElementById('summary-total');
+        if (sTotal) sTotal.innerText = `₹${roomTotal}`;
     } else {
-        summary.style.display = 'none';
+        if (summary) summary.style.display = 'none';
     }
 
     waiterCart = [];
@@ -206,28 +208,26 @@ function renderMenu(categoryFilter = 'All') {
     const pills = document.getElementById('order-categories');
     if (!grid) return;
 
-    // Filter available items
     const filteredMenu = menu.filter(i => i.isAvailable !== false && !unavailableItems.includes(i.id));
+    const cats = ['All', ...new Set(filteredMenu.map(i => i.category || 'General'))];
     
-    // Categories
-    const cats = ['All', ...new Set(filteredMenu.map(i => i.category || i.Category || 'General'))];
     if (pills) {
         pills.innerHTML = cats.map(c => `<button class="waiter-cat-pill ${categoryFilter === c ? 'active' : ''}" onclick="window.renderMenu('${c}')">${c}</button>`).join('');
     }
 
-    const items = categoryFilter === 'All' ? filteredMenu : filteredMenu.filter(i => (i.category || i.Category || 'General') === categoryFilter);
+    const items = categoryFilter === 'All' ? filteredMenu : filteredMenu.filter(i => (i.category || 'General') === categoryFilter);
 
     grid.innerHTML = items.map(i => {
-        const name = i.name || i.Name || i.itemName || 'Unnamed Item';
-        const price = i.price || i.PriceFull || i.Price || i.priceFull || 0;
-        const priceH = i.priceHalf || i.PriceHalf || 0;
-        const imgUrl = i.imageUrl || i.ImageURL || i.image || 'br.png';
-        const halfLine = priceH ? `<div class="item-half-price">Half: â‚¹${priceH}</div>` : '';
+        const name = i.name || 'Unnamed Item';
+        const price = i.price || 0;
+        const priceH = i.priceHalf || 0;
+        const imgUrl = i.imageUrl || 'br.png';
+        const halfLine = priceH ? `<div class="item-half-price">Half: ₹${priceH}</div>` : '';
         return `
             <div class="waiter-menu-card" onclick="window.promptPortion('${i.id}')">
                 <img src="${imgUrl}" onerror="this.src='br.png'" style="width:100%; height:80px; object-fit:cover; border-radius:8px;" />
                 <div class="item-name">${name}</div>
-                <div class="item-price">â‚¹${price}</div>
+                <div class="item-price">₹${price}</div>
                 ${halfLine}
             </div>`;
     }).join('');
@@ -240,24 +240,24 @@ window.promptPortion = function(itemId) {
     if (!item) return;
 
     const modal = document.getElementById('waiter-portion-modal');
-    const name = item.name || item.Name || item.itemName || 'Item';
-    const desc = item.description || item.Description || 'Select preference';
+    const name = item.name || 'Item';
+    const desc = item.description || 'Select preference';
     document.getElementById('wpm-item-name').innerText = name;
     document.getElementById('wpm-item-desc').innerText = desc;
     const ctn = document.getElementById('wpm-options-container');
     ctn.innerHTML = '';
 
-    const price = item.price || item.PriceFull || item.Price || item.priceFull || 0;
-    const type = item.portionType || item.PortionType || 'Plate';
+    const price = item.price || 0;
+    const type = item.portionType || 'Plate';
 
     if (type === 'Plate' || type === 'Portion') {
-        const halfPrice = item.priceHalf || item.PriceHalf || 0;
+        const halfPrice = item.priceHalf || 0;
         const opts = [{ label: 'Full', val: 'Full', price: price }];
         if (halfPrice > 0) opts.push({ label: 'Half', val: 'Half', price: halfPrice });
         opts.forEach(opt => {
             const btn = document.createElement('button');
             btn.className = 'wpm-opt-btn';
-            btn.innerHTML = `<span>${opt.label}</span> <span>â‚¹${opt.price}</span>`;
+            btn.innerHTML = `<span>${opt.label}</span> <span>₹${opt.price}</span>`;
             btn.onclick = () => promptQuantity(item, opt.val, opt.label, opt.price);
             ctn.appendChild(btn);
         });
@@ -269,7 +269,7 @@ window.promptPortion = function(itemId) {
 
 function promptQuantity(item, variant, label, price) {
     const ctn = document.getElementById('wpm-options-container');
-    const name = item.name || item.Name || item.itemName || 'Item';
+    const name = item.name || 'Item';
     document.getElementById('wpm-item-name').innerText = `${name} (${label})`;
     ctn.innerHTML = '';
     let qty = 1;
@@ -285,14 +285,14 @@ function promptQuantity(item, variant, label, price) {
 
     const addBtn = document.createElement('button');
     addBtn.className = 'wpm-add-btn';
-    addBtn.innerText = `ADD TO CART â€” â‚¹${price}`;
+    addBtn.innerText = `ADD TO CART — ₹${price}`;
     addBtn.onclick = () => {
-        const nameFallback = item.name || item.Name || item.itemName || 'Item';
+        const nameFallback = item.name || 'Item';
         const finalName = variant === 'Full' || variant === 'Regular' ? nameFallback : `${nameFallback} (${label})`;
         const cartItem = {
             id: `${item.id}_${variant}`,
-            name: finalName || 'Unknown Item',
-            price: price || 0,
+            name: finalName,
+            price: price,
             qty: qty,
             variant: variant,
             timestamp: Date.now()
@@ -310,7 +310,7 @@ function promptQuantity(item, variant, label, price) {
         qty = Math.max(1, qty + delta);
         const qtyVal = document.getElementById('wpm-qty-val');
         if (qtyVal) qtyVal.innerText = qty;
-        addBtn.innerText = `ADD TO CART â€” â‚¹${price * qty}`;
+        addBtn.innerText = `ADD TO CART — ₹${price * qty}`;
     };
 }
 
@@ -329,7 +329,7 @@ function updateCartUI() {
                 <div class="cart-row">
                     <div class="cart-info">
                         <div class="cart-name">${item.name}</div>
-                        <div class="cart-sub">â‚¹${item.price} Ã— ${item.qty}</div>
+                        <div class="cart-sub">₹${item.price} × ${item.qty}</div>
                     </div>
                     <div class="cart-controls">
                         <button onclick="window.changeCartQty(${idx}, -1)">-</button>
@@ -373,7 +373,7 @@ function renderLiveOrders() {
                     <div style="font-size:0.75rem; opacity:0.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                         ${(o.items || []).map(i => i.name).join(', ')}
                     </div>
-                    <div style="margin-top:0.4rem; font-weight:800; color:var(--gold-primary); font-size:0.85rem;">â‚¹${o.total_price || o.total || 0}</div>
+                    <div style="margin-top:0.4rem; font-weight:800; color:var(--gold-primary); font-size:0.85rem;">₹${o.total_price || o.total || 0}</div>
                 </div>
             `;
         }).join('');
@@ -382,12 +382,12 @@ function renderLiveOrders() {
 
 window.enterAddonMode = function(orderId) {
     addonOrderId = orderId;
-    document.getElementById('ordering-room-display').innerText = `ROOM ${selectedRoom} â€” ADD-ON TO ${orderId}`;
+    document.getElementById('ordering-room-display').innerText = `ROOM ${selectedRoom} — ADD-ON TO ${orderId}`;
     document.getElementById('waiter-addon-badge').style.display = 'block';
     showToast('Add-on Mode Active', 'info');
 };
 
-// â”€â”€ Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Actions ──────────────────────────────────────────
 
 async function getNextGlobalSerial(roomNum) {
     const { doc, runTransaction } = hooks;
@@ -411,8 +411,10 @@ window.placeOrder = async function() {
     const { doc, updateDoc, setDoc, serverTimestamp, increment, arrayUnion } = hooks;
     
     const btn = document.getElementById('waiter-place-btn');
-    btn.disabled = true;
-    btn.innerText = 'âŒ› PLACING...';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = '⌛ PLACING...';
+    }
 
     const roomNum = selectedRoom;
     const room = rooms[roomNum] || {};
@@ -420,7 +422,6 @@ window.placeOrder = async function() {
 
     try {
         if (addonOrderId) {
-            // Add-on logic
             const orderRef = doc(db, 'orders', addonOrderId);
             await updateDoc(orderRef, {
                 items: arrayUnion(...waiterCart),
@@ -430,7 +431,6 @@ window.placeOrder = async function() {
             });
             showToast('Add-on items added!', 'success');
         } else {
-            // New order logic
             const orderId = await getNextGlobalSerial(roomNum);
             const orderObj = {
                 order_id: orderId,
@@ -446,7 +446,6 @@ window.placeOrder = async function() {
             showToast(`Order ${orderId} placed!`, 'success');
         }
         
-        // Update Guest Bill if guest exists
         if (room.currentGuestId) {
             const guestRef = doc(db, 'guests', room.currentGuestId);
             const itemsToAppend = waiterCart.map(i => ({
@@ -464,12 +463,12 @@ window.placeOrder = async function() {
         waiterCart = [];
         updateCartUI();
         addonOrderId = null;
-        document.getElementById('waiter-addon-badge').style.display = 'none';
-        document.getElementById('ordering-room-display').innerText = `ROOM ${selectedRoom} â€” NEW ORDER`;
+        if (document.getElementById('waiter-addon-badge')) document.getElementById('waiter-addon-badge').style.display = 'none';
+        if (document.getElementById('ordering-room-display')) document.getElementById('ordering-room-display').innerText = `ROOM ${selectedRoom} — NEW ORDER`;
 
         await pushNotification(
             'order',
-            `ROOM ORDER: Room ${roomNum} â€” ${room.guestName || 'Guest'}`,
+            `ROOM ORDER: Room ${roomNum} — ${room.guestName || 'Guest'}`,
             'desk',
             { type: 'room', roomNumber: roomNum, orderId: addonOrderId || 'New' }
         );
@@ -478,12 +477,13 @@ window.placeOrder = async function() {
         console.error(e);
         showToast('Operation failed', 'error');
     } finally {
-        btn.disabled = false;
-        btn.innerText = 'ðŸš€ PLACE ORDER';
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = '🚀 PLACE ORDER';
+        }
     }
 };
 
-// â”€â”€ Export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 window.handleLogout = async () => {
     if (confirm('Logout from Waiter Portal?')) {
         await window.firebaseHooks.signOut(window.firebaseAuth);
@@ -502,26 +502,20 @@ function showToast(msg, type = 'info') {
     }, 3000);
 }
 
-// â”€â”€ Bootstrap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function boot() {
     if (!window.firebaseHooks) {
         setTimeout(boot, 500);
         return;
     }
-    
-    // Refresh local refs
     refreshFirebaseRefs();
-    
     const { onAuthStateChanged } = hooks;
-    
     onAuthStateChanged(auth, user => {
         if (!user) {
             window.location.href = 'login.html';
         } else {
             startListeners();
-            renderMenu(); // Initial render with fallback
+            renderMenu(); 
         }
     });
 }
 boot();
-

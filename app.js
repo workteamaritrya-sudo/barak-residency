@@ -584,7 +584,7 @@ class PMSApp {
 
             try {
                 this.userProfile = await window.FirebaseSync.getUserProfile(user.email);
-                document.getElementById('app-container').style.display = 'flex';
+                document.getElementById('tab-dashboard').style.display = 'flex';
                 this.initManagementHub();
             } catch (err) {
                 console.error("Auth init failed", err);
@@ -5102,10 +5102,10 @@ class PMSApp {
         const restPaxEl = document.getElementById('kpi-rest-pax');
         const ebitdaEl = document.getElementById('kpi-ebitda');
 
-        if (roomRevEl) roomRevEl.textContent = `â‚¹${totalRoomRevenueToday.toLocaleString()}`;
-        if (restRevEl) restRevEl.textContent = `â‚¹${totalRestEarningsToday.toLocaleString()}`;
+        if (roomRevEl) roomRevEl.textContent = `₹${totalRoomRevenueToday.toLocaleString()}`;
+        if (restRevEl) restRevEl.textContent = `₹${totalRestEarningsToday.toLocaleString()}`;
         if (restPaxEl) restPaxEl.textContent = restCustomers;
-        if (ebitdaEl) ebitdaEl.textContent = `â‚¹${Math.round(approxEbitda).toLocaleString()}`;
+        if (ebitdaEl) ebitdaEl.textContent = `₹${Math.round(approxEbitda).toLocaleString()}`;
 
         // 2. Render Charts
         // Chart rendering was moved to renderOwnerHub
@@ -5156,7 +5156,7 @@ class PMSApp {
             grid.innerHTML = '';
             rooms.sort((a, b) => Number(a.number) - Number(b.number)).forEach(room => {
                 const color = room.status === 'occupied' ? '#D4AF37' : room.status === 'reserved' ? '#a855f7' : '#4ade80';
-                const icon = room.status === 'occupied' ? 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚ÂÃƒÂ¯Ã‚Â¸Ã‚Â' : room.status === 'reserved' ? 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦' : 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦';
+                const icon = room.status === 'occupied' ? '🛌' : room.status === 'reserved' ? '📅' : '✅';
                 const name = room.guestName ? `<div style="font-size:0.7rem; color:${color}; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${room.salutation || ''} ${room.guestName}</div>` : '';
                 grid.innerHTML += `<div style="background:rgba(255,255,255,0.04); border:1px solid ${color}33; border-top:3px solid ${color}; border-radius:8px; padding:0.75rem; cursor:pointer;" onclick="app.selectRoom('${room.number}'); app.switchTab('dashboard');">
                     <div style="display:flex; justify-content:space-between; align-items:center;">

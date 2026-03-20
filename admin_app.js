@@ -113,31 +113,24 @@ window.sendToAI = async function() {
 
     try {
         // Try Gemini 1.5 Flash (preferred) or fallback to Gemini Pro
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-        
-        const response = await fetch(url, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: `You are the Executive Manager of Barak Residency. Stay professional. Business Status: Occupied Rooms ${occupiedRooms()} / 26, Dashboard Revenue ₹${revenue}. Assistant Task: Respond to owner: ${msg}` }] }]
+                contents: [{ parts: [{ text: `You are the AI Resident Manager at Barak Residency. Your role is to assist the owners in managing their business efficiently. Today's Statistics: ₹${revenue} revenue, ${orders.length} orders. Use a professional, executive tone. Request: ${msg}` }] }]
             })
         });
 
-        if (!response.ok) {
-            const errData = await response.json();
-            console.error("Gemini API Error:", errData);
-            throw new Error(`API ${response.status}: ${errData.error?.message || 'Unknown Failure'}`);
-        }
+        if (document.getElementById(aiLoaderId)) document.getElementById(aiLoaderId).remove();
 
-        const data = await response.json();
-        document.getElementById(aiLoaderId).remove();
-
-        if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-            const text = data.candidates[0].content.parts[0].text;
-            appendMsg(text, 'ai');
-            handleAICommands(text);
+        if (res.ok) {
+            const data = await res.json();
+            const aiTxt = data.candidates?.[0]?.content?.parts?.[0]?.text || "Neural link clear. Please rephrase.";
+            appendMsg(aiTxt, 'ai');
+            handleAICommands(aiTxt); 
         } else {
-            throw new Error("Empty AI response received.");
+            console.warn(`AI Bridge Failure: ${res.status}`);
+            throw new Error(`Cloud Error ${res.status}`);
         }
     } catch (e) {
         console.warn("AI System Fallback:", e.message);
