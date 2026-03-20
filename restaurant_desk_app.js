@@ -765,15 +765,6 @@ function renderPickupMenu(search = '') {
         el.onclick = () => window.deskApp.promptPickupItem(item);
         grid.appendChild(el);
     });
-
-    // Add the "QUICK PLACE ORDER" button at the end of the menu grid
-    const quickPlaceOrderButtonContainer = document.createElement('div');
-    quickPlaceOrderButtonContainer.style.cssText = 'grid-column: 1 / -1; display:flex; flex-direction:column; background:rgba(255,255,255,0.02); padding:1rem; border-top:1px solid var(--glass-border); flex-shrink:0;';
-    quickPlaceOrderButtonContainer.innerHTML = `
-        <button class="btn btn-primary btn-block" style="padding:1.2rem; font-size:1.1rem; background:var(--gold-primary); color:black; font-weight:800;"
-            onclick="window.deskApp.submitPickupQuick()">⚡ QUICK PLACE ORDER</button>
-    `;
-    grid.appendChild(quickPlaceOrderButtonContainer);
 }
 
 function filterPickupMenu(val) {
@@ -1162,7 +1153,7 @@ window.deskApp = {
     toggleRevVisibility, openAvailabilityModal, renderAvailabilityTool,
     toggleItemAvailability, handleLogout,
     filterPickupMenu, removeFromPickupCart, submitPickupOrder,
-    addVariantToPickupCart,
+    addVariantToPickupCart, promptPickupItem,
     showCheckInForm, openReserveModal, sciNext, captureLivePhoto,
     handleMultiIdUpload, submitCheckIn, submitReservation, verifyPasscode
 };

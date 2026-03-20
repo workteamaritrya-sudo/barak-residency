@@ -11,22 +11,7 @@ import {
 import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
 // --- Firebase Config ---
-// --- Firebase Config (Keys imported dynamically to handle missing files on Git) ---
-let FIREBASE_KEY = "";
-let GEMINI_KEY = "";
-
-async function initConfig() {
-    try {
-        const secrets = await import('./secrets.js?v=' + Date.now());
-        FIREBASE_KEY = secrets.FIREBASE_KEY || "";
-        GEMINI_KEY = secrets.GEMINI_KEY || "";
-        console.log("[Secrets] Dynamic link established.");
-    } catch (e) {
-        console.warn("[Secrets] Bridge failed. Advanced cloud features may be offline.");
-        // Fallback for demo if needed, or leave blank to see config alerts
-    }
-}
-await initConfig();
+import { FIREBASE_KEY, GEMINI_KEY } from './secrets.js';
 
 const firebaseConfig = {
     apiKey: FIREBASE_KEY,
