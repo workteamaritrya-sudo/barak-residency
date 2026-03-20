@@ -579,6 +579,7 @@ function renderRestDesk() {
     if (paxEl) paxEl.textContent = totalPax;
     if (tabEl) tabEl.textContent = activeTables;
 
+    // Trigger pickup sync
     renderPickupList();
     updateRevDisplay();
 }
@@ -764,6 +765,15 @@ function renderPickupMenu(search = '') {
         el.onclick = () => window.deskApp.promptPickupItem(item);
         grid.appendChild(el);
     });
+
+    // Add the "QUICK PLACE ORDER" button at the end of the menu grid
+    const quickPlaceOrderButtonContainer = document.createElement('div');
+    quickPlaceOrderButtonContainer.style.cssText = 'grid-column: 1 / -1; display:flex; flex-direction:column; background:rgba(255,255,255,0.02); padding:1rem; border-top:1px solid var(--glass-border); flex-shrink:0;';
+    quickPlaceOrderButtonContainer.innerHTML = `
+        <button class="btn btn-primary btn-block" style="padding:1.2rem; font-size:1.1rem; background:var(--gold-primary); color:black; font-weight:800;"
+            onclick="window.deskApp.submitPickupQuick()">⚡ QUICK PLACE ORDER</button>
+    `;
+    grid.appendChild(quickPlaceOrderButtonContainer);
 }
 
 function filterPickupMenu(val) {
@@ -921,7 +931,10 @@ async function submitPickupOrder() {
         activePickups.push(orderObj);
         localStorage.setItem('yukt_active_pickups', JSON.stringify(activePickups));
 
-        await pushNotification('order', `New Pickup Order ${pid} — ₹${total}`, 'desk');
+        await pushNotification('order', `New Pickup Order ${pid} — ₹${total}`, 'desk', { 
+            orderId: pid, 
+            type: 'pickup' 
+        });
 
         document.getElementById('pickup-modal').style.display = 'none';
         renderPickupList();
@@ -935,47 +948,58 @@ async function submitPickupOrder() {
 function renderPickupList() {
     const container = document.getElementById('rest-desk-pickup-list');
     if (!container) return;
-    if (activePickups.length === 0) {
-        container.innerHTML = '<div class="text-center text-gray" style="padding:1rem;">No active pickups</div>';
+    
+    // Global filter: Show all active pickups from the cloud (shared state)
+    const cloudPickups = kitchenOrders.filter(o => o.orderType === 'Pickup' && o.status !== 'archived');
+    
+    if (cloudPickups.length === 0) {
+        container.innerHTML = `<div class="text-center text-gray" style="padding:1rem; background:rgba(255,255,255,0.02); border-radius:8px;">No active pickups</div>`;
         return;
     }
+    
     container.innerHTML = '';
-    activePickups.forEach(p => {
+    cloudPickups.forEach(p => {
         const isPaid = p.paymentStatus === 'paid';
+        const isReady = p.status === 'ready';
         const row = document.createElement('div');
-        row.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1rem;background:rgba(255,255,255,0.05);border-radius:8px;border-left:4px solid ${isPaid ? '#39FF14' : '#A020F0'};margin-bottom:0.5rem;`;
+        row.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:0.8rem 1rem;background:rgba(255,255,255,0.05);border-radius:12px;border-left:4px solid ${isPaid ? '#39FF14' : (isReady ? '#FFF01F' : '#A020F0')};margin-bottom:0.6rem; transition: transform 0.2s;`;
         row.innerHTML = `
             <div style="flex:1;">
-                <span style="font-weight:bold;color:${isPaid ? '#39FF14' : '#A020F0'};margin-right:1rem;">#${p.id}</span>
-                <span style="color:white;">${p.items?.length || 0} Items${isPaid ? ' [PAID]' : ''}</span>
-                <span class="text-gray" style="font-size:0.75rem;margin-left:0.5rem;">${timeOnlyIST(p.timestamp)}</span>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span style="font-weight:900; color:${isPaid ? '#39FF14' : (isReady ? '#FFF01F' : '#A020F0')}; font-size:1.1rem;">#${p.id}</span>
+                    ${isReady ? '<span class="badge-ready" style="background:#FFF01F; color:black; font-size:0.6rem; padding:1px 4px; border-radius:3px; font-weight:800;">READY</span>' : ''}
+                </div>
+                <div style="font-size:0.8rem; color:white;">${p.items?.length || 0} Items${isPaid ? ' [PAID]' : ''}</div>
+                <div class="text-gray" style="font-size:0.7rem;">${timeOnlyIST(p.timestamp)}</div>
             </div>
             <div style="display:flex;align-items:center;gap:0.75rem;">
-                <span style="font-weight:bold;color:#4ADE80;">₹${p.total}</span>
-                ${!isPaid ? `<button class="btn btn-success" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.deskApp.markPickupPaid('${p.id}')">PAY</button>` : ''}
-                ${isPaid ? `<button class="btn btn-primary" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.deskApp.markPickupDelivered('${p.id}')">DELIVERED</button>` : ''}
+                <div style="text-align:right; margin-right:0.5rem;">
+                    <div style="font-weight:900; color:#4ADE80; font-size:1rem;">₹${p.total_price || p.total || 0}</div>
+                </div>
+                ${!isPaid ? `<button class="btn btn-success" style="padding:0.4rem 0.8rem; font-size:0.75rem; font-weight:800;" onclick="window.deskApp.markPickupPaid('${p.id}')">PAY</button>` : ''}
+                ${isPaid ? `<button class="btn btn-primary" style="padding:0.4rem 0.8rem; font-size:0.75rem; font-weight:800; background:#1F51FF;" onclick="window.deskApp.markPickupDelivered('${p.id}')">DONE</button>` : ''}
             </div>`;
         container.appendChild(row);
     });
 }
 
+
 async function markPickupPaid(id) {
-    const p = activePickups.find(x => x.id === id); if (!p) return;
-    p.paymentStatus = 'paid';
-    localStorage.setItem('yukt_active_pickups', JSON.stringify(activePickups));
-    await pushNotification('payment', `${id} PAYMENT RECEIVED`, 'desk');
-    renderPickupList();
-    showToast(`${id} marked as paid`, 'success');
+    try {
+        await updateDoc(doc(db, 'orders', id), { paymentStatus: 'paid' });
+        await pushNotification('payment', `${id} PAYMENT RECEIVED`, 'desk', { orderId: id });
+        showToast(`${id} marked as paid`, 'success');
+    } catch (e) { showToast('Sync failed', 'error'); }
 }
 
 async function markPickupDelivered(id) {
-    const idx = activePickups.findIndex(x => x.id === id); if (idx === -1) return;
-    activePickups.splice(idx, 1);
-    localStorage.setItem('yukt_active_pickups', JSON.stringify(activePickups));
-    await pushNotification('delivery', `${id} DELIVERED & ARCHIVED`, 'desk');
-    renderPickupList();
-    showToast(`${id} delivered and archived`, 'success');
+    try {
+        await updateDoc(doc(db, 'orders', id), { status: 'archived' });
+        await pushNotification('delivery', `${id} DELIVERED & ARCHIVED`, 'desk', { orderId: id });
+        showToast(`${id} archived`, 'success');
+    } catch (e) { showToast('Sync failed', 'error'); }
 }
+
 
 // ── Notifications Sidebar ─────────────────────────────────
 
@@ -1001,7 +1025,7 @@ function renderNotificationSidebar() {
 
         // KOT print button for dine-in and addon orders
         let actionHtml = '';
-        if (n.data && (n.data.type === 'dinein' || n.data.type === 'addon')) {
+        if (n.data && (n.data.type === 'dinein' || n.data.type === 'addon' || n.data.type === 'pickup')) {
             const printed = JSON.parse(localStorage.getItem('br_printed_kots') || '{}');
             const isPrinted = printed[n.id];
             actionHtml = `<button class="btn ${isPrinted ? 'btn-outline' : 'btn-primary'} btn-block mt-2"
@@ -1126,6 +1150,11 @@ async function handleLogout() {
 }
 
 // ── Expose to window ──────────────────────────────────────
+async function submitPickupQuick() {
+    if (pickupCart.length === 0) { showToast('Cart is empty', 'warning'); return; }
+    await submitPickupOrder();
+}
+
 window.deskApp = {
     selectDeskCheckout, checkoutBill, printAndCloseTable, printBill,
     generatePickupOrder, markPickupPaid, markPickupDelivered,

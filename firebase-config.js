@@ -1,5 +1,7 @@
+import { FIREBASE_KEY } from './secrets.js';
+
 export const firebaseConfig = {
-    apiKey: "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo",
+    apiKey: FIREBASE_KEY,
     authDomain: "barak-residency-59405.firebaseapp.com",
     projectId: "barak-residency-59405",
     databaseURL: "https://barak-residency-59405-default-rtdb.firebaseio.com",

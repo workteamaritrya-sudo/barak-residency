@@ -600,14 +600,14 @@
 
                 if (currentEmpId === 'BR-ADM-001' || role.includes("admin") || role.includes("owner")) {
                     window.location.href = 'admin.html';
+                } else if (currentEmpId.toLowerCase().includes('rw') || (role.includes("rest") && role.includes("waiter"))) {
+                    window.location.href = 'restaurant_waiter.html';
+                } else if (currentEmpId.toLowerCase().includes('rd') || (role.includes("rest") && role.includes("desk"))) {
+                    window.location.href = 'restaurant_desk.html';
                 } else if (role.includes("kitchen") || role.includes("chef")) {
                     window.location.href = 'kitchen.html';
                 } else if (role.includes("hotel") && role.includes("waiter")) {
                     window.location.href = 'hotel_waiter.html';
-                } else if (role.includes("rest") && role.includes("waiter")) {
-                    window.location.href = 'restaurant_waiter.html';
-                } else if (role.includes("rest") && role.includes("desk")) {
-                    window.location.href = 'restaurant_desk.html';
                 } else {
                     window.location.href = 'index.html';
                 }
@@ -639,14 +639,14 @@
 
                         if (empId === 'BR-ADM-001' || role.includes("admin") || role.includes("owner")) {
                             window.location.href = 'admin.html'; return;
+                        } else if (empId.toLowerCase().includes('rw') || (role.includes("rest") && role.includes("waiter"))) {
+                            window.location.href = 'restaurant_waiter.html'; return;
+                        } else if (empId.toLowerCase().includes('rd') || (role.includes("rest") && role.includes("desk"))) {
+                            window.location.href = 'restaurant_desk.html'; return;
                         } else if (role.includes("kitchen") || role.includes("chef")) {
                             window.location.href = 'kitchen.html'; return;
                         } else if (role.includes("hotel") && role.includes("waiter")) {
                             window.location.href = 'hotel_waiter.html'; return;
-                        } else if (role.includes("rest") && role.includes("waiter")) {
-                            window.location.href = 'restaurant_waiter.html'; return;
-                        } else if (role.includes("rest") && role.includes("desk")) {
-                            window.location.href = 'restaurant_desk.html'; return;
                         }
                     }
                     window.location.href = 'index.html';

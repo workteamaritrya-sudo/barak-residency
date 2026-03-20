@@ -50,17 +50,7 @@
             </div>
         </div>
 
-        <!-- Passcode Overlay -->
-        <div id="desk-passcode-overlay" style="position:fixed; inset:0; background:rgba(5,11,26,0.98); z-index:100000; display:flex; flex-direction:column; align-items:center; justify-content:center; backdrop-filter:blur(20px);">
-            <div style="text-align:center; padding:3rem; background:rgba(212,175,55,0.05); border:1px solid rgba(212,175,55,0.2); border-radius:32px; box-shadow:0 0 50px rgba(0,0,0,0.5);">
-                <div style="font-family:'Outfit'; font-size:1.2rem; color:var(--gold-primary); letter-spacing:4px; text-transform:uppercase; font-weight:900; margin-bottom:2rem;">REST DESK ACCESS</div>
-                <div style="display:flex; gap:1rem; justify-content:center; margin-bottom:2rem;">
-                    <input type="password" id="desk-pass-input" maxlength="4" style="width:160px; height:60px; text-align:center; font-size:2rem; letter-spacing:1rem; background:rgba(255,255,255,0.05); border:2px solid var(--gold-primary); color:white; border-radius:12px; outline:none;" placeholder="****">
-                </div>
-                <button class="btn btn-primary" style="padding:1rem 2rem; width:100%; letter-spacing:2px;" onclick="window.deskApp.verifyPasscode()">ENTER DESK</button>
-                <p id="desk-pass-err" style="color:#EF4444; font-size:0.8rem; margin-top:1rem; display:none;">INCORRECT PASSCODE</p>
-            </div>
-        </div>
+
 
         <div class="desk-layout">
             <!-- Live Table Grid -->
@@ -143,14 +133,14 @@
 
             <div style="display:grid; grid-template-columns: 1fr 320px; flex:1; overflow:hidden; min-height:0;">
                 <!-- Menu Area -->
-                <div
-                    style="display:flex; flex-direction:column; border-right:1px solid var(--glass-border); background:rgba(0,0,0,0.2);">
-                    <div style="padding:1rem; border-bottom:1px solid var(--glass-border);">
-                        <input type="search" id="pickup-menu-search" class="form-control" placeholder="Search menu..."
+                    <div style="padding:1rem; border-bottom:1px solid var(--glass-border); flex-shrink:0;">
+                        <button class="btn btn-primary btn-block" style="padding:1rem; font-size:1.1rem; background:var(--gold-primary); color:black; font-weight:800; margin-bottom:0.75rem;"
+                            onclick="window.deskApp.submitPickupQuick()">⚡ QUICK PLACE ORDER</button>
+                        <input type="search" id="pickup-menu-search" class="form-control" placeholder="Search items..."
                             oninput="window.deskApp.filterPickupMenu(this.value)">
                     </div>
                     <div id="pickup-menu-grid"
-                        style="flex:1; overflow-y:auto; padding:1.5rem; display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:1rem;">
+                        style="flex:1; overflow-y:auto; padding:1.5rem; display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:1.2rem; min-height:0; position:relative;">
                     </div>
                 </div>
 

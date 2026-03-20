@@ -233,10 +233,24 @@
 
         <!-- Settings View -->
         <div id="settings-view" class="admin-view" style="display:none;">
-            <div class="analytics-card">
-                <h3>System Properties</h3>
-                <p>Advanced owner controls for Barak Residency.</p>
-                <!-- Form logic could go here -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
+                <div class="analytics-card">
+                    <h3 style="color:var(--gold); margin-bottom:1rem;">Master Menu Synchronization</h3>
+                    <p style="font-size:0.85rem; color:rgba(255,255,255,0.5); margin-bottom:1.5rem;">Paste your menu CSV data below. Format: ID, Name, Category, Price, PriceHalf, Description, PortionType, ImageURL</p>
+                    <textarea id="csv-paste-area" class="form-control" style="width:100%; height:200px; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); color:white; padding:1rem; border-radius:12px; font-family:monospace; font-size:0.8rem; margin-bottom:1rem;" placeholder="m1,Basmati Rice,Main,100,60,..."></textarea>
+                    <button class="btn btn-primary" style="width:100%; padding:1rem; background:var(--gold); color:black; font-weight:800;" onclick="window.syncMenuFromCSV()">⚡ UPDATE GLOBAL MENU</button>
+                    <div id="sync-status" style="margin-top:1rem; font-size:0.8rem; text-align:center;"></div>
+                </div>
+
+                <div class="analytics-card" style="border-color:rgba(239, 68, 68, 0.2);">
+                    <h3 style="color:#EF4444; margin-bottom:1rem;">Nuclear System Reset</h3>
+                    <p style="font-size:0.85rem; color:rgba(255,255,255,0.5); margin-bottom:1.5rem;">Warning: This will clear ALL orders, room ledger data, and active tables. This action is irreversible and reflects immediately across all staff portals.</p>
+                    <div style="background:rgba(239, 68, 68, 0.05); padding:1rem; border-radius:12px; border:1px dashed rgba(239, 68, 68, 0.3); margin-bottom:1.5rem;">
+                        <label style="display:block; font-size:0.7rem; color:#EF4444; margin-bottom:0.5rem; letter-spacing:1px;">TYPE "RESET" TO CONFIRM</label>
+                        <input type="text" id="reset-confirm-input" class="form-control" style="width:100%; background:transparent; border:1px solid rgba(239, 68, 68, 0.3); color:white; padding:0.8rem;" placeholder="...">
+                    </div>
+                    <button class="btn" style="width:100%; padding:1rem; background:#EF4444; color:white; font-weight:800;" onclick="window.nuclearReset()">☢️ WIPE SYSTEM DATA</button>
+                </div>
             </div>
         </div>
     </div>

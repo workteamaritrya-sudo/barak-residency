@@ -11,8 +11,10 @@ import {
 import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
 // --- Firebase Config ---
+import { FIREBASE_KEY, GEMINI_KEY } from './secrets.js';
+
 const firebaseConfig = {
-    apiKey: "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo",
+    apiKey: FIREBASE_KEY,
     authDomain: "barak-residency-59405.firebaseapp.com",
     projectId: "barak-residency-59405",
     databaseURL: "https://barak-residency-59405-default-rtdb.firebaseio.com",
@@ -26,7 +28,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 // --- Gemini Config ---
-const GEMINI_API_KEY = "AIzaSyCZvumbe-vo5hmYYJn4W5s3_bWWYCTRpkw";
+const GEMINI_API_KEY = GEMINI_KEY;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 // --- State ---
@@ -270,6 +272,82 @@ function renderFinanceView() {
 
 const occupiedRooms = () => rooms.filter(r => r.status === 'occupied').length;
 const activeOrders = () => orders.filter(o => o.status === 'Pending').length;
+
+async function syncMenuFromCSV() {
+    const csv = document.getElementById('csv-paste-area').value.trim();
+    if (!csv) return;
+    const status = document.getElementById('sync-status');
+    status.innerText = "Parsing and Syncing...";
+    
+    const lines = csv.split('\n');
+    let count = 0;
+    try {
+        for (let line of lines) {
+            const [id, name, cat, price, priceHalf, desc, type, img] = line.split(',').map(s => s.trim());
+            if (!id || !name) continue;
+            
+            await setDoc(doc(db, 'menuItems', id), {
+                id, name, category: cat, 
+                price: parseFloat(price) || 0,
+                priceHalf: parseFloat(priceHalf) || 0,
+                description: desc || '',
+                portionType: type || 'Plate',
+                imageUrl: img || 'br.png',
+                isAvailable: true
+            }, { merge: true });
+            count++;
+        }
+        status.innerHTML = `<span style="color:#22C55E;">✓ Successfully updated ${count} items!</span>`;
+    } catch (e) {
+        status.innerHTML = `<span style="color:#EF4444;">Error: ${e.message}</span>`;
+    }
+}
+
+async function nuclearReset() {
+    const confirmVal = document.getElementById('reset-confirm-input').value.trim();
+    if (confirmVal !== 'RESET') { alert('Type "RESET" to confirm.'); return; }
+    
+    if (!confirm('This will WIPE all active tables, guest data, and orders. Confirm?')) return;
+    
+    try {
+        // Clear Orders
+        const ordSnap = await getDocs(collection(db, 'orders'));
+        for (const d of ordSnap.docs) await deleteDoc(d.ref);
+
+        // Clear Rooms (Set to available)
+        const roomSnap = await getDocs(collection(db, 'rooms'));
+        for (const d of roomSnap.docs) {
+            await setDoc(d.ref, { 
+                status: 'available', 
+                guestName: null, 
+                guestPhone: null, 
+                orders: [], 
+                activeBills: [], 
+                currentStayId: null 
+            }, { merge: true });
+        }
+
+        // Reset Table Status
+        const tableSnap = await getDocs(collection(db, 'tables'));
+        for (const d of tableSnap.docs) {
+            await setDoc(d.ref, { 
+                status: 'available', 
+                pax: 0, 
+                orders: [], 
+                activeBills: [], 
+                chairs: Array(4).fill({status: 'available'}) 
+            }, { merge: true });
+        }
+
+        alert('System Reset Complete. All portals updated.');
+        location.reload();
+    } catch (e) {
+        alert('Reset failed: ' + e.message);
+    }
+}
+
+window.syncMenuFromCSV = syncMenuFromCSV;
+window.nuclearReset = nuclearReset;
 
 // Initialization & Authentication Handling
 window.handleLogout = async function() {

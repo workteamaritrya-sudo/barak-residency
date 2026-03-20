@@ -1,4 +1,5 @@
 # Firebase Security Keys
+secrets.js
 firebase-key.json
 backend/firebase-key.json
 *.pem
