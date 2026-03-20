@@ -26,15 +26,7 @@
     </script>
 </head>
 <body>
-    <div id="system-init-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-bg); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px);">
-        <div class="glass-panel" style="padding: 3rem; text-align: center; border: 1px solid var(--glass-border); max-width: 500px; width: 90%;">
-            <img src="br.png" alt="Logo" style="height: 80px; margin-bottom: 2rem; filter: drop-shadow(0 0 15px var(--gold-glow));">
-            <h1 class="golden-brand" style="font-size: 1.8rem; margin-bottom: 1rem;">BARAK RESIDENCY</h1>
-            <p style="color: var(--color-slate-400); margin-bottom: 2rem; font-size: 0.9rem; letter-spacing: 1px;">MANAGEMENT CONTROL SYSTEM v2.0</p>
-            <button class="btn btn-primary btn-block" onclick="app.initializeSession()" style="height: 60px; font-weight: 700; font-size: 1.1rem; letter-spacing: 2px;">START SESSION</button>
-            <p style="margin-top: 1.5rem; font-size: 0.7rem; color: var(--gold-primary); opacity: 0.6;">SYSTEM READY &#8226; ALL SYSTEMS NORMAL</p>
-        </div>
-    </div>
+
 
     <!-- WAITER PORTION MODAL -->
     <div id="waiter-portion-modal" style="display:none; position:fixed; top:0;left:0;width:100%;height:100%;background:rgba(5,11,26,0.92);z-index:8888;align-items:center;justify-content:center;backdrop-filter:blur(8px);">
@@ -64,12 +56,6 @@
                 </div>
                 <div class="side-item" id="side-kitchen" onclick="app.switchTab('kitchen')">
                     <span>ðŸ³</span> Kitchen (KDS)
-                </div>
-                <div class="side-item" id="side-inventory" onclick="app.switchTab('inventory')">
-                    <span>📦</span> Menu & Inventory
-                </div>
-                <div class="side-item" id="side-financials" onclick="app.switchTab('financials')">
-                    <span>📊</span> Financial Analytics
                 </div>
                 <div class="side-item" id="side-rest-desk" onclick="app.switchTab('rest-desk')">
                     <span>🍹</span> Restaurant Desk
@@ -217,38 +203,6 @@
                 <div class="kds-grid" id="kds-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; padding: 1.5rem;"></div>
             </section>
 
-            <!-- 3. INVENTORY TAB -->
-            <section id="tab-inventory" class="portal-content">
-                <div class="luxury-portal-header">
-                    <div class="luxury-identity golden-brand">MENU & INVENTORY SYNC</div>
-                    <button class="btn btn-primary btn-sm" onclick="app.triggerMenuSync()">SYNC FROM CSV</button>
-                </div>
-                <div class="glass-panel" style="margin: 1.5rem; padding: 1.5rem;">
-                    <div id="menu-loading-msg">Fetching cloud menu...</div>
-                    <div id="menu-items-table-wrapper" style="display: none;">
-                        <table class="inventory-table">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Category</th>
-                                    <th>Portion</th>
-                                    <th>Price</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inventory-list"></tbody>
-                        </table>
-                    </div>
-                    <div id="menu-empty-state" style="display: none; text-align: center; padding: 3rem;">
-                        <span style="font-size: 3rem;">&#128230;</span>
-                        <h3>No menu items found.</h3>
-                        <p>Upload a menu.csv file to get started.</p>
-                    </div>
-                </div>
-            </section>
-            
-
-
             <!-- 6. RESTAURANT DESK PORTAL -->
             <section id="tab-rest-desk" class="portal-content">
                 <div class="luxury-portal-header">
@@ -310,67 +264,7 @@
                         <button class="btn btn-outline flex-1" style="padding:1rem;" onclick="document.getElementById('invoice-preview-modal').style.display='none'">Close</button>
                     </div>
                 </div>
-            </div>
-            
-            <!-- 7. FINANCIAL ANALYTICS -->
-            <section id="tab-financials" class="portal-content">
-                <div class="luxury-portal-header">
-                    <div class="luxury-identity golden-brand">OWNER HUB &#8212; LIVE OPERATIONS</div>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <div class="portal-time-luxury" style="font-size:0.8rem; opacity:0.7;" id="owner-clock"></div>
-                        <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" style="border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
-                    </div>
-                </div>
-
-                <!-- KPI Row -->
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; padding: 1rem 1.5rem 0;">
-                    <div class="kpi-card glass-panel luxury-glow">
-                        <div class="kpi-title">Rooms Occupied</div>
-                        <div class="kpi-value" id="kpi-occupied">0 / 0</div>
-                    </div>
-                    <div class="kpi-card glass-panel luxury-glow">
-                        <div class="kpi-title">Room Revenue (Est.)</div>
-                        <div class="kpi-value" id="kpi-room-revenue">₹ 0</div>
-                    </div>
-                    <div class="kpi-card glass-panel luxury-glow">
-                        <div class="kpi-title">Pending Orders</div>
-                        <div class="kpi-value" id="kpi-pending-orders">0</div>
-                    </div>
-                    <div class="kpi-card glass-panel luxury-glow">
-                        <div class="kpi-title">EBITDA (Est.)</div>
-                        <div class="kpi-value" id="kpi-ebitda">₹ 0</div>
-                    </div>
-                </div>
-
-                <!-- Live Room Grid -->
-                <div style="padding: 1.5rem; display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
-                    <div>
-                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">&#127976; Live Room Status</h3>
-                        <div id="owner-room-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem;"></div>
-                    </div>
-                    <div>
-                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">&#9881;&#65039; Settings & Controls</h3>
-                        <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
-                            <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
-                                <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--gold-primary);">MENU SYNC</div>
-                                <button class="btn btn-outline btn-sm btn-block" style="margin-bottom:0.5rem;" onclick="app.triggerMenuSync()">&#128203; Sync From CSV</button>
-                                <button class="btn btn-outline btn-sm btn-block" onclick="app.syncMenuFromCloud()">&#9729;&#65039; Pull From Cloud</button>
-                            </div>
-                            <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
-                                <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem; color: #f59e0b;">BILLING RESET</div>
-                                <button class="btn btn-outline btn-sm btn-block" style="border-color:#f59e0b; color:#f59e0b;" onclick="app.systemReset()">&#128260; System Reset (Orders Only)</button>
-                            </div>
-                            <div>
-                                <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem; color: #f43f5e;">DANGER ZONE</div>
-                                <p style="font-size:0.75rem; color:var(--color-slate-400); margin-bottom:0.75rem;">Clears ALL guests, orders, reservations. Billing restarts from #1. Cannot be undone.</p>
-                                <button class="btn btn-sm btn-block" style="background:#f43f5e; border:none; font-weight:900; letter-spacing:1px;" onclick="app.hardReset()">&#128163; HARD RESET &#8212; FULL WIPE</button>
-                            </div>
-                        </div>
-
-                        <h3 style="color: var(--gold-primary); margin: 1.5rem 0 1rem;">ðŸ½ï¸ Live Kitchen Orders</h3>
-                        <div id="owner-order-feed" class="glass-panel" style="padding: 1rem; max-height: 300px; overflow-y: auto; font-size: 0.82rem;"></div>
-                    </div>
-                </div>
+               </div>
             </section>
         </main>
     </div>

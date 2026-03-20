@@ -173,10 +173,24 @@ async function toggleItemAvailability(id, available) {
 const occupiedRooms = () => rooms.filter(r => r.status === 'occupied').length;
 const activeOrders = () => orders.filter(o => o.status === 'Pending').length;
 
-// Initialization
+// Initialization & Authentication Handling
+window.handleLogout = async function() {
+    try {
+        await signOut(auth);
+        window.location.href = 'login.html';
+    } catch (e) {
+        console.error("Logout failed:", e);
+        window.location.href = 'login.html';
+    }
+};
+
 onAuthStateChanged(auth, user => {
-    if (!user) window.location.href = 'login.html';
-    else startListeners();
+    if (!user) {
+        window.location.href = 'login.html';
+    } else {
+        console.log("[Auth] Owner authenticated.");
+        startListeners();
+    }
 });
 
 setInterval(() => {

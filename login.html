@@ -444,8 +444,9 @@
 
             await firebaseHooks.signInWithEmailAndPassword(firebaseAuth, email, password);
             
-            const role = (userData.role || "").toLowerCase();
-            if (role.includes("hotel") && role.includes("waiter")) {
+            if (empId === 'BR-ADM-001' || role.includes("admin") || role.includes("owner")) {
+                window.location.href = 'admin.html';
+            } else if (role.includes("hotel") && role.includes("waiter")) {
                 window.location.href = 'hotel_waiter.html';
             } else if (role.includes("rest") && role.includes("waiter")) {
                 window.location.href = 'restaurant_waiter.html';
@@ -476,9 +477,9 @@
                 const snap = await firebaseHooks.getDocs(q);
                 
                 if (!snap.empty) {
-                    const userData = snap.docs[0].data();
-                    const role = (userData.role || "").toLowerCase();
-                    if (role.includes("hotel") && role.includes("waiter")) {
+                    if (userData.empId === 'BR-ADM-001' || role.includes("admin") || role.includes("owner")) {
+                        window.location.href = 'admin.html'; return;
+                    } else if (role.includes("hotel") && role.includes("waiter")) {
                         window.location.href = 'hotel_waiter.html'; return;
                     } else if (role.includes("rest") && role.includes("waiter")) {
                         window.location.href = 'restaurant_waiter.html'; return;
