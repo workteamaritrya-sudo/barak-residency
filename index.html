@@ -1,264 +1,478 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Reception Hub | Barak Residency</title>
-    <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Barak Residency | Management Hub</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="favicon.ico">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="firebase-sync.js"></script>
-    <script type="module" src="app.js"></script>
-    <style>
-        :root { --gold-primary: #D4AF37; }
-        body { background: #050B1A !important; overflow-x: hidden; margin: 0; padding: 0; }
-        .top-navbar {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 1rem 2rem; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255,255,255,0.08); position: sticky; top: 0; z-index: 999;
-        }
-        .navbar-brand { display: flex; align-items: center; gap: 1rem; }
-        .navbar-brand img { width: 40px; }
-        .main-layout { padding: 2rem; max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: 1fr 380px; gap: 2rem; }
-        
-        /* Mobile adjustment */
-        @media (max-width: 1024px) {
-            .main-layout { grid-template-columns: 1fr; }
-            .reception-orders-sidebar { position: fixed; bottom: 0; left:0; width: 100%; height: 60px; z-index: 1000; overflow: hidden; background: #0A1229; }
-        }
-
-        .side-panel { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 1.5rem; height: calc(100vh - 120px); display: flex; flex-direction: column; overflow: hidden; }
-        
-        .logout-pill {
-            background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3); color: #F43F5E;
-            padding: 0.5rem 1rem; border-radius: 20px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: 0.3s;
-        }
-        .logout-pill:hover { background: #F43F5E; color: white; }
-    </style>
+    <script type="module">
+        import { firebaseAuth, firebaseHooks } from './firebase-sync.js';
+        firebaseHooks.onAuthStateChanged(firebaseAuth, (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            } else {
+                document.getElementById('app-container').style.display = 'flex';
+            }
+        });
+    </script>
 </head>
 <body>
+    <div id="system-init-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-bg); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px);">
+        <div class="glass-panel" style="padding: 3rem; text-align: center; border: 1px solid var(--glass-border); max-width: 500px; width: 90%;">
+            <img src="br.png" alt="Logo" style="height: 80px; margin-bottom: 2rem; filter: drop-shadow(0 0 15px var(--gold-glow));">
+            <h1 class="golden-brand" style="font-size: 1.8rem; margin-bottom: 1rem;">BARAK RESIDENCY</h1>
+            <p style="color: var(--color-slate-400); margin-bottom: 2rem; font-size: 0.9rem; letter-spacing: 1px;">MANAGEMENT CONTROL SYSTEM v2.0</p>
+            <button class="btn btn-primary btn-block" onclick="app.initializeSession()" style="height: 60px; font-weight: 700; font-size: 1.1rem; letter-spacing: 2px;">START SESSION</button>
+            <p style="margin-top: 1.5rem; font-size: 0.7rem; color: var(--gold-primary); opacity: 0.6;">SYSTEM READY &#8226; ALL SYSTEMS NORMAL</p>
+        </div>
+    </div>
 
-    <div class="management-hub no-sidebar" id="tab-dashboard" style="display: none; flex-direction: column;">
-        <header class="top-navbar">
-            <div class="navbar-brand">
-                <img src="br.png" alt="Barak Residency" />
-                <div>
-                    <div class="golden-brand" style="font-size: 1rem; font-weight: 800; letter-spacing: 1px;">BARAK HUB</div>
-                    <div style="font-size: 0.6rem; letter-spacing: 3px; color: rgba(255,255,255,0.5);">EXECUTIVE RECEPTION DASHBOARD</div>
+    <!-- WAITER PORTION MODAL -->
+    <div id="waiter-portion-modal" style="display:none; position:fixed; top:0;left:0;width:100%;height:100%;background:rgba(5,11,26,0.92);z-index:8888;align-items:center;justify-content:center;backdrop-filter:blur(8px);">
+        <div class="glass-panel" style="width:92%;max-width:420px;padding:2rem;border:1px solid var(--glass-border);border-radius:20px;position:relative;">
+            <button onclick="app.closeWaiterPortionModal()" style="position:absolute;top:1rem;right:1rem;background:transparent;border:none;color:var(--text-gray);font-size:1.4rem;cursor:pointer;">âœ•</button>
+            <img id="wpm-item-img" src="" style="width:100%;height:160px;object-fit:cover;border-radius:12px;margin-bottom:1rem;display:none;" onerror="this.style.display='none'">
+            <div id="wpm-item-name" style="font-size:1.2rem;font-weight:900;color:var(--gold-primary);margin-bottom:0.3rem;"></div>
+            <div id="wpm-item-desc" style="font-size:0.8rem;color:var(--color-slate-400);margin-bottom:1rem;"></div>
+            <div id="wpm-options-container"></div>
+        </div>
+    </div>
+
+    <div class="management-hub" id="app-container" style="display: none;">
+
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <img src="br.png" alt="Barak Residency">
+                <div style="display:flex; flex-direction:column;">
+                    <span class="golden-brand" style="font-size: 0.9rem;">BARAK</span>
+                    <span class="golden-brand" style="font-size: 0.6rem; letter-spacing: 4px; opacity:0.7;">SILCHAR</span>
                 </div>
             </div>
-            
-            <div style="display: flex; align-items: center; gap: 2rem;">
-                <!-- Hidden components required by app.js logic -->
-                <div style="display: none;">
-                    <span id="user-display-name">Receptionist</span>
-                    <span id="user-display-role">Reception</span>
-                    <span id="user-avatar">??</span>
-                </div>
-                <div id="live-clock" style="font-family: 'Inter', sans-serif; font-weight: 800; font-size: 1.2rem; color: #D4AF37;">00:00 AM</div>
-                
-                <div class="executive-actions" style="display: flex; gap: 0.5rem; align-items:center; border-left: 1px solid rgba(212,175,55,0.2); padding-left: 2rem; margin-left: 1rem;">
-                    <button class="btn btn-primary" style="font-size: 0.75rem; padding: 0.5rem 1rem;" onclick="app.showCheckInForm()">⚡ QUICK CHECK-IN</button>
-                    <button class="btn btn-outline" style="font-size: 0.75rem; padding: 0.5rem 1rem; border-color: #a855f7; color: #a855f7;" onclick="app.openReserveModal()">📅 RESERVATIONS</button>
-                    
-                    <div class="portal-menu" style="display:flex; gap:0.5rem; margin-left:1rem;">
-                        <a href="kitchen.html" class="logout-pill" style="background:rgba(212,175,55,0.1); border-color:rgba(212,175,55,0.3); color:#D4AF37; text-decoration:none;">KDS</a>
-                        <a href="restaurant_desk.html" class="logout-pill" style="background:rgba(212,175,55,0.1); border-color:rgba(212,175,55,0.3); color:#D4AF37; text-decoration:none;">REST. DESK</a>
-                        <a href="admin.html" class="logout-pill" style="background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.1); color:white; text-decoration:none;">ADMIN</a>
-                    </div>
-                </div>
-                
-                <button class="logout-pill" onclick="app.handleLogout()">🚪 SIGN OUT</button>
-            </div>
-        </header>
 
-        <main class="main-layout">
-            <!-- Room Management Area -->
-            <div class="rooms-container">
-                <section class="floor">
-                    <h2 style="color: var(--gold-primary); font-family: 'Inter', sans-serif; font-weight: 800; margin-bottom: 1.5rem; letter-spacing: 2px;">FLOOR 1</h2>
-                    <div class="room-grid" id="floor-1"></div>
-                </section>
-                <section class="floor" style="margin-top: 3rem;">
-                    <h2 style="color: var(--gold-primary); font-family: 'Inter', sans-serif; font-weight: 800; margin-bottom: 1.5rem; letter-spacing: 2px;">FLOOR 2</h2>
-                    <div class="room-grid" id="floor-2"></div>
-                </section>
+            <div class="sidebar-nav">
+                <div class="side-item active" id="side-dashboard" onclick="app.switchTab('dashboard')">
+                    <span>ðŸ¨</span> Live Dashboard
+                </div>
+                <div class="side-item" id="side-kitchen" onclick="app.switchTab('kitchen')">
+                    <span>ðŸ³</span> Kitchen (KDS)
+                </div>
+                <div class="side-item" id="side-inventory" onclick="app.switchTab('inventory')">
+                    <span>📦</span> Menu & Inventory
+                </div>
+                <div class="side-item" id="side-financials" onclick="app.switchTab('financials')">
+                    <span>📊</span> Financial Analytics
+                </div>
             </div>
 
-            <!-- Orders & Service Panel -->
-            <div class="side-panel glass-panel">
-                <div style="flex: 1; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem; overflow: hidden; display: flex; flex-direction: column;">
-                    <h3 style="color: #D4AF37; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; letter-spacing: 1px;">
-                        LIVE ROOM ORDERS <span id="room-order-badge-count" class="badge">0</span>
-                    </h3>
-                    <div id="room-orders-panel" style="flex: 1; overflow-y: auto;"></div>
-                </div>
-                <div style="flex: 1; padding-top: 1rem; overflow: hidden; display: flex; flex-direction: column;">
-                    <h3 style="color: #F43F5E; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; letter-spacing: 1px;">
-                        SERVICE REQUESTS <span id="service-req-count" class="badge">0</span>
-                    </h3>
-                    <div id="service-requests-panel" style="flex: 1; overflow-y: auto;"></div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Command Center (Floats over content) -->
-        <aside class="command-center" id="command-center">
-            <div class="glass-panel cc-inner" style="min-width: 420px; box-shadow: 0 40px 100px rgba(0,0,0,0.8); border: 1px solid rgba(212,175,55,0.2);">
-                <button class="close-btn" onclick="app.closeCommandCenter()">&times;</button>
-                <h2 class="cc-title" id="cc-room-title" style="font-size: 2rem; color: #D4AF37;">Room --</h2>
-                
-                <div id="cc-content-empty">
-                    <p style="opacity: 0.6; margin-bottom: 2rem;">This room is currently available for guest check-in.</p>
-                    <div style="display: flex; gap: 1rem;">
-                        <button class="btn btn-primary flex-1" onclick="app.showCheckInForm()">CHECK IN GUEST</button>
-                        <button class="btn btn-outline flex-1" style="border-color: #a855f7; color: #a855f7;" onclick="app.openReserveModal()">RESERVE</button>
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="user-avatar">??</div>
+                    <div class="user-info">
+                        <span class="user-name" id="user-display-name">Loading...</span>
+                        <span class="user-role" id="user-display-role">---</span>
                     </div>
                 </div>
-
-                <div id="cc-content-occupied" style="display: none;">
-                    <div class="cc-section">
-                        <h3 style="font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 2px;">Guest Profile</h3>
-                        <div class="metadata-grid" style="margin-top: 0.8rem;">
-                            <div class="meta-item"><span class="meta-label">Name</span><span class="meta-value" id="cc-guest-name" style="color: white; font-weight: 800;">--</span></div>
-                            <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-value" id="cc-guest-phone" style="opacity: 0.7;">--</span></div>
-                        </div>
-                    </div>
-                    <div class="cc-section" style="margin-top: 1.5rem;">
-                        <h3 style="font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 2px;">Financial Ledger</h3>
-                        <div class="ledger-pill luxury-glow" style="background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.2); padding: 1rem; border-radius: 12px; display: flex; justify-content: space-between; margin-top: 0.8rem;">
-                            <span style="font-weight: 600;">Net Payable</span>
-                            <span id="cc-total-bill" style="font-weight: 800; color: #D4AF37; font-size: 1.2rem;">₹ 0</span>
-                        </div>
-                    </div>
-                    <div class="cc-actions mt-4" style="display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 1.5rem;">
-                        <button class="btn btn-outline" style="flex:1" onclick="app.toggleOrderHistory()">HISTORY</button>
-                        <button class="btn btn-primary" style="flex:1" onclick="app.generateInvoice()">PRINT BILL</button>
-                        <button id="cc-finalize-btn" class="btn btn-success" style="flex:1; background: #22C55E;" onclick="app.finalizePayAndCheckout()">CHECKOUT</button>
-                    </div>
-                </div>
-                
-                <div id="cc-content-reserved" style="display: none;">
-                    <div class="cc-section">
-                        <h3 style="color: #a855f7; font-size: 0.7rem; text-transform: uppercase;">Reservation Data</h3>
-                        <div class="metadata-grid" id="cc-res-grid" style="margin-top: 0.8rem;">
-                            <div class="meta-item"><span class="meta-label">Guest</span><span class="meta-value" id="cc-res-name">--</span></div>
-                            <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-value" id="cc-res-phone">--</span></div>
-                            <div class="meta-item"><span class="meta-label">Arrival</span><span class="meta-value" id="cc-res-arrival">--</span></div>
-                        </div>
-                        <button class="btn btn-primary btn-block mt-6" onclick="app.convertResToCheckin()">CONVERT TO CHECK-IN</button>
-                    </div>
-                </div>
+                <button class="btn btn-outline btn-block text-sm" onclick="app.handleLogout()">
+                    &#128682; LOGOUT
+                </button>
             </div>
         </aside>
+
+        <main class="main-content" id="portal-view">
+            <!-- 1. DASHBOARD TAB (RECEPTION) -->
+            <section id="tab-dashboard" class="portal-content active">
+                <div class="luxury-portal-header">
+                    <div class="luxury-identity golden-brand">EXECUTIVE ROOM DASHBOARD</div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div class="portal-time-luxury" id="live-clock">--:-- --</div>
+                        <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" id="header-logout" style="display: none; border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
+                    </div>
+                </div>
+                
+                <div class="reception-split-container">
+                    <div class="reception-rooms-area">
+                        <section class="room-section">
+                            <div class="floor">
+                                <h2>First Floor</h2>
+                                <div class="room-grid" id="floor-1"></div>
+                            </div>
+                            <div class="floor mt-4">
+                                <h2>Second Floor</h2>
+                                <div class="room-grid" id="floor-2"></div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="reception-orders-sidebar glass-panel">
+                        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                            <h3 style="color: var(--gold-primary); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1rem;">
+                                ROOM ORDERS 
+                                <span id="room-order-badge-count" class="badge">0</span>
+                            </h3>
+                            <div id="room-orders-panel" style="flex: 1; overflow-y: auto;">
+                                <div class="text-gray" style="text-align: center; margin-top: 1rem;">No active orders</div>
+                            </div>
+                        </div>
+                        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 1rem;">
+                            <h3 style="color: #f43f5e; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 1rem;">
+                                SERVICE REQUESTS
+                                <span id="service-req-count" class="badge">0</span>
+                            </h3>
+                            <div id="service-requests-panel" style="flex: 1; overflow-y: auto;">
+                                <div class="text-gray" style="text-align: center; margin-top: 1rem;">No pending requests</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="command-center" id="command-center">
+                    <div class="glass-panel cc-inner">
+                        <button class="close-btn" onclick="app.closeCommandCenter()">&times;</button>
+                        <h2 class="cc-title" id="cc-room-title">Room --</h2>
+                        
+                        <div id="cc-content-empty">
+                            <p>Room is available.</p>
+                            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                                <button class="btn btn-primary flex-1" onclick="app.showCheckInForm()">Check In</button>
+                                <button class="btn btn-outline flex-1" style="border-color: #a855f7; color: #a855f7;" onclick="app.openReserveModal()">Reserve</button>
+                            </div>
+                        </div>
+
+                        <div id="cc-content-occupied" style="display: none;">
+                            <div class="cc-section">
+                                <h3>&#128100; Guest Profile</h3>
+                                <div class="metadata-grid">
+                                    <div class="meta-item"><span class="meta-label">Name</span><span class="meta-value" id="cc-guest-name">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">Age</span><span class="meta-value" id="cc-guest-age">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-value" id="cc-guest-phone">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">ID Status</span><span class="meta-value" id="cc-guest-id">--</span></div>
+                                </div>
+                            </div>
+                            <div class="cc-section">
+                                <h3>&#128337; Stay Details</h3>
+                                <div class="metadata-grid">
+                                    <div class="meta-item"><span class="meta-label">Check-in</span><span class="meta-value" id="cc-checkin-datetime">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">Billed Days</span><span class="meta-value" id="cc-stay-days">0</span></div>
+                                </div>
+                            </div>
+                            <div class="cc-section">
+                                <h3>&#128184; Financial Ledger</h3>
+                                <div class="ledger-pill mb-3">
+                                    <span>Base Tariff</span>
+                                    <span id="cc-tariff">₹ 0</span>
+                                </div>
+                                <div class="metadata-grid mb-4">
+                                    <div class="meta-item"><span class="meta-label">Room (x<span id="cc-ledger-days">0</span>)</span><span class="meta-value" id="cc-room-total">₹ 0</span></div>
+                                    <div class="meta-item"><span class="meta-label">Food/Other</span><span class="meta-value" id="cc-food-total">₹ 0</span></div>
+                                    <div class="meta-item"><span class="meta-label">Advance</span><span class="meta-value" style="color: #4ade80;">- ₹ <span id="cc-advance-amt">0</span></span></div>
+                                </div>
+                                <div class="ledger-pill luxury-glow">
+                                    <span>Net Payable</span>
+                                    <span id="cc-total-bill">₹ 0</span>
+                                </div>
+                            </div>
+                            <div class="cc-actions mt-4" style="border-top: 1px solid var(--glass-border); padding-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                                <button class="btn btn-outline" style="flex:1" onclick="app.toggleOrderHistory()">History</button>
+                                <button class="btn btn-primary" style="flex:1" onclick="app.generateInvoice()">Print Bill</button>
+                                <button id="cc-finalize-btn" class="btn btn-success" style="flex:1; opacity: 0.5;" onclick="app.finalizePayAndCheckout()">Finalize Checkout</button>
+                            </div>
+                        </div>
+
+                        <div id="cc-content-reserved" style="display: none;">
+                            <div class="cc-section">
+                                <h3 style="color: #a855f7;">&#128197; Reservation Info</h3>
+                                <div class="metadata-grid">
+                                    <div class="meta-item"><span class="meta-label">Guest</span><span class="meta-value" id="cc-res-name">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">Phone</span><span class="meta-value" id="cc-res-phone">--</span></div>
+                                    <div class="meta-item"><span class="meta-label">Arrival</span><span class="meta-value" id="cc-res-arrival">--</span></div>
+                                </div>
+                                <button class="btn btn-primary btn-block mt-6" onclick="app.convertResToCheckin()">CHECK-IN GUEST</button>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </section>
+
+            <!-- 2. KITCHEN TAB -->
+            <section id="tab-kitchen" class="portal-content">
+                <div class="luxury-portal-header">
+                    <div class="luxury-identity golden-brand">KITCHEN DISPLAY SYSTEM</div>
+                    <div style="display: flex; align-items: center; gap: 2rem;">
+                        <div id="kds-pending-stats" class="text-gray">0 Orders Pending</div>
+                        <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" class="header-logout-alt" style="border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
+                    </div>
+                </div>
+                <div class="kds-grid" id="kds-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; padding: 1.5rem;"></div>
+            </section>
+
+            <!-- 3. INVENTORY TAB -->
+            <section id="tab-inventory" class="portal-content">
+                <div class="luxury-portal-header">
+                    <div class="luxury-identity golden-brand">MENU & INVENTORY SYNC</div>
+                    <button class="btn btn-primary btn-sm" onclick="app.triggerMenuSync()">SYNC FROM CSV</button>
+                </div>
+                <div class="glass-panel" style="margin: 1.5rem; padding: 1.5rem;">
+                    <div id="menu-loading-msg">Fetching cloud menu...</div>
+                    <div id="menu-items-table-wrapper" style="display: none;">
+                        <table class="inventory-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Category</th>
+                                    <th>Portion</th>
+                                    <th>Price</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-list"></tbody>
+                        </table>
+                    </div>
+                    <div id="menu-empty-state" style="display: none; text-align: center; padding: 3rem;">
+                        <span style="font-size: 3rem;">&#128230;</span>
+                        <h3>No menu items found.</h3>
+                        <p>Upload a menu.csv file to get started.</p>
+                    </div>
+                </div>
+            </section>
+            
+
+
+            </div>
+            
+            <!-- 7. FINANCIAL ANALYTICS -->
+            <section id="tab-financials" class="portal-content">
+                <div class="luxury-portal-header">
+                    <div class="luxury-identity golden-brand">OWNER HUB &#8212; LIVE OPERATIONS</div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div class="portal-time-luxury" style="font-size:0.8rem; opacity:0.7;" id="owner-clock"></div>
+                        <button class="btn btn-outline btn-sm" onclick="app.handleLogout()" style="border-color: rgba(255,255,255,0.2); font-size: 0.7rem;">LOGOUT</button>
+                    </div>
+                </div>
+
+                <!-- KPI Row -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; padding: 1rem 1.5rem 0;">
+                    <div class="kpi-card glass-panel luxury-glow">
+                        <div class="kpi-title">Rooms Occupied</div>
+                        <div class="kpi-value" id="kpi-occupied">0 / 0</div>
+                    </div>
+                    <div class="kpi-card glass-panel luxury-glow">
+                        <div class="kpi-title">Room Revenue (Est.)</div>
+                        <div class="kpi-value" id="kpi-room-revenue">₹ 0</div>
+                    </div>
+                    <div class="kpi-card glass-panel luxury-glow">
+                        <div class="kpi-title">Pending Orders</div>
+                        <div class="kpi-value" id="kpi-pending-orders">0</div>
+                    </div>
+                    <div class="kpi-card glass-panel luxury-glow">
+                        <div class="kpi-title">EBITDA (Est.)</div>
+                        <div class="kpi-value" id="kpi-ebitda">₹ 0</div>
+                    </div>
+                </div>
+
+                <!-- Live Room Grid -->
+                <div style="padding: 1.5rem; display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                    <div>
+                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">&#127976; Live Room Status</h3>
+                        <div id="owner-room-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem;"></div>
+                    </div>
+                    <div>
+                        <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">&#9881;&#65039; Settings & Controls</h3>
+                        <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                            <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                                <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--gold-primary);">MENU SYNC</div>
+                                <button class="btn btn-outline btn-sm btn-block" style="margin-bottom:0.5rem;" onclick="app.triggerMenuSync()">&#128203; Sync From CSV</button>
+                                <button class="btn btn-outline btn-sm btn-block" onclick="app.syncMenuFromCloud()">&#9729;&#65039; Pull From Cloud</button>
+                            </div>
+                            <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                                <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem; color: #f59e0b;">BILLING RESET</div>
+                                <button class="btn btn-outline btn-sm btn-block" style="border-color:#f59e0b; color:#f59e0b;" onclick="app.systemReset()">&#128260; System Reset (Orders Only)</button>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem; color: #f43f5e;">DANGER ZONE</div>
+                                <p style="font-size:0.75rem; color:var(--color-slate-400); margin-bottom:0.75rem;">Clears ALL guests, orders, reservations. Billing restarts from #1. Cannot be undone.</p>
+                                <button class="btn btn-sm btn-block" style="background:#f43f5e; border:none; font-weight:900; letter-spacing:1px;" onclick="app.hardReset()">&#128163; HARD RESET &#8212; FULL WIPE</button>
+                            </div>
+                        </div>
+
+                        <h3 style="color: var(--gold-primary); margin: 1.5rem 0 1rem;">ðŸ½ï¸ Live Kitchen Orders</h3>
+                        <div id="owner-order-feed" class="glass-panel" style="padding: 1rem; max-height: 300px; overflow-y: auto; font-size: 0.82rem;"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 
-    <!-- 1. SMART CHECK-IN MODAL (Full Implementation) -->
-    <div id="smart-checkin-modal" class="modal-overlay" style="display:none; z-index:20002; background:rgba(2,10,24,0.98); backdrop-filter:blur(15px);">
-        <div class="glass-panel" style="width:96%; max-width:850px; height:auto; display:flex; flex-direction:column; padding:2.5rem; border:1px solid rgba(212,175,55,0.3); border-radius:32px; box-shadow:0 0 100px rgba(212,175,55,0.1);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
-                <h2 style="font-family:'Inter'; font-weight:900; color:var(--gold-primary); letter-spacing:2px; font-size:1.5rem;">EXECUTIVE ONBOARDING</h2>
-                <button class="btn btn-outline" onclick="document.getElementById('smart-checkin-modal').style.display='none'" style="border-radius:50%; width:40px; height:40px; padding:0;">✕</button>
+    <!-- Modals -->
+    <div id="reserve-modal" class="modal-overlay" style="display: none; z-index: 10008;">
+        <div class="glass-panel" style="width: 100%; max-width: 500px; padding: 2rem;">
+            <h2 class="mb-6" style="color: #a855f7;">Reserve Room <span id="reserve-room-num">--</span></h2>
+            <div class="form-group mb-4">
+                <label>Title</label>
+                <select id="res-salutation" class="form-control">
+                    <option value="Mr.">Mr.</option>
+                    <option value="Mrs.">Mrs.</option>
+                    <option value="Ms.">Ms.</option>
+                    <option value="Dr.">Dr.</option>
+                </select>
+            </div>
+            <div class="form-group mb-4">
+                <label>Guest Name</label>
+                <input type="text" id="res-name" class="form-control" placeholder="John Doe">
+            </div>
+            <div class="form-group mb-4">
+                <label>Phone Number</label>
+                <input type="tel" id="res-phone" class="form-control" placeholder="+91">
+            </div>
+            <div class="form-group mb-4">
+                <label>Arrival Time</label>
+                <input type="datetime-local" id="res-arrival" class="form-control">
+            </div>
+            <div class="d-flex gap-4">
+                <button class="btn btn-outline flex-1" onclick="document.getElementById('reserve-modal').style.display='none'">Cancel</button>
+                <button class="btn btn-primary flex-1" style="background: #a855f7; border: none;" onclick="app.submitReservation()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="history-modal" class="modal-overlay" style="display: none; z-index: 20000; background: rgba(0,0,0,0.85);">
+        <div class="glass-panel" style="max-width: 600px; margin: 2rem auto; padding: 2rem; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                <h2 style="color: var(--gold-primary); margin-top: 0;">&#128190; GUEST STAY HISTORY</h2>
+                <button style="background:none; border:none; color: white; font-size: 2.5rem; cursor:pointer;" onclick="document.getElementById('history-modal').style.display='none'">&times;</button>
+            </div>
+            <div id="history-content">
+                <p class="text-gray">Loading history...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Smart Checkin Modal (Restore Sequential Flow) -->
+    <div id="smart-checkin-modal" class="modal-overlay" style="display: none; z-index: 20000; background: #050B1A;">
+        <div style="width: 100%; height: 100%; display: flex; flex-direction: column; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-bottom: 2rem;">
+                <h1 style="color: var(--gold-primary);">Guest Onboarding (<span id="summary-room">--</span>)</h1>
+                <button class="btn btn-outline" onclick="app.closeSmartCheckin()">Exit</button>
             </div>
 
-            <div class="smart-checkin-stepper" style="display:flex; gap:1rem; margin-bottom:2rem; justify-content:center; align-items:center;">
-                <div class="step-indicator active" id="ci-step-1">1. IDENTITY</div>
-                <div class="step-line" style="flex:1; height:2px; background:rgba(255,255,255,0.1);"></div>
-                <div class="step-indicator" id="ci-step-2">2. PHOTO</div>
-                <div class="step-line" style="flex:1; height:2px; background:rgba(255,255,255,0.1);"></div>
-                <div class="step-indicator" id="ci-step-3">3. DOCUMENTS</div>
-                <div class="step-line" style="flex:1; height:2px; background:rgba(255,255,255,0.1);"></div>
-                <div class="step-indicator" id="ci-step-4">4. FINANCE</div>
-                <div class="step-line" style="flex:1; height:2px; background:rgba(255,255,255,0.1);"></div>
-                <div class="step-indicator" id="ci-step-5">5. REVIEW</div>
+            <div class="smart-checkin-stepper" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; justify-content: center;">
+                <div class="step-indicator active" id="ci-step-1">1. Identity</div>
+                <div class="step-line"></div>
+                <div class="step-indicator" id="ci-step-2">2. Photo</div>
+                <div class="step-line"></div>
+                <div class="step-indicator" id="ci-step-3">3. ID Proofs</div>
+                <div class="step-line"></div>
+                <div class="step-indicator" id="ci-step-4">4. Finance</div>
+                <div class="step-line"></div>
+                <div class="step-indicator" id="ci-step-5">5. Review</div>
             </div>
 
-            <div id="sci-body" style="padding:1rem;">
-                <!-- Step 1 -->
-                <div class="ci-view active" id="ci-view-1">
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
-                        <div class="form-group"><label>Salutation</label><select id="sci-salutation" class="form-control"><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option></select></div>
-                        <div class="form-group"><label>Guest Name</label><input type="text" id="sci-name" class="form-control" placeholder="John Doe" /></div>
-                        <div class="form-group"><label>Phone Number</label><input type="tel" id="sci-phone" class="form-control" placeholder="+91" /></div>
-                        <div class="form-group"><label>Age</label><input type="number" id="sci-age" class="form-control" placeholder="25" /></div>
+            <div id="sci-body" style="flex: 1; display: flex; align-items: flex-start; justify-content: center; padding-top: 1rem;">
+                <!-- Step 1: Details -->
+                <div class="ci-view active" id="ci-view-1" style="width: 100%; max-width: 500px;">
+                    <h3 style="color:white; margin-bottom:1.5rem;">Personal Details</h3>
+                    <div class="form-group mb-4">
+                        <label>Title</label>
+                        <select id="sci-salutation" class="form-control">
+                            <option value="Mr.">Mr.</option>
+                            <option value="Mrs.">Mrs.</option>
+                            <option value="Ms.">Ms.</option>
+                            <option value="Dr.">Dr.</option>
+                        </select>
                     </div>
-                    <button class="btn btn-primary btn-block mt-8" onclick="app.sciNext(2)">PROCEED TO PHOTO CAPTURE</button>
+                    <div class="form-group mb-4">
+                        <label>Guest Name</label>
+                        <input type="text" id="sci-name" class="form-control" placeholder="John Doe">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label>Phone Number</label>
+                        <input type="tel" id="sci-phone" class="form-control" placeholder="+91">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label>Age</label>
+                        <input type="number" id="sci-age" class="form-control" placeholder="25">
+                    </div>
+                    <button class="btn btn-primary btn-block mt-4" onclick="app.sciNext(2)">Next: Photo Capture</button>
                 </div>
 
-                <!-- Step 2 -->
-                <div class="ci-view" id="ci-view-2" style="display:none; text-align:center;">
-                    <div id="sci-photo-container" style="width:100%; max-width:400px; margin:0 auto; background:#000; border-radius:12px; aspect-ratio:4/3; margin-bottom:1.5rem; overflow:hidden; border:2px solid var(--gold-primary);">
-                        <video id="sci-video" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
-                        <canvas id="sci-canvas" style="display:none;"></canvas>
-                        <img id="sci-photo-preview" style="display:none; width:100%; height:100%; object-fit:cover;" />
+                <!-- Step 2: Guest Photo -->
+                <div class="ci-view" id="ci-view-2" style="width: 100%; max-width: 500px; text-align: center;">
+                    <h3 style="color:white; margin-bottom:1.5rem;">Guest Photo</h3>
+                    <div id="sci-photo-container" style="width: 100%; background: #000; border-radius: 12px; aspect-ratio: 4/3; margin-bottom: 1rem; overflow: hidden; position: relative; border: 2px solid var(--glass-border);">
+                        <video id="sci-video" autoplay playsinline style="width:100%; height:100%; object-fit: cover;"></video>
+                        <canvas id="sci-canvas" style="display:none; width:100%; height:100%;"></canvas>
+                        <img id="sci-photo-preview" style="display:none; width:100%; height:100%; object-fit: cover;">
                     </div>
-                    <div id="sci-photo-status" style="display:none; color:#4ade80; margin-bottom:1rem; font-weight:800;">✓ PHOTO CAPTURED</div>
-                    <div style="display:flex; gap:1rem; justify-content:center;">
-                        <button class="btn btn-outline" onclick="app.captureLivePhoto()">CAPTURE NOW</button>
-                        <button class="btn btn-outline" onclick="document.getElementById('sci-photo-upload').click()">BROWSE FILE</button>
-                        <input type="file" id="sci-photo-upload" style="display:none" accept="image/*" onchange="app.handlePhotoUpload(this)" />
+                    <div id="sci-photo-status" style="display: none; color: #4ade80; margin-bottom: 1rem; font-weight: bold;">Captured!</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <button class="btn btn-outline" onclick="app.captureLivePhoto()">Capture Now</button>
+                        <button class="btn btn-outline" onclick="document.getElementById('sci-photo-upload').click()">Browse File</button>
+                        <input type="file" id="sci-photo-upload" style="display:none" accept="image/*" onchange="app.handlePhotoUpload(this)">
                     </div>
-                    <button class="btn btn-primary btn-block mt-6" onclick="app.sciNext(3)">CONTINUE TO DOCUMENTS</button>
+                    <button class="btn btn-primary btn-block mt-6" onclick="app.sciNext(3)">Next: ID Upload</button>
                 </div>
 
-                <!-- Step 3 -->
-                <div class="ci-view" id="ci-view-3" style="display:none;">
-                    <div id="sci-id-list" style="background:rgba(255,255,255,0.02); min-height:120px; border-radius:12px; border:2px dashed rgba(255,255,255,0.1); padding:1rem; margin-bottom:1rem; text-align:center;">
-                        <span id="id-placeholder-text">NO DOCUMENTS ATTACHED</span>
+                <!-- Step 3: ID Documents -->
+                <div class="ci-view" id="ci-view-3" style="width: 100%; max-width: 500px; text-align: center;">
+                    <h3 style="color:white; margin-bottom:1.5rem;">Multiple ID Proofs</h3>
+                    <div id="sci-id-list" style="background: rgba(255,255,255,0.05); min-height: 150px; border-radius: 12px; border: 2px dashed var(--glass-border); padding: 1.5rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; justify-content: center; align-items: center;">
+                        <span id="id-placeholder-text" style="color: var(--color-slate-400);">No files attached</span>
                     </div>
-                    <button class="btn btn-outline btn-block mb-4" onclick="document.getElementById('sci-id-upload').click()">+ ATTACH ID FILES (PDF/JPG)</button>
-                    <input type="file" id="sci-id-upload" style="display:none" multiple accept="image/*,pdf" onchange="app.handleMultiIdUpload(this)" />
-                    <button class="btn btn-primary btn-block" onclick="app.sciNext(4)">PROCEED TO FINANCE</button>
+                    <button class="btn btn-outline btn-block mb-3" onclick="document.getElementById('sci-id-upload').click()">+ Upload ID Files</button>
+                    <input type="file" id="sci-id-upload" style="display:none" accept="image/*,application/pdf" multiple onchange="app.handleMultiIdUpload(this)">
+                    <button class="btn btn-primary btn-block" onclick="app.sciNext(4)">Next: Finance</button>
                 </div>
 
-                <!-- Step 4 -->
-                <div class="ci-view" id="ci-view-4" style="display:none;">
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
-                        <div class="form-group"><label>Room Tariff</label><input type="number" id="sci-tariff" class="form-control" value="2500" /></div>
-                        <div class="form-group"><label>Advance Payment</label><input type="number" id="sci-advance" class="form-control" value="0" /></div>
-                        <div class="form-group"><label>Payment Method</label><select id="sci-payment-method" class="form-control"><option>UPI</option><option>Cash</option><option>Card</option></select></div>
+                <!-- Step 4: Finance -->
+                <div class="ci-view" id="ci-view-4" style="width: 100%; max-width: 500px;">
+                    <h3 style="color:white; margin-bottom:1.5rem;">Financial Details</h3>
+                    <div class="form-group mb-4">
+                        <label>Room Tariff (per night)</label>
+                        <input type="number" id="sci-tariff" class="form-control" value="2500">
                     </div>
-                    <button class="btn btn-primary btn-block mt-8" onclick="app.sciNext(5)">REVIEW & CONFIRM</button>
+                    <div class="form-group mb-4">
+                        <label>Advance Payment</label>
+                        <input type="number" id="sci-advance" class="form-control" value="0">
+                    </div>
+                    <div class="form-group mb-6">
+                        <label>Payment Method</label>
+                        <select id="sci-payment-method" class="form-control">
+                            <option value="Cash">Cash</option>
+                            <option value="UPI / QR">UPI / QR</option>
+                            <option value="Card">Card</option>
+                            <option value="Credit">Credit</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="app.sciNext(5)">Review & Summary</button>
                 </div>
 
-                <!-- Step 5 -->
-                <div class="ci-view" id="ci-view-5" style="display:none;">
-                    <div style="background:rgba(212,175,55,0.05); padding:1.5rem; border-radius:12px; margin-bottom:2rem; border:1px solid rgba(212,175,55,0.2);">
-                        <p><strong>GUEST:</strong> <span id="summary-name" style="color:var(--gold-primary);">--</span></p>
-                        <p><strong>PHONE:</strong> <span id="summary-phone">--</span></p>
-                        <p><strong>ROOM:</strong> <span id="summary-room">--</span></p>
-                        <p><strong>TOTAL PER NIGHT:</strong> ₹<span id="summary-tariff">--</span></p>
+                <!-- Step 5: Final Review -->
+                <div class="ci-view" id="ci-view-5" style="width: 100%; max-width: 500px;">
+                    <h3 style="color:white; margin-bottom:1.5rem;">Confirm Onboarding</h3>
+                    <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 2rem; border: 1px solid var(--gold-primary);">
+                        <p style="margin-bottom:0.5rem;"><strong>Guest:</strong> <span id="summary-name" style="color: var(--gold-primary);">--</span></p>
+                        <p style="margin-bottom:0.5rem;"><strong>Contact:</strong> <span id="summary-phone">--</span></p>
+                        <p style="margin-bottom:0.5rem;"><strong>Room:</strong> <span id="summary-room-view">--</span></p>
+                        <p style="margin-bottom:0.8rem;"><strong>Stay Total:</strong> ₹<span id="summary-tariff">--</span> / night</p>
+                        <button class="btn btn-outline btn-block" style="font-size:0.8rem; padding:0.5rem;" onclick="app.viewCapturedMedia()">View Photo & IDs</button>
                     </div>
-                    <button class="btn btn-primary btn-block" style="padding:1.5rem; font-size:1.2rem;" onclick="app.submitCheckIn()">CONFIRM FINAL CHECK-IN</button>
+                    <button class="btn btn-primary btn-block" style="padding:1.5rem; font-size:1.2rem;" onclick="app.submitCheckIn()">CONFIRM CHECK-IN</button>
+                    <button class="btn btn-outline btn-block mt-3" onclick="app.sciNext(1)">Go Back</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 2. OTHER REQUIRED COMPONENTS -->
-    <div id="reserve-modal" class="modal-overlay" style="display:none; z-index:20003;">
-        <div class="glass-panel" style="max-width:450px; padding:2rem;">
-            <h2 style="color:var(--gold-primary); margin-bottom:1.5rem;">RESERVE ROOM</h2>
-            <div class="form-group mb-4"><label>Guest Name</label><input type="text" id="res-name" class="form-control" /></div>
-            <div class="form-group mb-4"><label>Phone</label><input type="tel" id="res-phone" class="form-control" /></div>
-            <div class="form-group mb-4"><label>Arrival Date</label><input type="datetime-local" id="res-arrival" class="form-control" /></div>
-            <div style="display:flex; gap:1rem;">
-                <button class="btn btn-primary flex-1" onclick="app.submitReservation()">RESERVE</button>
-                <button class="btn btn-outline flex-1" onclick="app.closeReserveModal()">CANCEL</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="invoice-preview-modal" class="modal-overlay" style="display:none; z-index:20004;">
-        <div class="glass-panel" style="max-width:600px; padding:2rem; max-height:90vh; overflow-y:auto;">
-            <div id="invoice-preview-content"></div>
-            <div style="display:flex; gap:1rem; margin-top:2rem;">
-                <button class="btn btn-primary flex-1" onclick="app.printInvoiceFromPreview()">PRINT BILL</button>
-                <button class="btn btn-outline flex-1" onclick="document.getElementById('invoice-preview-modal').style.display='none'">CLOSE</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="print-area" style="display:none;"></div>
-
+    <div id="print-area"></div>
+    <script src="app.js"></script>
 </body>
 </html>

@@ -1629,7 +1629,9 @@ class PMSApp {
         document.getElementById('smart-checkin-modal').style.display = 'flex';
         this.sciNext(1);
 
-        document.getElementById('summary-room').innerText = this.currentRoom || '--';
+        const roomEl = document.getElementById('sci-room-manual');
+        if (roomEl) roomEl.value = this.currentRoom || '';
+        if (document.getElementById('summary-room')) document.getElementById('summary-room').innerText = this.currentRoom || '--';
     }
 
     sciNext(step) {
@@ -1648,7 +1650,8 @@ class PMSApp {
         if (step === 5) {
             document.getElementById('summary-name').innerText = document.getElementById('sci-name').value || '---';
             document.getElementById('summary-phone').innerText = document.getElementById('sci-phone').value || '---';
-            document.getElementById('summary-room-view').innerText = this.currentRoom || '---';
+            const manualRoom = document.getElementById('sci-room-manual');
+            document.getElementById('summary-room-view').innerText = manualRoom ? (manualRoom.value || this.currentRoom || '---') : (this.currentRoom || '---');
             document.getElementById('summary-tariff').innerText = document.getElementById('sci-tariff').value || '0';
             document.getElementById('summary-advance').innerText = document.getElementById('sci-advance').value || '0';
         }
@@ -1806,8 +1809,15 @@ class PMSApp {
             this.showToast("Please fill Name and Phone", "warning");
             return;
         }
+        
+        const manualRoom = document.getElementById('sci-room-manual');
+        const roomNum = manualRoom ? (manualRoom.value || this.currentRoom) : this.currentRoom;
+        
+        if (!roomNum) {
+            this.showToast("Room number missing", "error");
+            return;
+        }
 
-        const roomNum = this.currentRoom;
         const stayID = `room${roomNum}_${Date.now()}`;
         this.showToast("Executing Atomic Check-in Transaction...", "info");
 

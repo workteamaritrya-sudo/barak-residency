@@ -94,6 +94,157 @@ let activePickups = [];
 let pickupCounter = 0;
 let pickupCart = [];
 
+// ── Check-in & Reservation State ──────────────────────────
+let capturedGuestPhoto = null;
+let capturedIdFiles = [];
+
+// ── Passcode Protection ───────────────────────────────────
+function verifyPasscode() {
+    const input = document.getElementById('desk-pass-input').value;
+    if (input === '2026') {
+        document.getElementById('desk-passcode-overlay').style.fadeOut = '0.3s';
+        setTimeout(() => {
+            document.getElementById('desk-passcode-overlay').style.display = 'none';
+        }, 300);
+    } else {
+        const err = document.getElementById('desk-pass-err');
+        err.style.display = 'block';
+        setTimeout(() => { err.style.display = 'none'; }, 2000);
+    }
+}
+
+// ── Check-in & Reservation UI ─────────────────────────────
+
+function showCheckInForm() {
+    document.getElementById('smart-checkin-modal').style.display = 'flex';
+    if (window.deskApp.currentRoom) {
+        document.getElementById('sci-room').value = window.deskApp.currentRoom;
+    }
+    sciNext(1);
+}
+
+function openReserveModal() {
+    document.getElementById('reserve-modal').style.display = 'flex';
+}
+
+function sciNext(step) {
+    document.querySelectorAll('.ci-view').forEach(v => v.style.display = 'none');
+    document.getElementById(`ci-view-${step}`).style.display = 'block';
+    
+    // Update stepper
+    for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById(`ci-step-${i}`);
+        if (el) {
+            el.style.color = i === step ? 'var(--gold-primary)' : 'var(--text-gray)';
+            el.style.fontWeight = i === step ? 'bold' : 'normal';
+        }
+    }
+
+    if (step === 2) startSciCamera();
+}
+
+async function startSciCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const video = document.getElementById('sci-video');
+        video.srcObject = stream;
+        video.style.display = 'block';
+        document.getElementById('sci-photo-preview').style.display = 'none';
+        window.sciStream = stream;
+    } catch (e) { showToast('Camera access failed', 'error'); }
+}
+
+function captureLivePhoto() {
+    const video = document.getElementById('sci-video');
+    const canvas = document.getElementById('sci-canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    const dataUrl = canvas.toDataURL('image/jpeg');
+    document.getElementById('sci-photo-preview').src = dataUrl;
+    document.getElementById('sci-photo-preview').style.display = 'block';
+    video.style.display = 'none';
+    
+    capturedGuestPhoto = dataUrl;
+    if (window.sciStream) {
+        window.sciStream.getTracks().forEach(t => t.stop());
+    }
+}
+
+function handleMultiIdUpload(input) {
+    capturedIdFiles = Array.from(input.files);
+    document.getElementById('sci-id-list').innerText = `${capturedIdFiles.length} files attached`;
+}
+
+async function submitCheckIn() {
+    const roomNum = document.getElementById('sci-room').value.trim();
+    const guestName = document.getElementById('sci-name').value.trim();
+    const phone = document.getElementById('sci-phone').value.trim();
+    const tariff = parseFloat(document.getElementById('sci-tariff').value) || 2500;
+    const advance = parseFloat(document.getElementById('sci-advance').value) || 0;
+
+    if (!roomNum || !guestName || !phone) {
+        showToast('Required fields missing', 'warning');
+        return;
+    }
+
+    try {
+        const stayID = `stay_${roomNum}_${Date.now()}`;
+        const guestObj = {
+            id: Date.now().toString(),
+            roomNumber: roomNum,
+            guestName, phone, tariff, advance,
+            checkInTimestamp: Date.now(),
+            stayID,
+            status: 'active'
+        };
+
+        // Update Room in Firestore
+        await setDoc(doc(db, 'rooms', roomNum), {
+            status: 'occupied',
+            guestName, guestPhone: phone,
+            currentStayId: stayID,
+            last_updated: serverTimestamp()
+        }, { merge: true });
+
+        // Add to Guests
+        await setDoc(doc(db, 'guests', stayID), guestObj);
+
+        await pushNotification('checkin', `Room ${roomNum} checked in — ${guestName}`, 'reception');
+        
+        showToast(`Room ${roomNum} Check-in Complete!`, 'success');
+        document.getElementById('smart-checkin-modal').style.display = 'none';
+    } catch (e) {
+        console.error(e);
+        showToast('Check-in failed', 'error');
+    }
+}
+
+async function submitReservation() {
+    const roomNum = document.getElementById('res-room').value.trim();
+    const guestName = document.getElementById('res-name').value.trim();
+    const arrival = document.getElementById('res-arrival').value;
+
+    if (!roomNum || !guestName) {
+        showToast('Required fields missing', 'warning');
+        return;
+    }
+
+    try {
+        await setDoc(doc(db, 'rooms', roomNum), {
+            status: 'reserved',
+            resGuestName: guestName,
+            arrivalDate: arrival
+        }, { merge: true });
+
+        showToast(`Room ${roomNum} Reserved`, 'success');
+        document.getElementById('reserve-modal').style.display = 'none';
+    } catch (e) {
+        showToast('Reservation failed', 'error');
+    }
+}
+
 // ── Firebase Helpers ──────────────────────────────────────
 
 async function pushTableToCloud(tableObj) {
@@ -982,7 +1133,9 @@ window.deskApp = {
     toggleRevVisibility, openAvailabilityModal, renderAvailabilityTool,
     toggleItemAvailability, handleLogout,
     filterPickupMenu, removeFromPickupCart, submitPickupOrder,
-    addVariantToPickupCart
+    addVariantToPickupCart,
+    showCheckInForm, openReserveModal, sciNext, captureLivePhoto,
+    handleMultiIdUpload, submitCheckIn, submitReservation, verifyPasscode
 };
 
 // Legacy onclick compatibility
