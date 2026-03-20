@@ -34,7 +34,7 @@
             backdrop-filter: blur(20px); display: flex; flex-direction: column; padding: 2rem 1.5rem;
         }
         .sidebar-logo { text-align: center; margin-bottom: 3rem; }
-        .sidebar-logo img { width: 50px; filter: drop-shadow(0 0 10px var(--gold)); }
+        .sidebar-logo img { width: 60px; filter: drop-shadow(0 0 10px var(--gold)); }
         .sidebar-logo h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: var(--gold); letter-spacing: 2px; margin-top: 0.5rem; }
 
         .nav-item {
@@ -90,7 +90,7 @@
             padding: 1.25rem; background: var(--gold-dim); border-bottom: 1px solid var(--glass-border);
             display: flex; align-items: center; gap: 1rem;
         }
-        .ai-header img { width: 35px; filter: drop-shadow(0 0 5px var(--gold)); }
+        .ai-header img { width: 42px; filter: drop-shadow(0 0 5px var(--gold)); }
         .ai-header div { flex: 1; }
         .ai-header h3 { font-size: 1rem; color: var(--gold); letter-spacing: 1px; }
         .ai-header p { font-size: 0.7rem; color: rgba(212,175,55,0.7); }
@@ -236,8 +236,8 @@
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
                 <div class="analytics-card">
                     <h3 style="color:var(--gold); margin-bottom:1rem;">Master Menu Synchronization</h3>
-                    <p style="font-size:0.85rem; color:rgba(255,255,255,0.5); margin-bottom:1.5rem;">Paste your menu CSV data below. Format: ID, Name, Category, Price, PriceHalf, Description, PortionType, ImageURL</p>
-                    <textarea id="csv-paste-area" class="form-control" style="width:100%; height:200px; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); color:white; padding:1rem; border-radius:12px; font-family:monospace; font-size:0.8rem; margin-bottom:1rem;" placeholder="m1,Basmati Rice,Main,100,60,..."></textarea>
+                    <p style="font-size:0.85rem; color:rgba(255,255,255,0.5); margin-bottom:1.5rem;">Format: Name,Category,PriceFull,PriceHalf,Description,ImageURL,PortionType</p>
+                    <textarea id="csv-paste-area" class="form-control" style="width:100%; height:200px; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); color:white; padding:1rem; border-radius:12px; font-family:monospace; font-size:0.8rem; margin-bottom:1rem;" placeholder="Hyderabadi Biryani,Main,350,200,Fragrant basmati rice with spice,biryani.jpg,Plate"></textarea>
                     <button class="btn btn-primary" style="width:100%; padding:1rem; background:var(--gold); color:black; font-weight:800;" onclick="window.syncMenuFromCSV()">⚡ UPDATE GLOBAL MENU</button>
                     <div id="sync-status" style="margin-top:1rem; font-size:0.8rem; text-align:center;"></div>
                 </div>

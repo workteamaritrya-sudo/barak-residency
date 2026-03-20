@@ -17,9 +17,9 @@ let GEMINI_KEY = "";
 
 async function initConfig() {
     try {
-        const secrets = await import('./secrets.js');
-        FIREBASE_KEY = secrets.FIREBASE_KEY;
-        GEMINI_KEY = secrets.GEMINI_KEY;
+        const secrets = await import('./secrets.js?v=' + Date.now());
+        FIREBASE_KEY = secrets.FIREBASE_KEY || "";
+        GEMINI_KEY = secrets.GEMINI_KEY || "";
         console.log("[Secrets] Dynamic link established.");
     } catch (e) {
         console.warn("[Secrets] Bridge failed. Advanced cloud features may be offline.");
@@ -308,11 +308,14 @@ async function syncMenuFromCSV() {
     let count = 0;
     try {
         for (let line of lines) {
-            const [id, name, cat, price, priceHalf, desc, type, img] = line.split(',').map(s => s.trim());
-            if (!id || !name) continue;
+            const [name, cat, price, priceHalf, desc, img, type] = line.split(',').map(s => s.trim());
+            if (!name) continue;
+            
+            // Generate stable ID from name
+            const id = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
             
             await setDoc(doc(db, 'menuItems', id), {
-                id, name, category: cat, 
+                id, name, category: cat || 'General', 
                 price: parseFloat(price) || 0,
                 priceHalf: parseFloat(priceHalf) || 0,
                 description: desc || '',
