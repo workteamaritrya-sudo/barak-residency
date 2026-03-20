@@ -10,9 +10,7 @@
     <script type="module">
         import { firebaseAuth, firebaseHooks } from './firebase-sync.js';
         
-        firebaseHooks.onAuthStateChanged(firebaseAuth, (user) => {
-            if (!user) window.location.href = 'login.html';
-        });
+        // Removed duplicate auth watcher as PMSApp handles its own security checks
     </script>
     <style>
         body { background: #050B1A; overflow-x: hidden; }

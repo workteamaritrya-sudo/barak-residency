@@ -5366,3 +5366,4 @@ document.addEventListener('keydown', (e) => {
 });
 
 
+export { PMSApp };
