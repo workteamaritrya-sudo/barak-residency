@@ -31,56 +31,56 @@ const auth = getAuth(firebaseApp);
 
 // ── Master Menu Fallback ──────────────────────────────────
 const SHARED_MENU = [
-    {id:'m1-basmat',name:'Basmati Rice',category:'Main Course',price:80,priceHalf:50,description:'Premium long grain steamed rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m2-bhunak',name:'Bhuna Khichuri',category:'Main Course',price:180,priceHalf:100,description:'Ghee-laden yellow lentil rice',imageUrl:'https://images.unsplash.com/photo-1645177639578-56e89d924bb1?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m3-luchi',name:'Luchi (4 pcs)',category:'Starters',price:60,priceHalf:0,description:'Deep-fried puffed bread',imageUrl:'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m4-chola',name:'Cholar Dal',category:'Main Course',price:90,priceHalf:0,description:'Bengal gram dal with coconut',imageUrl:'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m5-begun',name:'Begun Bhaja',category:'Starters',price:40,priceHalf:0,description:'Fried eggplant slices',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m6-aloop',name:'Aloo Posto',category:'Main Course',price:150,priceHalf:80,description:'Potatoes in poppy seed paste',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m7-shukto',name:'Shukto',category:'Main Course',price:120,priceHalf:70,description:'Traditional bitter-sweet mixed veg',imageUrl:'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m8-mocha',name:'Mochar Ghonto',category:'Main Course',price:160,priceHalf:0,description:'Banana flower dry curry',imageUrl:'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m9-dhoka',name:'Dhokar Dalna',category:'Main Course',price:140,priceHalf:80,description:'Lentil cakes in spicy gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m10-chick',name:'Chicken Kosha',category:'Main Course',price:280,priceHalf:160,description:'Slow-cooked spicy chicken',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m11-mutt',name:'Mutton Kosha',category:'Main Course',price:450,priceHalf:250,description:'Traditional spicy mutton curry',imageUrl:'https://images.unsplash.com/photo-1545247181-516773cae754?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m12-ilish',name:'Ilish Bhapa',category:'Main Course',price:450,priceHalf:0,description:'Hilsa steamed in mustard paste',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m13-ruim',name:'Rui Macher Jhol',category:'Main Course',price:180,priceHalf:0,description:'Rohu fish in light cumin gravy',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m14-pabda',name:'Pabda Jhal',category:'Main Course',price:250,priceHalf:0,description:'Pabda fish in spicy mustard',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m15-ching',name:'Chingri Malaikari',category:'Main Course',price:380,priceHalf:0,description:'Prawns in coconut milk gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m16-bhet',name:'Bhetki Paturi',category:'Main Course',price:320,priceHalf:0,description:'Fish steamed in banana leaf',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m17-sorsh',name:'Sorshe Ilish',category:'Main Course',price:480,priceHalf:0,description:'Hilsa in pungent mustard gravy',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m18-katla',name:'Katla Kalia',category:'Main Course',price:220,priceHalf:0,description:'Rich Katla fish gravy',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m19-pomf',name:'Pomfret Masala',category:'Main Course',price:300,priceHalf:0,description:'Whole fried pomfret masala',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m20-chikb',name:'Chicken Biryani',category:'Main Course',price:320,priceHalf:180,description:'Kolkata style with potato',imageUrl:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m21-mutb',name:'Mutton Biryani',category:'Main Course',price:420,priceHalf:220,description:'Rich aromatic mutton rice',imageUrl:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m22-fishf',name:'Fish Finger (6pcs)',category:'Starters',price:220,priceHalf:0,description:'Crispy breaded fish strips',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m23-chikc',name:'Chicken Cutlet',category:'Starters',price:150,priceHalf:0,description:'Minced chicken deep fried',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m24-vegc',name:'Veg Chop (2pcs)',category:'Starters',price:40,priceHalf:0,description:'Beetroot and peanut croquettes',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m25-alood',name:'Aloo Dum',category:'Main Course',price:110,priceHalf:60,description:'Spicy baby potato curry',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m26-chann',name:'Channar Dalna',category:'Main Course',price:180,priceHalf:100,description:'Cottage cheese balls in gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m27-murig',name:'Muri Ghonto',category:'Main Course',price:200,priceHalf:0,description:'Fish head cooked with rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m28-lauch',name:'Lau Chingri',category:'Main Course',price:190,priceHalf:0,description:'Bottle gourd with small prawns',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m29-papad',name:'Papad Bhaja',category:'Starters',price:15,priceHalf:0,description:'Crispy fried papadum',imageUrl:'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m30-tomat',name:'Tomato Chutney',category:'Starters',price:40,priceHalf:0,description:'Sweet and tangy tomato relish',imageUrl:'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m31-mishti',name:'Mishti Doi',category:'Dessert',price:60,priceHalf:0,description:'Sweet fermented yogurt',imageUrl:'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m32-roso',name:'Rosogolla (2pcs)',category:'Dessert',price:40,priceHalf:0,description:'Sponge syrupy balls',imageUrl:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m33-gulab',name:'Gulab Jamun (2pcs)',category:'Dessert',price:50,priceHalf:0,description:'Fried milk solid balls',imageUrl:'https://images.unsplash.com/photo-1620660998677-f5a6c07db9bb?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m34-payesh',name:'Payesh',category:'Dessert',price:100,priceHalf:0,description:'Rice pudding with jaggery',imageUrl:'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m35-sand',name:'Sandesh (2pcs)',category:'Dessert',price:60,priceHalf:0,description:'Traditional dry milk sweet',imageUrl:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m36-mw1l',name:'Mineral Water 1L',category:'Drinks',price:20,priceHalf:0,description:'Chilled Bisleri',imageUrl:'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',portionType:'Bottle',isAvailable:true},
-    {id:'m37-mw500',name:'Mineral Water 500ml',category:'Drinks',price:10,priceHalf:0,description:'Travel size water',imageUrl:'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',portionType:'Bottle',isAvailable:true},
-    {id:'m38-milkt',name:'Milk Tea',category:'Drinks',price:25,priceHalf:0,description:'Strong Assam CTC Tea',imageUrl:'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=400',portionType:'Cup',isAvailable:true},
-    {id:'m39-blkt',name:'Black Tea',category:'Drinks',price:15,priceHalf:0,description:'Lemon and ginger tea',imageUrl:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',portionType:'Cup',isAvailable:true},
-    {id:'m40-coffee',name:'Coffee',category:'Drinks',price:40,priceHalf:0,description:'Instant milk coffee',imageUrl:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400',portionType:'Cup',isAvailable:true},
-    {id:'m41-lassi',name:'Sweet Lassi',category:'Drinks',price:80,priceHalf:0,description:'Thick yogurt drink',imageUrl:'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400',portionType:'Cup',isAvailable:true},
-    {id:'m42-limsod',name:'Fresh Lime Soda',category:'Drinks',price:60,priceHalf:0,description:'Sweet or Salted',imageUrl:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',portionType:'Cup',isAvailable:true},
-    {id:'m43-cola',name:'Coca Cola 500ml',category:'Drinks',price:45,priceHalf:0,description:'Pet bottle chilled',imageUrl:'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400',portionType:'Bottle',isAvailable:true},
-    {id:'m44-sprite',name:'Sprite 500ml',category:'Drinks',price:45,priceHalf:0,description:'Pet bottle chilled',imageUrl:'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400',portionType:'Bottle',isAvailable:true},
-    {id:'m45-eggc',name:'Egg Curry (2pcs)',category:'Main Course',price:120,priceHalf:0,description:'Boiled eggs in spicy gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m46-dakb',name:'Chicken Dak Bunglow',category:'Main Course',price:300,priceHalf:180,description:'Heritage chicken curry with egg',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m47-posto',name:'Posto Bora (4pcs)',category:'Starters',price:120,priceHalf:0,description:'Poppy seed fried fritters',imageUrl:'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400',portionType:'Quantity',isAvailable:true},
-    {id:'m48-dachr',name:'Macher Matha Diye Dal',category:'Main Course',price:130,priceHalf:0,description:'Roasted Moong dal with fish head',imageUrl:'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m49-kanka',name:'Kancha Lanka Murgi',category:'Main Course',price:290,priceHalf:160,description:'Green chili chicken (spicy)',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
-    {id:'m50-bhetf',name:'Bhetki Fry',category:'Starters',price:180,priceHalf:0,description:'Pure Bhetki fillet fry',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true}
+    { id: 'm1-basmat', name: 'Basmati Rice', category: 'Main Course', price: 80, priceHalf: 50, description: 'Premium long grain steamed rice', imageUrl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm2-bhunak', name: 'Bhuna Khichuri', category: 'Main Course', price: 180, priceHalf: 100, description: 'Ghee-laden yellow lentil rice', imageUrl: 'https://images.unsplash.com/photo-1645177639578-56e89d924bb1?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm3-luchi', name: 'Luchi (4 pcs)', category: 'Starters', price: 60, priceHalf: 0, description: 'Deep-fried puffed bread', imageUrl: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm4-chola', name: 'Cholar Dal', category: 'Main Course', price: 90, priceHalf: 0, description: 'Bengal gram dal with coconut', imageUrl: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm5-begun', name: 'Begun Bhaja', category: 'Starters', price: 40, priceHalf: 0, description: 'Fried eggplant slices', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm6-aloop', name: 'Aloo Posto', category: 'Main Course', price: 150, priceHalf: 80, description: 'Potatoes in poppy seed paste', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm7-shukto', name: 'Shukto', category: 'Main Course', price: 120, priceHalf: 70, description: 'Traditional bitter-sweet mixed veg', imageUrl: 'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm8-mocha', name: 'Mochar Ghonto', category: 'Main Course', price: 160, priceHalf: 0, description: 'Banana flower dry curry', imageUrl: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm9-dhoka', name: 'Dhokar Dalna', category: 'Main Course', price: 140, priceHalf: 80, description: 'Lentil cakes in spicy gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm10-chick', name: 'Chicken Kosha', category: 'Main Course', price: 280, priceHalf: 160, description: 'Slow-cooked spicy chicken', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm11-mutt', name: 'Mutton Kosha', category: 'Main Course', price: 450, priceHalf: 250, description: 'Traditional spicy mutton curry', imageUrl: 'https://images.unsplash.com/photo-1545247181-516773cae754?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm12-ilish', name: 'Ilish Bhapa', category: 'Main Course', price: 450, priceHalf: 0, description: 'Hilsa steamed in mustard paste', imageUrl: 'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm13-ruim', name: 'Rui Macher Jhol', category: 'Main Course', price: 180, priceHalf: 0, description: 'Rohu fish in light cumin gravy', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm14-pabda', name: 'Pabda Jhal', category: 'Main Course', price: 250, priceHalf: 0, description: 'Pabda fish in spicy mustard', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm15-ching', name: 'Chingri Malaikari', category: 'Main Course', price: 380, priceHalf: 0, description: 'Prawns in coconut milk gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm16-bhet', name: 'Bhetki Paturi', category: 'Main Course', price: 320, priceHalf: 0, description: 'Fish steamed in banana leaf', imageUrl: 'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm17-sorsh', name: 'Sorshe Ilish', category: 'Main Course', price: 480, priceHalf: 0, description: 'Hilsa in pungent mustard gravy', imageUrl: 'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm18-katla', name: 'Katla Kalia', category: 'Main Course', price: 220, priceHalf: 0, description: 'Rich Katla fish gravy', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm19-pomf', name: 'Pomfret Masala', category: 'Main Course', price: 300, priceHalf: 0, description: 'Whole fried pomfret masala', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm20-chikb', name: 'Chicken Biryani', category: 'Main Course', price: 320, priceHalf: 180, description: 'Kolkata style with potato', imageUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm21-mutb', name: 'Mutton Biryani', category: 'Main Course', price: 420, priceHalf: 220, description: 'Rich aromatic mutton rice', imageUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm22-fishf', name: 'Fish Finger (6pcs)', category: 'Starters', price: 220, priceHalf: 0, description: 'Crispy breaded fish strips', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm23-chikc', name: 'Chicken Cutlet', category: 'Starters', price: 150, priceHalf: 0, description: 'Minced chicken deep fried', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm24-vegc', name: 'Veg Chop (2pcs)', category: 'Starters', price: 40, priceHalf: 0, description: 'Beetroot and peanut croquettes', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm25-alood', name: 'Aloo Dum', category: 'Main Course', price: 110, priceHalf: 60, description: 'Spicy baby potato curry', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm26-chann', name: 'Channar Dalna', category: 'Main Course', price: 180, priceHalf: 100, description: 'Cottage cheese balls in gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm27-murig', name: 'Muri Ghonto', category: 'Main Course', price: 200, priceHalf: 0, description: 'Fish head cooked with rice', imageUrl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm28-lauch', name: 'Lau Chingri', category: 'Main Course', price: 190, priceHalf: 0, description: 'Bottle gourd with small prawns', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm29-papad', name: 'Papad Bhaja', category: 'Starters', price: 15, priceHalf: 0, description: 'Crispy fried papadum', imageUrl: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm30-tomat', name: 'Tomato Chutney', category: 'Starters', price: 40, priceHalf: 0, description: 'Sweet and tangy tomato relish', imageUrl: 'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm31-mishti', name: 'Mishti Doi', category: 'Dessert', price: 60, priceHalf: 0, description: 'Sweet fermented yogurt', imageUrl: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm32-roso', name: 'Rosogolla (2pcs)', category: 'Dessert', price: 40, priceHalf: 0, description: 'Sponge syrupy balls', imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm33-gulab', name: 'Gulab Jamun (2pcs)', category: 'Dessert', price: 50, priceHalf: 0, description: 'Fried milk solid balls', imageUrl: 'https://images.unsplash.com/photo-1620660998677-f5a6c07db9bb?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm34-payesh', name: 'Payesh', category: 'Dessert', price: 100, priceHalf: 0, description: 'Rice pudding with jaggery', imageUrl: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm35-sand', name: 'Sandesh (2pcs)', category: 'Dessert', price: 60, priceHalf: 0, description: 'Traditional dry milk sweet', imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm36-mw1l', name: 'Mineral Water 1L', category: 'Drinks', price: 20, priceHalf: 0, description: 'Chilled Bisleri', imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400', portionType: 'Bottle', isAvailable: true },
+    { id: 'm37-mw500', name: 'Mineral Water 500ml', category: 'Drinks', price: 10, priceHalf: 0, description: 'Travel size water', imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400', portionType: 'Bottle', isAvailable: true },
+    { id: 'm38-milkt', name: 'Milk Tea', category: 'Drinks', price: 25, priceHalf: 0, description: 'Strong Assam CTC Tea', imageUrl: 'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=400', portionType: 'Cup', isAvailable: true },
+    { id: 'm39-blkt', name: 'Black Tea', category: 'Drinks', price: 15, priceHalf: 0, description: 'Lemon and ginger tea', imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400', portionType: 'Cup', isAvailable: true },
+    { id: 'm40-coffee', name: 'Coffee', category: 'Drinks', price: 40, priceHalf: 0, description: 'Instant milk coffee', imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400', portionType: 'Cup', isAvailable: true },
+    { id: 'm41-lassi', name: 'Sweet Lassi', category: 'Drinks', price: 80, priceHalf: 0, description: 'Thick yogurt drink', imageUrl: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400', portionType: 'Cup', isAvailable: true },
+    { id: 'm42-limsod', name: 'Fresh Lime Soda', category: 'Drinks', price: 60, priceHalf: 0, description: 'Sweet or Salted', imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400', portionType: 'Cup', isAvailable: true },
+    { id: 'm43-cola', name: 'Coca Cola 500ml', category: 'Drinks', price: 45, priceHalf: 0, description: 'Pet bottle chilled', imageUrl: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400', portionType: 'Bottle', isAvailable: true },
+    { id: 'm44-sprite', name: 'Sprite 500ml', category: 'Drinks', price: 45, priceHalf: 0, description: 'Pet bottle chilled', imageUrl: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400', portionType: 'Bottle', isAvailable: true },
+    { id: 'm45-eggc', name: 'Egg Curry (2pcs)', category: 'Main Course', price: 120, priceHalf: 0, description: 'Boiled eggs in spicy gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm46-dakb', name: 'Chicken Dak Bunglow', category: 'Main Course', price: 300, priceHalf: 180, description: 'Heritage chicken curry with egg', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm47-posto', name: 'Posto Bora (4pcs)', category: 'Starters', price: 120, priceHalf: 0, description: 'Poppy seed fried fritters', imageUrl: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400', portionType: 'Quantity', isAvailable: true },
+    { id: 'm48-dachr', name: 'Macher Matha Diye Dal', category: 'Main Course', price: 130, priceHalf: 0, description: 'Roasted Moong dal with fish head', imageUrl: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm49-kanka', name: 'Kancha Lanka Murgi', category: 'Main Course', price: 290, priceHalf: 160, description: 'Green chili chicken (spicy)', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Plate', isAvailable: true },
+    { id: 'm50-bhetf', name: 'Bhetki Fry', category: 'Starters', price: 180, priceHalf: 0, description: 'Pure Bhetki fillet fry', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Quantity', isAvailable: true }
 ];
 
 // ── State ─────────────────────────────────────────────────
@@ -126,7 +126,7 @@ async function updateOrderStatus(orderId, status) {
         try {
             await updateDoc(doc(db, 'orders', String(orderId)), { status: cloudStatus });
             return;
-        } catch (e) {}
+        } catch (e) { }
         // Fallback: query by order_id field
         const q = query(collection(db, 'orders'), where('order_id', '==', String(orderId)));
         const snap = await getDocs(q);
@@ -176,7 +176,7 @@ function startListeners() {
     onSnapshot(collection(db, 'menuItems'), async snap => {
         if (!snap.empty) {
             const cloudItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            
+
             // Core Merge Logic: Master Fallback is the Ground Truth for Structure
             const updatedMenu = JSON.parse(JSON.stringify(SHARED_MENU)).map(baseItem => {
                 const cloudItem = cloudItems.find(c => String(c.id) === String(baseItem.id));
@@ -205,7 +205,7 @@ function startListeners() {
 
 async function init() {
     startClock();
-    
+
     // Auth Check
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
@@ -244,13 +244,13 @@ async function loadInitialData() {
     try {
         const notifSnap = await getDocs(query(collection(db, 'notifications'), orderBy('timestamp', 'desc'), limit(30)));
         notifSnap.forEach(d => notifications.push({ id: d.id, ...d.data() }));
-    } catch (e) {}
+    } catch (e) { }
 
     // Availability
     try {
         const avail = await getDoc(doc(db, 'settings', 'availability'));
         if (avail.exists()) unavailableItems = avail.data().unavailableItems || [];
-    } catch (e) {}
+    } catch (e) { }
 
     renderRestDesk();
     renderNotificationSidebar();
@@ -259,57 +259,57 @@ async function loadInitialData() {
 
 function getDefaultMenu() {
     return [
-            {id:'m1-basmat',name:'Basmati Rice',category:'Main Course',price:80,priceHalf:50,description:'Premium long grain steamed rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m2-bhunak',name:'Bhuna Khichuri',category:'Main Course',price:180,priceHalf:100,description:'Ghee-laden yellow lentil rice',imageUrl:'https://images.unsplash.com/photo-1645177639578-56e89d924bb1?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m3-luchi',name:'Luchi (4 pcs)',category:'Starters',price:60,priceHalf:0,description:'Deep-fried puffed bread',imageUrl:'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m4-chola',name:'Cholar Dal',category:'Main Course',price:90,priceHalf:0,description:'Bengal gram dal with coconut',imageUrl:'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m5-begun',name:'Begun Bhaja',category:'Starters',price:40,priceHalf:0,description:'Fried eggplant slices',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m6-aloop',name:'Aloo Posto',category:'Main Course',price:150,priceHalf:80,description:'Potatoes in poppy seed paste',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m7-shukto',name:'Shukto',category:'Main Course',price:120,priceHalf:70,description:'Traditional bitter-sweet mixed veg',imageUrl:'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m8-mocha',name:'Mochar Ghonto',category:'Main Course',price:160,priceHalf:0,description:'Banana flower dry curry',imageUrl:'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m9-dhoka',name:'Dhokar Dalna',category:'Main Course',price:140,priceHalf:80,description:'Lentil cakes in spicy gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m10-chick',name:'Chicken Kosha',category:'Main Course',price:280,priceHalf:160,description:'Slow-cooked spicy chicken',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m11-mutt',name:'Mutton Kosha',category:'Main Course',price:450,priceHalf:250,description:'Traditional spicy mutton curry',imageUrl:'https://images.unsplash.com/photo-1545247181-516773cae754?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m12-ilish',name:'Ilish Bhapa',category:'Main Course',price:450,priceHalf:0,description:'Hilsa steamed in mustard paste',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m13-ruim',name:'Rui Macher Jhol',category:'Main Course',price:180,priceHalf:0,description:'Rohu fish in light cumin gravy',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m14-pabda',name:'Pabda Jhal',category:'Main Course',price:250,priceHalf:0,description:'Pabda fish in spicy mustard',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m15-ching',name:'Chingri Malaikari',category:'Main Course',price:380,priceHalf:0,description:'Prawns in coconut milk gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m16-bhet',name:'Bhetki Paturi',category:'Main Course',price:320,priceHalf:0,description:'Fish steamed in banana leaf',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m17-sorsh',name:'Sorshe Ilish',category:'Main Course',price:480,priceHalf:0,description:'Hilsa in pungent mustard gravy',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m18-katla',name:'Katla Kalia',category:'Main Course',price:220,priceHalf:0,description:'Rich Katla fish gravy',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m19-pomf',name:'Pomfret Masala',category:'Main Course',price:300,priceHalf:0,description:'Whole fried pomfret masala',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m20-chikb',name:'Chicken Biryani',category:'Main Course',price:320,priceHalf:180,description:'Kolkata style with potato',imageUrl:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m21-mutb',name:'Mutton Biryani',category:'Main Course',price:420,priceHalf:220,description:'Rich aromatic mutton rice',imageUrl:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m22-fishf',name:'Fish Finger (6pcs)',category:'Starters',price:220,priceHalf:0,description:'Crispy breaded fish strips',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m23-chikc',name:'Chicken Cutlet',category:'Starters',price:150,priceHalf:0,description:'Minced chicken deep fried',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m24-vegc',name:'Veg Chop (2pcs)',category:'Starters',price:40,priceHalf:0,description:'Beetroot and peanut croquettes',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m25-alood',name:'Aloo Dum',category:'Main Course',price:110,priceHalf:60,description:'Spicy baby potato curry',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m26-chann',name:'Channar Dalna',category:'Main Course',price:180,priceHalf:100,description:'Cottage cheese balls in gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m27-murig',name:'Muri Ghonto',category:'Main Course',price:200,priceHalf:0,description:'Fish head cooked with rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m28-lauch',name:'Lau Chingri',category:'Main Course',price:190,priceHalf:0,description:'Bottle gourd with small prawns',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m29-papad',name:'Papad Bhaja',category:'Starters',price:15,priceHalf:0,description:'Crispy fried papadum',imageUrl:'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m30-tomat',name:'Tomato Chutney',category:'Starters',price:40,priceHalf:0,description:'Sweet and tangy tomato relish',imageUrl:'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m31-mishti',name:'Mishti Doi',category:'Dessert',price:60,priceHalf:0,description:'Sweet fermented yogurt',imageUrl:'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m32-roso',name:'Rosogolla (2pcs)',category:'Dessert',price:40,priceHalf:0,description:'Sponge syrupy balls',imageUrl:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m33-gulab',name:'Gulab Jamun (2pcs)',category:'Dessert',price:50,priceHalf:0,description:'Fried milk solid balls',imageUrl:'https://images.unsplash.com/photo-1620660998677-f5a6c07db9bb?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m34-payesh',name:'Payesh',category:'Dessert',price:100,priceHalf:0,description:'Rice pudding with jaggery',imageUrl:'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m35-sand',name:'Sandesh (2pcs)',category:'Dessert',price:60,priceHalf:0,description:'Traditional dry milk sweet',imageUrl:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m36-mw1l',name:'Mineral Water 1L',category:'Drinks',price:20,priceHalf:0,description:'Chilled Bisleri',imageUrl:'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',portionType:'Bottle',isAvailable:true},
-            {id:'m37-mw500',name:'Mineral Water 500ml',category:'Drinks',price:10,priceHalf:0,description:'Travel size water',imageUrl:'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',portionType:'Bottle',isAvailable:true},
-            {id:'m38-milkt',name:'Milk Tea',category:'Drinks',price:25,priceHalf:0,description:'Strong Assam CTC Tea',imageUrl:'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=400',portionType:'Cup',isAvailable:true},
-            {id:'m39-blkt',name:'Black Tea',category:'Drinks',price:15,priceHalf:0,description:'Lemon and ginger tea',imageUrl:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',portionType:'Cup',isAvailable:true},
-            {id:'m40-coffee',name:'Coffee',category:'Drinks',price:40,priceHalf:0,description:'Instant milk coffee',imageUrl:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400',portionType:'Cup',isAvailable:true},
-            {id:'m41-lassi',name:'Sweet Lassi',category:'Drinks',price:80,priceHalf:0,description:'Thick yogurt drink',imageUrl:'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400',portionType:'Cup',isAvailable:true},
-            {id:'m42-limsod',name:'Fresh Lime Soda',category:'Drinks',price:60,priceHalf:0,description:'Sweet or Salted',imageUrl:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',portionType:'Cup',isAvailable:true},
-            {id:'m43-cola',name:'Coca Cola 500ml',category:'Drinks',price:45,priceHalf:0,description:'Pet bottle chilled',imageUrl:'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400',portionType:'Bottle',isAvailable:true},
-            {id:'m44-sprite',name:'Sprite 500ml',category:'Drinks',price:45,priceHalf:0,description:'Pet bottle chilled',imageUrl:'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400',portionType:'Bottle',isAvailable:true},
-            {id:'m45-eggc',name:'Egg Curry (2pcs)',category:'Main Course',price:120,priceHalf:0,description:'Boiled eggs in spicy gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m46-dakb',name:'Chicken Dak Bunglow',category:'Main Course',price:300,priceHalf:180,description:'Heritage chicken curry with egg',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m47-posto',name:'Posto Bora (4pcs)',category:'Starters',price:120,priceHalf:0,description:'Poppy seed fried fritters',imageUrl:'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400',portionType:'Quantity',isAvailable:true},
-            {id:'m48-dachr',name:'Macher Matha Diye Dal',category:'Main Course',price:130,priceHalf:0,description:'Roasted Moong dal with fish head',imageUrl:'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m49-kanka',name:'Kancha Lanka Murgi',category:'Main Course',price:290,priceHalf:160,description:'Green chili chicken (spicy)',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
-            {id:'m50-bhetf',name:'Bhetki Fry',category:'Starters',price:180,priceHalf:0,description:'Pure Bhetki fillet fry',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true}
-        ];
+        { id: 'm1-basmat', name: 'Basmati Rice', category: 'Main Course', price: 80, priceHalf: 50, description: 'Premium long grain steamed rice', imageUrl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm2-bhunak', name: 'Bhuna Khichuri', category: 'Main Course', price: 180, priceHalf: 100, description: 'Ghee-laden yellow lentil rice', imageUrl: 'https://images.unsplash.com/photo-1645177639578-56e89d924bb1?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm3-luchi', name: 'Luchi (4 pcs)', category: 'Starters', price: 60, priceHalf: 0, description: 'Deep-fried puffed bread', imageUrl: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm4-chola', name: 'Cholar Dal', category: 'Main Course', price: 90, priceHalf: 0, description: 'Bengal gram dal with coconut', imageUrl: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm5-begun', name: 'Begun Bhaja', category: 'Starters', price: 40, priceHalf: 0, description: 'Fried eggplant slices', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm6-aloop', name: 'Aloo Posto', category: 'Main Course', price: 150, priceHalf: 80, description: 'Potatoes in poppy seed paste', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm7-shukto', name: 'Shukto', category: 'Main Course', price: 120, priceHalf: 70, description: 'Traditional bitter-sweet mixed veg', imageUrl: 'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm8-mocha', name: 'Mochar Ghonto', category: 'Main Course', price: 160, priceHalf: 0, description: 'Banana flower dry curry', imageUrl: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm9-dhoka', name: 'Dhokar Dalna', category: 'Main Course', price: 140, priceHalf: 80, description: 'Lentil cakes in spicy gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm10-chick', name: 'Chicken Kosha', category: 'Main Course', price: 280, priceHalf: 160, description: 'Slow-cooked spicy chicken', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm11-mutt', name: 'Mutton Kosha', category: 'Main Course', price: 450, priceHalf: 250, description: 'Traditional spicy mutton curry', imageUrl: 'https://images.unsplash.com/photo-1545247181-516773cae754?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm12-ilish', name: 'Ilish Bhapa', category: 'Main Course', price: 450, priceHalf: 0, description: 'Hilsa steamed in mustard paste', imageUrl: 'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm13-ruim', name: 'Rui Macher Jhol', category: 'Main Course', price: 180, priceHalf: 0, description: 'Rohu fish in light cumin gravy', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm14-pabda', name: 'Pabda Jhal', category: 'Main Course', price: 250, priceHalf: 0, description: 'Pabda fish in spicy mustard', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm15-ching', name: 'Chingri Malaikari', category: 'Main Course', price: 380, priceHalf: 0, description: 'Prawns in coconut milk gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm16-bhet', name: 'Bhetki Paturi', category: 'Main Course', price: 320, priceHalf: 0, description: 'Fish steamed in banana leaf', imageUrl: 'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm17-sorsh', name: 'Sorshe Ilish', category: 'Main Course', price: 480, priceHalf: 0, description: 'Hilsa in pungent mustard gravy', imageUrl: 'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm18-katla', name: 'Katla Kalia', category: 'Main Course', price: 220, priceHalf: 0, description: 'Rich Katla fish gravy', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm19-pomf', name: 'Pomfret Masala', category: 'Main Course', price: 300, priceHalf: 0, description: 'Whole fried pomfret masala', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm20-chikb', name: 'Chicken Biryani', category: 'Main Course', price: 320, priceHalf: 180, description: 'Kolkata style with potato', imageUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm21-mutb', name: 'Mutton Biryani', category: 'Main Course', price: 420, priceHalf: 220, description: 'Rich aromatic mutton rice', imageUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm22-fishf', name: 'Fish Finger (6pcs)', category: 'Starters', price: 220, priceHalf: 0, description: 'Crispy breaded fish strips', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm23-chikc', name: 'Chicken Cutlet', category: 'Starters', price: 150, priceHalf: 0, description: 'Minced chicken deep fried', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm24-vegc', name: 'Veg Chop (2pcs)', category: 'Starters', price: 40, priceHalf: 0, description: 'Beetroot and peanut croquettes', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm25-alood', name: 'Aloo Dum', category: 'Main Course', price: 110, priceHalf: 60, description: 'Spicy baby potato curry', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm26-chann', name: 'Channar Dalna', category: 'Main Course', price: 180, priceHalf: 100, description: 'Cottage cheese balls in gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm27-murig', name: 'Muri Ghonto', category: 'Main Course', price: 200, priceHalf: 0, description: 'Fish head cooked with rice', imageUrl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm28-lauch', name: 'Lau Chingri', category: 'Main Course', price: 190, priceHalf: 0, description: 'Bottle gourd with small prawns', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm29-papad', name: 'Papad Bhaja', category: 'Starters', price: 15, priceHalf: 0, description: 'Crispy fried papadum', imageUrl: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm30-tomat', name: 'Tomato Chutney', category: 'Starters', price: 40, priceHalf: 0, description: 'Sweet and tangy tomato relish', imageUrl: 'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm31-mishti', name: 'Mishti Doi', category: 'Dessert', price: 60, priceHalf: 0, description: 'Sweet fermented yogurt', imageUrl: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm32-roso', name: 'Rosogolla (2pcs)', category: 'Dessert', price: 40, priceHalf: 0, description: 'Sponge syrupy balls', imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm33-gulab', name: 'Gulab Jamun (2pcs)', category: 'Dessert', price: 50, priceHalf: 0, description: 'Fried milk solid balls', imageUrl: 'https://images.unsplash.com/photo-1620660998677-f5a6c07db9bb?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm34-payesh', name: 'Payesh', category: 'Dessert', price: 100, priceHalf: 0, description: 'Rice pudding with jaggery', imageUrl: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm35-sand', name: 'Sandesh (2pcs)', category: 'Dessert', price: 60, priceHalf: 0, description: 'Traditional dry milk sweet', imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm36-mw1l', name: 'Mineral Water 1L', category: 'Drinks', price: 20, priceHalf: 0, description: 'Chilled Bisleri', imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400', portionType: 'Bottle', isAvailable: true },
+        { id: 'm37-mw500', name: 'Mineral Water 500ml', category: 'Drinks', price: 10, priceHalf: 0, description: 'Travel size water', imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400', portionType: 'Bottle', isAvailable: true },
+        { id: 'm38-milkt', name: 'Milk Tea', category: 'Drinks', price: 25, priceHalf: 0, description: 'Strong Assam CTC Tea', imageUrl: 'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=400', portionType: 'Cup', isAvailable: true },
+        { id: 'm39-blkt', name: 'Black Tea', category: 'Drinks', price: 15, priceHalf: 0, description: 'Lemon and ginger tea', imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400', portionType: 'Cup', isAvailable: true },
+        { id: 'm40-coffee', name: 'Coffee', category: 'Drinks', price: 40, priceHalf: 0, description: 'Instant milk coffee', imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400', portionType: 'Cup', isAvailable: true },
+        { id: 'm41-lassi', name: 'Sweet Lassi', category: 'Drinks', price: 80, priceHalf: 0, description: 'Thick yogurt drink', imageUrl: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400', portionType: 'Cup', isAvailable: true },
+        { id: 'm42-limsod', name: 'Fresh Lime Soda', category: 'Drinks', price: 60, priceHalf: 0, description: 'Sweet or Salted', imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400', portionType: 'Cup', isAvailable: true },
+        { id: 'm43-cola', name: 'Coca Cola 500ml', category: 'Drinks', price: 45, priceHalf: 0, description: 'Pet bottle chilled', imageUrl: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400', portionType: 'Bottle', isAvailable: true },
+        { id: 'm44-sprite', name: 'Sprite 500ml', category: 'Drinks', price: 45, priceHalf: 0, description: 'Pet bottle chilled', imageUrl: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400', portionType: 'Bottle', isAvailable: true },
+        { id: 'm45-eggc', name: 'Egg Curry (2pcs)', category: 'Main Course', price: 120, priceHalf: 0, description: 'Boiled eggs in spicy gravy', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm46-dakb', name: 'Chicken Dak Bunglow', category: 'Main Course', price: 300, priceHalf: 180, description: 'Heritage chicken curry with egg', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm47-posto', name: 'Posto Bora (4pcs)', category: 'Starters', price: 120, priceHalf: 0, description: 'Poppy seed fried fritters', imageUrl: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400', portionType: 'Quantity', isAvailable: true },
+        { id: 'm48-dachr', name: 'Macher Matha Diye Dal', category: 'Main Course', price: 130, priceHalf: 0, description: 'Roasted Moong dal with fish head', imageUrl: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm49-kanka', name: 'Kancha Lanka Murgi', category: 'Main Course', price: 290, priceHalf: 160, description: 'Green chili chicken (spicy)', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400', portionType: 'Plate', isAvailable: true },
+        { id: 'm50-bhetf', name: 'Bhetki Fry', category: 'Starters', price: 180, priceHalf: 0, description: 'Pure Bhetki fillet fry', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Quantity', isAvailable: true }
+    ];
 }
 
 // ── Clock ─────────────────────────────────────────────────
@@ -317,12 +317,12 @@ function getDefaultMenu() {
 function startClock() {
     const update = () => {
         const now = new Date();
-        const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         let h = now.getHours(); const ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
-        const mm = String(now.getMinutes()).padStart(2,'0'), ss = String(now.getSeconds()).padStart(2,'0');
+        const mm = String(now.getMinutes()).padStart(2, '0'), ss = String(now.getSeconds()).padStart(2, '0');
         const el = document.getElementById('clock');
-        if (el) el.textContent = `${days[now.getDay()]}, ${String(now.getDate()).padStart(2,'0')} ${months[now.getMonth()]} | ${h}:${mm}:${ss} ${ampm}`;
+        if (el) el.textContent = `${days[now.getDay()]}, ${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} | ${h}:${mm}:${ss} ${ampm}`;
     };
     update(); setInterval(update, 1000);
 }
@@ -348,9 +348,9 @@ function renderRestDesk() {
     if (!grid) return;
     grid.innerHTML = '';
     let totalPax = 0, activeTables = 0;
-    const orderColors = {1:'#FF3131',2:'#39FF14',3:'#1F51FF',4:'#FFF01F',5:'#A020F0'};
+    const orderColors = { 1: '#FF3131', 2: '#39FF14', 3: '#1F51FF', 4: '#FFF01F', 5: '#A020F0' };
 
-    Object.values(tables).sort((a,b) => String(a.id).localeCompare(String(b.id))).forEach(table => {
+    Object.values(tables).sort((a, b) => String(a.id).localeCompare(String(b.id))).forEach(table => {
         if (table.status === 'occupied') {
             activeTables++; totalPax += table.pax || 0;
             const chars = table.chairs || [];
@@ -364,7 +364,7 @@ function renderRestDesk() {
                     const billTotal = billOrders.reduce((s, o) => s + (o.total || o.total_price || 0), 0);
                     const linkedTag = b.colorIndex === 5 ? `🔗 ${b.linkGroupId || 'L'}:` : '';
                     guestDivs += `<div onclick="event.stopPropagation();window.deskApp.selectDeskCheckout('${table.id}','${b.billID}')"
-                        style="color:${c};font-weight:bold;margin-bottom:0.3rem;cursor:pointer;padding:0.2rem;border-radius:4px;border:1px solid ${b.colorIndex===5?'#A020F0':'transparent'};">
+                        style="color:${c};font-weight:bold;margin-bottom:0.3rem;cursor:pointer;padding:0.2rem;border-radius:4px;border:1px solid ${b.colorIndex === 5 ? '#A020F0' : 'transparent'};">
                         ${linkedTag} ${b.billID} | ${b.guestName} <span style="color:#4ADE80;">₹${billTotal}</span></div>`;
                 });
             } else {
@@ -396,9 +396,9 @@ function renderRestDesk() {
                 </div>
                 <div class="room-guest border-bottom pb-2 mb-2" style="display:flex;flex-direction:column;">${guestDivs}</div>
                 <div class="restaurant-table-view"><div class="table-layout-wrapper">
-                    <div class="chair-row">${cHtml[0]||''}${cHtml[1]||''}</div>
+                    <div class="chair-row">${cHtml[0] || ''}${cHtml[1] || ''}</div>
                     <div class="table-engine-box" style="border-color:#F59E0B;">${table.id}</div>
-                    <div class="chair-row">${cHtml[2]||''}${cHtml[3]||''}</div>
+                    <div class="chair-row">${cHtml[2] || ''}${cHtml[3] || ''}</div>
                 </div></div>
                 <div class="text-sm mt-3 text-center text-gray">${table.pax || 0} / 4 Seats Occupied</div>
                 <div class="text-xl font-bold mt-2 text-center color-primary">₹${table.total || 0}</div>`;
@@ -414,9 +414,9 @@ function renderRestDesk() {
                     <span class="room-status status-available">Available</span>
                 </div>
                 <div class="restaurant-table-view" style="opacity:0.5;"><div class="table-layout-wrapper">
-                    <div class="chair-row">${cHtml[0]||''}${cHtml[1]||''}</div>
+                    <div class="chair-row">${cHtml[0] || ''}${cHtml[1] || ''}</div>
                     <div class="table-engine-box" style="border-color:var(--color-slate-700);color:var(--color-slate-400);">${table.id}</div>
-                    <div class="chair-row">${cHtml[2]||''}${cHtml[3]||''}</div>
+                    <div class="chair-row">${cHtml[2] || ''}${cHtml[3] || ''}</div>
                 </div></div>
                 <div class="text-sm mt-3 text-center text-gray">0 / 4 Seats Occupied</div>`;
             grid.appendChild(card);
@@ -449,30 +449,30 @@ function selectDeskCheckout(tableId, billId = null) {
         const id = b.billID;
         const orders = (table.orders || []).filter(o => o.id === id || o.order_id === id);
         const total = orders.reduce((s, o) => s + (o.total || o.total_price || 0), 0);
-        
+
         const isPaid = b.status === 'paid' || b.paid;
 
         billsHtml += `
-            <div style="margin-bottom:1.5rem; border:1px solid ${isPaid?'#10B981':'var(--glass-border)'}; border-radius:12px; padding:1.2rem; background:rgba(0,0,0,0.2);">
+            <div style="margin-bottom:1.5rem; border:1px solid ${isPaid ? '#10B981' : 'var(--glass-border)'}; border-radius:12px; padding:1.2rem; background:rgba(0,0,0,0.2);">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
                     <div>
                         <div style="font-weight:900; color:var(--gold-primary); font-size:1rem;">BILL ${id}</div>
                         <div style="font-size:0.8rem; color:var(--text-gray);">${b.guestName || 'Walk-in'} — ${b.pax || 1} PAX</div>
                     </div>
-                    ${isPaid ? 
-                        `<span style="color:#10B981; font-weight:800; font-size:0.8rem;">PAID ✓</span>` : 
-                        `<button class="btn btn-primary" style="padding:0.4rem 0.8rem; font-size:0.75rem; background:#10B981; border:none;" 
+                    ${isPaid ?
+                `<span style="color:#10B981; font-weight:800; font-size:0.8rem;">PAID ✓</span>` :
+                `<button class="btn btn-primary" style="padding:0.4rem 0.8rem; font-size:0.75rem; background:#10B981; border:none;" 
                             onclick="window.deskApp.checkoutBill('${tableId}', '${id}', ${total})">CHECKOUT</button>`
-                    }
+            }
                 </div>
                 <div style="font-size:0.85rem; border-top:1px dashed var(--glass-border); padding-top:0.8rem;">
-                    ${orders.length > 0 ? 
-                        orders.map(o => (o.items || []).map(i => `<div style="display:flex; justify-content:space-between; margin-bottom:0.2rem;">
+                    ${orders.length > 0 ?
+                orders.map(o => (o.items || []).map(i => `<div style="display:flex; justify-content:space-between; margin-bottom:0.2rem;">
                             <span class="text-gray">${i.qty}x ${i.name}</span>
                             <span>₹${i.qty * i.price}</span>
-                        </div>`).join('')).join('') : 
-                        '<div class="text-gray italic">No items found</div>'
-                    }
+                        </div>`).join('')).join('') :
+                '<div class="text-gray italic">No items found</div>'
+            }
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-top:1rem; font-weight:bold; font-size:1.1rem; border-top:1px solid var(--glass-border); padding-top:0.8rem;">
                     <span>Subtotal</span>
@@ -490,15 +490,15 @@ function selectDeskCheckout(tableId, billId = null) {
                 <span>TABLE TOTAL</span>
                 <span style="color:var(--gold-primary);">₹${grandTotal}</span>
             </div>
-            ${allPaid ? 
-                `<button class="btn btn-primary btn-block" style="padding:1rem; font-size:1.1rem;" onclick="window.deskApp.printAndCloseTable('${tableId}', ${grandTotal})">CLOSE TABLE & SYNC</button>` :
-                `<div style="font-size:0.8rem; color:#f43f5e; text-align:center;">All bills must be checked out to close table</div>`
-            }
+            ${allPaid ?
+            `<button class="btn btn-primary btn-block" style="padding:1rem; font-size:1.1rem;" onclick="window.deskApp.printAndCloseTable('${tableId}', ${grandTotal})">CLOSE TABLE & SYNC</button>` :
+            `<div style="font-size:0.8rem; color:#f43f5e; text-align:center;">All bills must be checked out to close table</div>`
+        }
         </div>`;
 
     document.getElementById('checkout-modal-content').innerHTML = billsHtml;
     document.getElementById('checkout-modal-title').innerText = `TABLE ${tableId} — DASHBOARD`;
-    
+
     // Store for closing action
     const modal = document.getElementById('checkout-modal');
     modal.dataset.tableId = tableId;
@@ -515,7 +515,7 @@ async function checkoutBill(tableId, billId, amount) {
     bill.paid = true;
     restaurantRevenue += amount;
     localStorage.setItem('yukt_rest_rev', restaurantRevenue);
-    
+
     try {
         await setDoc(doc(db, 'tables', tableId), table, { merge: true });
         await addDoc(collection(db, 'ledger'), {
@@ -548,7 +548,7 @@ async function printAndCloseTable() {
             closedAt: serverTimestamp(),
             logType: 'TABLE_CHECKOUT'
         });
-    } catch (e) {}
+    } catch (e) { }
 
     // Reset table
     table.status = 'available'; table.guestName = null; table.pax = 0;
@@ -568,7 +568,7 @@ function printBill(tableId, total) {
     pa.innerHTML = `<div class="invoice-copy" style="font-family:monospace;font-size:1.1rem;">
         <div style="text-align:center;font-weight:bold;font-size:1.5rem;border-bottom:2px solid black;padding-bottom:1rem;margin-bottom:1rem;">BARAK RESIDENCY</div>
         <div style="margin-bottom:1rem;"><strong>Table:</strong> ${tableId}<br>
-        <strong>Date:</strong> ${new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}</div>
+        <strong>Date:</strong> ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
         <div style="font-size:1.3rem;font-weight:bold;border-top:2px solid black;padding-top:1rem;margin-top:1rem;">Grand Total: ₹${total}</div>
         <div style="text-align:center;margin-top:1rem;font-size:0.9rem;">Thank you for dining with us!</div>
     </div>`;
@@ -588,7 +588,7 @@ function renderPickupMenu(search = '') {
     const grid = document.getElementById('pickup-menu-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    
+
     const filtered = menu.filter(i => {
         const name = (i.name || i.Name || '').toLowerCase();
         const cat = (i.category || i.Category || '').toLowerCase();
@@ -600,7 +600,7 @@ function renderPickupMenu(search = '') {
         const el = document.createElement('div');
         el.className = 'waiter-menu-card'; // Reuse waiter card styles
         el.style.cssText = 'background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:12px; padding:1rem; cursor:pointer; text-align:center;';
-        
+
         const name = item.name || item.Name || item.itemName || 'Item';
         const price = item.price || item.PriceFull || item.Price || item.priceFull || 0;
         const img = item.imageUrl || item.ImageURL || item.image || 'br.png';
@@ -610,7 +610,7 @@ function renderPickupMenu(search = '') {
             <div style="font-weight:bold; font-size:0.9rem; margin-bottom:0.3rem; height:2.4rem; overflow:hidden;">${name}</div>
             <div style="color:var(--gold-primary); font-weight:800;">₹${price}</div>
         `;
-        el.onclick = () => window.deskApp.addVariantToPickupCart(item);
+        el.onclick = () => window.deskApp.promptPickupItem(item);
         grid.appendChild(el);
     });
 }
@@ -620,67 +620,75 @@ function filterPickupMenu(val) {
 }
 
 function addVariantToPickupCart(item) {
-    // Basic auto-add for now, can be expanded to modal if variants needed
-    pickupCart.push({
-        id: item.id,
-        name: item.name,
-        label: 'Full',
-        price: item.price,
-        qty: 1
-    });
-    renderPickupCart();
+    promptPickupItem(item);
 }
 
+let pendingPickupItem = null;
+let pendingPickupVariant = null;
+let pendingPickupQty = 1;
+
 function promptPickupItem(item) {
+    pendingPickupItem = item;
     const modal = document.getElementById('pickup-item-modal');
     const container = document.getElementById('pim-options-container');
-    const name = item.name || item.Name || item.itemName || 'Item';
-    const price = item.price || item.PriceFull || item.Price || item.priceFull || 0;
-    
+    const name = item.name || item.itemName || 'Item';
+    const price = item.price || 0;
+
     document.getElementById('pim-item-name').innerText = name;
     container.innerHTML = '';
 
     const type = item.portionType || 'Plate';
-    
+
     if (type === 'Plate' || type === 'Portion') {
-        const priceHalf = item.priceHalf || item.PriceHalf || Math.floor(price * 0.6);
-        const options = [
-            { label: 'Full Plate', val: 'Full', price: price },
-            { label: 'Half Plate', val: 'Half', price: priceHalf }
-        ];
+        const priceHalf = item.priceHalf || 0;
+        const options = [{ label: 'Full Plate', val: 'Full', price: price }];
+        if (priceHalf > 0) options.push({ label: 'Half Plate', val: 'Half', price: priceHalf });
+
         options.forEach(opt => {
             const btn = document.createElement('button');
             btn.className = 'btn btn-outline';
             btn.style.width = '100%';
             btn.innerHTML = `<span>${opt.label}</span> <span style="margin-left:auto; font-weight:bold;">₹${opt.price}</span>`;
-            btn.onclick = () => { addToPickupCart(item, opt.val, opt.label, opt.price, 1); modal.style.display = 'none'; };
-            container.appendChild(btn);
-        });
-    } else if (type === 'Bottle') {
-        const options = [
-            { label: '1L Bottle', val: '1L', price: price },
-            { label: '750ml', val: '750ml', price: Math.floor(price * 0.8) },
-            { label: '500ml', val: '500ml', price: Math.floor(price * 0.6) }
-        ];
-        options.forEach(opt => {
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-outline';
-            btn.style.width = '100%';
-            btn.innerHTML = `<span>${opt.label}</span> <span style="margin-left:auto; font-weight:bold;">₹${opt.price}</span>`;
-            btn.onclick = () => { addToPickupCart(item, opt.val, opt.label, opt.price, 1); modal.style.display = 'none'; };
+            btn.onclick = () => promptPickupQuantity(opt.val, opt.label, opt.price);
             container.appendChild(btn);
         });
     } else {
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-primary';
-        btn.style.width = '100%';
-        btn.innerHTML = `Add Standard Portion — ₹${price}`;
-        btn.onclick = () => { addToPickupCart(item, 'Regular', 'Standard', price, 1); modal.style.display = 'none'; };
-        container.appendChild(btn);
+        promptPickupQuantity('Regular', 'Standard', price);
     }
-    
     modal.style.display = 'flex';
 }
+
+function promptPickupQuantity(variant, label, price) {
+    pendingPickupVariant = { variant, label, price };
+    pendingPickupQty = 1;
+
+    const modal = document.getElementById('pickup-item-modal');
+    const container = document.getElementById('pim-options-container');
+    const name = pendingPickupItem.name || 'Item';
+
+    document.getElementById('pim-item-name').innerText = `${name} (${label})`;
+    container.innerHTML = `
+        <div style="display:flex;align-items:center;gap:1.5rem;justify-content:center;background:rgba(0,0,0,0.3);border-radius:12px;padding:1.5rem;margin:1rem 0;">
+            <button class="btn btn-outline" style="width:45px;height:45px;border-radius:50%;padding:0;font-size:1.5rem;" onclick="updatePickupQty(-1)">-</button>
+            <div id="pim-qty-val" style="font-size:2.5rem;font-weight:900;color:white;width:60px;text-align:center;">1</div>
+            <button class="btn btn-outline" style="width:45px;height:45px;border-radius:50%;padding:0;font-size:1.5rem;" onclick="updatePickupQty(1)">+</button>
+        </div>
+        <button class="btn btn-primary" style="width:100%;padding:1.2rem;font-size:1.1rem;" onclick="executeAddPickupToCart()">ADD TO CART — ₹${price}</button>
+    `;
+}
+
+window.updatePickupQty = function (delta) {
+    pendingPickupQty = Math.max(1, pendingPickupQty + delta);
+    document.getElementById('pim-qty-val').innerText = pendingPickupQty;
+    const price = pendingPickupVariant.price * pendingPickupQty;
+    document.querySelector('#pim-options-container button.btn-primary').innerText = `ADD TO CART — ₹${price}`;
+};
+
+function executeAddPickupToCart() {
+    addToPickupCart(pendingPickupItem, pendingPickupVariant.variant, pendingPickupVariant.label, pendingPickupVariant.price, pendingPickupQty);
+    document.getElementById('pickup-item-modal').style.display = 'none';
+}
+
 
 function addToPickupCart(item, variant, label, price, qty) {
     const id = `${item.id}_${variant}`;
@@ -711,14 +719,14 @@ function renderPickupCart() {
     const container = document.getElementById('pickup-cart-items');
     const totalEl = document.getElementById('pickup-cart-total');
     if (!container) return;
-    
+
     container.innerHTML = '';
     let total = 0;
-    
+
     pickupCart.forEach((item, idx) => {
         const itemTotal = item.price * item.qty;
         total += itemTotal;
-        
+
         const row = document.createElement('div');
         row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; background:rgba(255,255,255,0.03); padding:0.6rem; border-radius:8px;';
         row.innerHTML = `
@@ -731,18 +739,18 @@ function renderPickupCart() {
         `;
         container.appendChild(row);
     });
-    
+
     totalEl.innerText = total.toLocaleString();
 }
 
 async function submitPickupOrder() {
     if (pickupCart.length === 0) { showToast('Cart is empty', 'warning'); return; }
-    
+
     pickupCounter++;
     localStorage.setItem('br_pickup_counter', pickupCounter);
     const pid = `P${pickupCounter}`;
     const total = pickupCart.reduce((s, i) => s + (i.price * i.qty), 0);
-    
+
     const orderObj = {
         order_id: pid,
         id: pid,
@@ -757,13 +765,13 @@ async function submitPickupOrder() {
 
     try {
         await setDoc(doc(db, 'orders', pid), orderObj);
-        
+
         // Also update the desk UI's activePickups
         activePickups.push(orderObj);
         localStorage.setItem('yukt_active_pickups', JSON.stringify(activePickups));
-        
+
         await pushNotification('order', `New Pickup Order ${pid} — ₹${total}`, 'desk');
-        
+
         document.getElementById('pickup-modal').style.display = 'none';
         renderPickupList();
         showToast(`Pickup Order ${pid} placed!`, 'success');
@@ -784,17 +792,17 @@ function renderPickupList() {
     activePickups.forEach(p => {
         const isPaid = p.paymentStatus === 'paid';
         const row = document.createElement('div');
-        row.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1rem;background:rgba(255,255,255,0.05);border-radius:8px;border-left:4px solid ${isPaid?'#39FF14':'#A020F0'};margin-bottom:0.5rem;`;
+        row.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1rem;background:rgba(255,255,255,0.05);border-radius:8px;border-left:4px solid ${isPaid ? '#39FF14' : '#A020F0'};margin-bottom:0.5rem;`;
         row.innerHTML = `
             <div style="flex:1;">
-                <span style="font-weight:bold;color:${isPaid?'#39FF14':'#A020F0'};margin-right:1rem;">#${p.id}</span>
-                <span style="color:white;">${p.items?.length || 0} Items${isPaid?' [PAID]':''}</span>
+                <span style="font-weight:bold;color:${isPaid ? '#39FF14' : '#A020F0'};margin-right:1rem;">#${p.id}</span>
+                <span style="color:white;">${p.items?.length || 0} Items${isPaid ? ' [PAID]' : ''}</span>
                 <span class="text-gray" style="font-size:0.75rem;margin-left:0.5rem;">${timeOnlyIST(p.timestamp)}</span>
             </div>
             <div style="display:flex;align-items:center;gap:0.75rem;">
                 <span style="font-weight:bold;color:#4ADE80;">₹${p.total}</span>
-                ${!isPaid?`<button class="btn btn-success" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.deskApp.markPickupPaid('${p.id}')">PAY</button>`:''}
-                ${isPaid?`<button class="btn btn-primary" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.deskApp.markPickupDelivered('${p.id}')">DELIVERED</button>`:''}
+                ${!isPaid ? `<button class="btn btn-success" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.deskApp.markPickupPaid('${p.id}')">PAY</button>` : ''}
+                ${isPaid ? `<button class="btn btn-primary" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="window.deskApp.markPickupDelivered('${p.id}')">DELIVERED</button>` : ''}
             </div>`;
         container.appendChild(row);
     });
@@ -845,18 +853,18 @@ function renderNotificationSidebar() {
         if (n.data && (n.data.type === 'dinein' || n.data.type === 'addon')) {
             const printed = JSON.parse(localStorage.getItem('br_printed_kots') || '{}');
             const isPrinted = printed[n.id];
-            actionHtml = `<button class="btn ${isPrinted?'btn-outline':'btn-primary'} btn-block mt-2"
-                style="font-size:0.75rem;padding:0.4rem;${isPrinted?'opacity:0.6;':'background:#F59E0B;border:none;color:#000;'}"
+            actionHtml = `<button class="btn ${isPrinted ? 'btn-outline' : 'btn-primary'} btn-block mt-2"
+                style="font-size:0.75rem;padding:0.4rem;${isPrinted ? 'opacity:0.6;' : 'background:#F59E0B;border:none;color:#000;'}"
                 onclick="window.deskApp.printKOT('${n.id}','${n.data.orderId}','${n.data.tableId}')">
-                ${isPrinted?'PRINTED ✓':'PRINT 2 KOT'}</button>`;
+                ${isPrinted ? 'PRINTED ✓' : 'PRINT 2 KOT'}</button>`;
         }
 
         div.innerHTML = `
             <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;">
-                <span class="note-type ${n.type||''}" style="${isPurple?'background:rgba(160,32,240,0.1);color:#A020F0;':''}">${(n.type||'').toUpperCase()}</span>
+                <span class="note-type ${n.type || ''}" style="${isPurple ? 'background:rgba(160,32,240,0.1);color:#A020F0;' : ''}">${(n.type || '').toUpperCase()}</span>
                 <span style="font-size:0.75rem;color:var(--color-slate-400);">${ts}</span>
             </div>
-            <div style="font-size:0.9rem;${isPurple?'color:#d4a0f7;font-weight:bold;':''}">${n.message}</div>
+            <div style="font-size:0.9rem;${isPurple ? 'color:#d4a0f7;font-weight:bold;' : ''}">${n.message}</div>
             ${actionHtml}`;
         container.appendChild(div);
     });
@@ -872,9 +880,9 @@ function printKOT(noteId, orderId, tableId) {
         pa.innerHTML += `<div class="invoice-copy" style="font-family:monospace;padding:1rem;border:1px dashed #ccc;margin-bottom:1rem;">
             <div style="text-align:center;font-weight:bold;font-size:1.3rem;text-decoration:underline;">KOT COPY ${copy}</div>
             <div style="margin-top:0.5rem;"><strong>Table:</strong> ${tableId} | <strong>Order:</strong> ${orderId}<br>
-            <strong>Time:</strong> ${new Date().toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour12:true})}</div>
+            <strong>Time:</strong> ${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })}</div>
             <div style="margin-top:0.5rem;border-top:1px dashed black;padding-top:0.5rem;">
-            ${order ? (order.items || []).map(i => `<div>• ${typeof i==='object'?`${i.qty}x ${i.name}`:i}</div>`).join('') : '<div>Items not found</div>'}
+            ${order ? (order.items || []).map(i => `<div>• ${typeof i === 'object' ? `${i.qty}x ${i.name}` : i}</div>`).join('') : '<div>Items not found</div>'}
             </div></div>`;
     }
     window.print();
@@ -886,7 +894,7 @@ async function clearNotifications() {
     try {
         const snap = await getDocs(collection(db, 'notifications'));
         await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
-    } catch (e) {}
+    } catch (e) { }
     notifications = [];
     renderNotificationSidebar();
     showToast('Notifications cleared', 'success');
@@ -927,17 +935,22 @@ function renderAvailabilityTool() {
     container.innerHTML = '';
     menu.forEach(item => {
         const isUnavail = unavailableItems.includes(item.id);
-        const itemName = item.name || item.Name || item.itemName || 'Unnamed Item';
-        const itemPrice = item.price || item.PriceFull || item.Price || item.priceFull || 0;
+        const itemName = item.name || item.itemName || 'Unnamed Item';
+        const itemPrice = item.price || 0;
         const row = document.createElement('div');
-        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:0.75rem;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:0.5rem;border:1px solid var(--glass-border);';
+        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:1rem;background:rgba(255,255,255,0.03);border-radius:12px;margin-bottom:0.75rem;border:1px solid var(--glass-border);';
         row.innerHTML = `
-            <div><span style="font-size:1.2rem;margin-right:0.5rem;">${item.icon || '🍽'}</span>
-            <span>${itemName}</span>
-            <span style="color:var(--color-slate-400);margin-left:0.5rem;font-size:0.85rem;">₹${itemPrice}</span></div>
-            <label class="switch"><input type="checkbox" ${!isUnavail ? 'checked' : ''}
-                onchange="window.deskApp.toggleItemAvailability('${item.id}',this.checked)">
-            <span class="slider"></span></label>`;
+            <div style="display:flex;align-items:center;gap:1rem;">
+                <div style="width:40px;height:40px;background:var(--glass);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">${item.icon || '🍽'}</div>
+                <div>
+                    <div style="font-weight:700;color:white;">${itemName}</div>
+                    <div style="font-size:0.8rem;color:var(--gold-primary);">₹${itemPrice}</div>
+                </div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" ${!isUnavail ? 'checked' : ''} onchange="window.deskApp.toggleItemAvailability('${item.id}',this.checked)">
+                <span class="slider"></span>
+            </label>`;
         container.appendChild(row);
     });
 }

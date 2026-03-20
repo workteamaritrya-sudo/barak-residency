@@ -527,38 +527,85 @@ function filterMenu(val) { renderMenu(val); }
 
 // ── Cart ──────────────────────────────────────────────────
 
-function promptVariant(item) {
-    if (!activeTableId) { showToast('Please select a table first.', 'error'); return; }
-    pendingItem = item;
-    document.getElementById('qp-item-name').innerText = item.name;
-    document.getElementById('qp-view-variant').style.display = 'flex';
-    document.getElementById('qp-view-quantity').style.display = 'none';
-    document.getElementById('quantity-prompt-modal').style.display = 'flex';
-}
+let pendingPortionItem = null;
+let pendingPortionVariant = null;
+let pendingPortionQty = 1;
 
-function qpSelectVariant(v) {
-    pendingVariant = v;
-    document.getElementById('qp-selected-variant-text').innerText = v === 'Half' ? 'Half Plate' : 'Full Plate';
-    document.getElementById('qp-qty').value = 1;
+window.waiterApp = {
+    promptVariant: function(item) {
+        if (!activeTableId) { showToast('Select a table first', 'warning'); return; }
+        pendingPortionItem = item;
+        const modal = document.getElementById('quantity-prompt-modal');
+        const name = item.name || 'Item';
+        document.getElementById('qp-item-name').innerText = name;
+        
+        const type = item.portionType || 'Plate';
+        const viewVar = document.getElementById('qp-view-variant');
+        const viewQty = document.getElementById('qp-view-quantity');
+        
+        viewVar.style.display = 'flex';
+        viewQty.style.display = 'none';
+
+        if (type === 'Plate' || type === 'Portion') {
+            const price = item.price || 0;
+            const priceHalf = item.priceHalf || 0;
+            viewVar.innerHTML = `
+                <p class="text-sm text-gray">Select Portion Size</p>
+                <div style="display:flex;flex-direction:column;gap:1.2rem;margin-top:1rem;">
+                    <button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;" onclick="qpSelectVariant('Full', 'Full Plate', ${price})">Full Plate — ₹${price}</button>
+                    ${priceHalf > 0 ? `<button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;border-color:var(--color-indigo-400);" onclick="qpSelectVariant('Half', 'Half Plate', ${priceHalf})">Half Plate — ₹${priceHalf}</button>` : ''}
+                    <button class="btn btn-outline" style="border:none;text-decoration:underline;margin-top:1rem;" onclick="document.getElementById('quantity-prompt-modal').style.display='none'">Cancel</button>
+                </div>
+            `;
+        } else {
+            qpSelectVariant('Regular', 'Standard', item.price || 0);
+        }
+        modal.style.display = 'flex';
+    }
+};
+
+window.qpSelectVariant = function(variant, label, price) {
+    pendingPortionVariant = { variant, label, price };
+    pendingPortionQty = 1;
+    
     document.getElementById('qp-view-variant').style.display = 'none';
-    document.getElementById('qp-view-quantity').style.display = 'flex';
-}
+    const viewQty = document.getElementById('qp-view-quantity');
+    viewQty.style.display = 'flex';
+    
+    document.getElementById('qp-selected-variant-text').innerText = label;
+    document.getElementById('qp-qty').value = 1;
+};
 
-function qpBack() {
-    document.getElementById('qp-view-quantity').style.display = 'none';
+window.qpBack = function() {
     document.getElementById('qp-view-variant').style.display = 'flex';
-}
+    document.getElementById('qp-view-quantity').style.display = 'none';
+};
 
-function addToCartFromModal() {
-    if (!pendingItem) return;
+window.addToCartFromModal = function() {
     const qty = parseInt(document.getElementById('qp-qty').value) || 1;
-    document.getElementById('quantity-prompt-modal').style.display = 'none';
-    const fi = { ...pendingItem };
-    if (pendingVariant === 'Half') { fi.name += ' [Half]'; fi.id += '-h'; fi.price = Math.floor(fi.price * 0.6); }
-    const ex = cart.find(c => c.item.id === fi.id);
-    if (ex) ex.qty += qty; else cart.push({ item: fi, qty, variant: pendingVariant });
+    const finalPrice = pendingPortionVariant.price;
+    const finalName = pendingPortionVariant.variant === 'Full' || pendingPortionVariant.variant === 'Regular' ? pendingPortionItem.name : `${pendingPortionItem.name} (${pendingPortionVariant.label})`;
+
+    const existing = cart.find(i => i.item.id === pendingPortionItem.id && i.variant === pendingPortionVariant.variant);
+    if (existing) {
+        existing.qty += qty;
+    } else {
+        cart.push({
+            item: {
+                id: pendingPortionItem.id,
+                name: finalName,
+                price: finalPrice
+            },
+            variant: pendingPortionVariant.variant,
+            qty: qty
+        });
+    }
+    
     renderCart();
-}
+    document.getElementById('quantity-prompt-modal').style.display = 'none';
+    showToast('Added to cart', 'success');
+};
+
 
 function renderCart() {
     const el = document.getElementById('rest-waiter-cart-items');

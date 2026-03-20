@@ -193,16 +193,18 @@ class GuestPortal {
                 const col = collection(window.firebaseFS, 'menuItems');
                 const snap = await getDocs(col);
                 
-                // Check if Firestore has stale data (items with Name/PriceFull fields or missing price)
-                const docs = snap.docs.map(d => d.data());
+                // Check if Firestore has stale data
+                const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 const hasStale = snap.size === 0 || 
-                    docs.some(d => (!d.name && d.Name) || (d.price == null && d.PriceFull) || d.price === 0);
+                    docs.some(d => {
+                        const price = parseFloat(d.price || d.PriceFull || d.pricefull || 0);
+                        const name = d.name || d.Name || d.itemName || '';
+                        return !name || price === 0 || price == null;
+                    });
                 
                 if (hasStale) {
-                    console.log('[Menu] Stale/empty Firestore data detected — re-seeding all 50 items...');
-                    // Delete old records
+                    console.log('[Menu] Stale/empty Firestore data detected — re-seeding all items...');
                     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
-                    // Write fresh hardcoded records
                     const writes = items.map(item => setDoc(doc(window.firebaseFS, 'menuItems', item.id), item));
                     await Promise.all(writes);
                     console.log(`[Menu] Seeded ${items.length} items to Firestore successfully.`);
@@ -216,30 +218,54 @@ class GuestPortal {
         pushMenuToFirestore(BARAK_MENU);
 
         // Helper: normalize field names from CSV legacy format to standard
-        const normalizeItem = (raw) => ({
-            id:          raw.id || `m-${Math.random().toString(36).slice(2,8)}`,
-            name:        raw.name || raw.Name || 'Dish',
-            category:    raw.category || raw.Category || 'General',
-            price:       parseFloat(raw.price || raw.PriceFull || raw.pricefull || 0),
-            priceHalf:   parseFloat(raw.priceHalf || raw.PriceHalf || raw.pricehalf || 0),
-            description: raw.description || raw.Description || 'Barak Residency Special',
-            imageUrl:    raw.imageUrl || raw.ImageURL || raw.image || raw.img || 'br.png',
-            portionType: raw.portionType || raw.PortionType || 'Plate',
-            isAvailable: raw.isAvailable !== false
-        });
+        const normalizeItem = (raw, fallback) => {
+            const name = raw.name || raw.Name || raw.itemName || (fallback ? fallback.name : null);
+            const price = parseFloat(raw.price || raw.PriceFull || raw.pricefull || raw.Price || 0);
+            const priceHalf = parseFloat(raw.priceHalf || raw.PriceHalf || raw.pricehalf || 0);
+            const imageUrl = raw.imageUrl || raw.ImageURL || raw.image || raw.img || (fallback ? fallback.imageUrl : null) || 'br.png';
+            return {
+                id:          raw.id || `m-${Math.random().toString(36).slice(2,8)}`,
+                name:        name || 'Unknown',
+                category:    raw.category || raw.Category || (fallback ? fallback.category : 'General'),
+                price:       price,
+                priceHalf:   priceHalf,
+                description: raw.description || raw.Description || (fallback ? fallback.description : 'Barak Residency Special'),
+                imageUrl:    imageUrl,
+                portionType: raw.portionType || raw.PortionType || (fallback ? fallback.portionType : 'Plate'),
+                isAvailable: raw.isAvailable !== false
+            };
+        };
 
         onSnapshot(collection(window.firebaseFS, 'menuItems'), (snap) => {
-            const items = [];
-            snap.forEach(d => items.push(normalizeItem(d.data())));
-            if (items.length > 0 && items.some(i => i.name !== 'Dish' && i.price > 0)) {
-                this.menu = items;
-                localStorage.setItem('br_menu', JSON.stringify(items));
-                this.renderMenu();
+            if (!snap.empty) {
+                const rawItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                // Merge with BARAK_MENU fallback for missing fields
+                const normalizedItems = rawItems.map(raw => {
+                    const fallback = BARAK_MENU.find(m => m.id === raw.id);
+                    return normalizeItem(raw, fallback);
+                });
+                
+                // Only use cloud items if they are valid (have names and prices)
+                const validItems = normalizedItems.filter(i => i.name && i.name !== 'Unknown' && i.price > 0);
+                if (validItems.length > 0) {
+                    this.menu = validItems;
+                    localStorage.setItem('br_menu', JSON.stringify(validItems));
+                    this.renderMenu();
+                }
+            }
+        });
+
+        // 1b. Availability Listener — sync from cloud
+        const { doc: fsDoc } = window.firebaseHooks;
+        onSnapshot(fsDoc(window.firebaseFS, 'settings', 'availability'), (snap) => {
+            if (snap.exists() && snap.data().unavailableItems) {
+                localStorage.setItem('br_unavailable_items', JSON.stringify(snap.data().unavailableItems));
+                this.renderMenu(); // Re-render with updated availability
             }
         });
 
         // 2. Room & Guest Listener
-        onSnapshot(doc(window.firebaseFS, 'rooms', this.roomNumber.toString()), (d) => {
+        onSnapshot(fsDoc(window.firebaseFS, 'rooms', this.roomNumber.toString()), (d) => {
             if (d.exists()) {
                 const data = d.data();
                 this.roomStatus = data.status || 'available';
@@ -419,7 +445,10 @@ class GuestPortal {
                         <div class="food-desc">${desc}</div>
                         <div class="food-price">₹${price}</div>
                     </div>
-                    <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
+                    <div class="food-add-area">
+                        <div class="added-indicator" id="added-${item.id}">Added to Cart</div>
+                        <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
+                    </div>
                 `;
                 grid.appendChild(card);
             });
@@ -463,7 +492,10 @@ class GuestPortal {
                     <div class="food-desc">${desc}</div>
                     <div class="food-price">₹${price}</div>
                 </div>
-                <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
+                <div class="food-add-area">
+                    <div class="added-indicator" id="added-${item.id}">Added to Cart</div>
+                    <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
+                </div>
             `;
             grid.appendChild(card);
         });
@@ -612,7 +644,28 @@ class GuestPortal {
             });
         }
         this.updateCartBar();
+        this.renderCartPanel();
+        this.openCart();
+        this.showAddedIndicator(item.id);
         this.hapticFeedback();
+    }
+
+    showAddedIndicator(itemId) {
+        const el = document.getElementById(`added-${itemId}`);
+        if (el) {
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 2000);
+        }
+    }
+
+    openCart() {
+        document.getElementById('cart-panel').classList.add('open');
+        document.getElementById('cart-panel-overlay').classList.add('show');
+    }
+
+    closeCart() {
+        document.getElementById('cart-panel').classList.remove('open');
+        document.getElementById('cart-panel-overlay').classList.remove('show');
     }
 
     updateCartBar() {
@@ -622,43 +675,58 @@ class GuestPortal {
 
         if (this.cart.length > 0) {
             const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            info.innerHTML = `${this.cart.length} Items | ₹${total}`;
+            const count = this.cart.reduce((s, i) => s + i.qty, 0);
+            info.innerHTML = `${count} ${count === 1 ? 'Item' : 'Items'} | ₹${total}`;
             bar.style.display = 'flex';
-            bar.classList.add('active');
         } else {
             bar.style.display = 'none';
         }
     }
 
-    renderCartModal() {
-        const modal = document.getElementById('cart-modal');
-        const itemsList = document.getElementById('cart-modal-items');
-        const totalEl = document.getElementById('cart-modal-total');
-        if (!modal || !itemsList) return;
+    renderCartPanel() {
+        const itemsList = document.getElementById('cart-panel-items');
+        const totalEl = document.getElementById('cart-panel-total-val');
+        if (!itemsList) return;
         
+        if (this.cart.length === 0) {
+            itemsList.innerHTML = '<div class="cart-empty-msg">Your cart is empty.<br>Start adding delicacies!</div>';
+            totalEl.innerHTML = '₹0';
+            return;
+        }
+
         itemsList.innerHTML = '';
         const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
         totalEl.innerHTML = '₹' + total;
         
         this.cart.forEach((c, index) => {
-            itemsList.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.8rem;">
-                <div style="flex:1;">
-                    <div style="font-weight:bold;">${c.name}</div>
-                    <div style="color:var(--color-slate-400); font-size:0.9rem;">${c.qty} x ₹${c.price}</div>
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'cart-panel-item';
+            itemDiv.innerHTML = `
+                <div class="cart-panel-item-info">
+                    <div class="cart-panel-item-name">${c.name}</div>
+                    <div class="cart-panel-item-price">₹${c.price}</div>
                 </div>
-                <div style="font-weight:bold; color:var(--gold-primary); margin-right:1rem;">₹${c.qty * c.price}</div>
-                <button onclick="portal.removeFromCart(${index})" style="background:transparent; border:none; color:var(--color-red-500); font-size:1.5rem; cursor:pointer;">&times;</button>
-            </div>`;
+                <div class="cart-qty-ctrl">
+                    <button onclick="portal.updateItemQty(${index}, -1)">-</button>
+                    <div class="cart-qty-val">${c.qty}</div>
+                    <button onclick="portal.updateItemQty(${index}, 1)">+</button>
+                </div>
+            `;
+            itemsList.appendChild(itemDiv);
         });
     }
 
-    removeFromCart(index) {
-        this.cart.splice(index, 1);
-        this.updateCartBar();
-        this.renderCartModal();
-        if (this.cart.length === 0) {
-            document.getElementById('cart-modal').style.display = 'none';
+    updateItemQty(index, delta) {
+        this.cart[index].qty += delta;
+        if (this.cart[index].qty <= 0) {
+            this.cart.splice(index, 1);
         }
+        this.updateCartBar();
+        this.renderCartPanel();
+        if (this.cart.length === 0) {
+            this.closeCart();
+        }
+        this.hapticFeedback();
     }
 
     async placeOrder() {
@@ -672,8 +740,8 @@ class GuestPortal {
         const btn = document.querySelector('.cart-bar-btn, .place-order-btn');
         if (btn) { btn.disabled = true; btn.innerText = 'Sending...'; }
 
-        const modal = document.getElementById('cart-modal');
-        if(modal) modal.style.display = 'none';
+        const panel = document.getElementById('cart-panel');
+        if(panel) this.closeCart();
 
         const releaseLock = () => {
             this._isOrdering = false;

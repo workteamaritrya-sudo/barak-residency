@@ -286,6 +286,117 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
+        /* Sliding Cart Panel (Swiggy-style) */
+        .cart-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            max-width: 95vw;
+            height: 100vh;
+            background: linear-gradient(180deg, #0A1229, #050B1A);
+            border-left: 1px solid var(--gold-dim);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            box-shadow: -20px 0 60px rgba(0,0,0,0.8);
+        }
+        .cart-panel.open { right: 0; }
+        .cart-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1999;
+            display: none;
+            backdrop-filter: blur(4px);
+        }
+        .cart-panel-overlay.show { display: block; }
+        .cart-panel-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-glass);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cart-panel-header h3 { color: var(--gold-primary); font-size: 1rem; letter-spacing: 2px; text-transform: uppercase; }
+        .cart-panel-close {
+            background: none; border: none; color: rgba(255,255,255,0.5);
+            font-size: 1.5rem; cursor: pointer; padding: 0.3rem;
+            transition: color 0.2s;
+        }
+        .cart-panel-close:hover { color: white; }
+        .cart-panel-items { flex: 1; overflow-y: auto; padding: 1rem 1.5rem; scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent; }
+        .cart-panel-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border-glass);
+            animation: fadeIn 0.3s ease-out;
+        }
+        .cart-panel-item-info { flex: 1; }
+        .cart-panel-item-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 3px; }
+        .cart-panel-item-price { color: var(--gold-primary); font-size: 0.85rem; font-weight: 700; }
+        .cart-qty-ctrl {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(212,175,55,0.1);
+            border: 1px solid var(--gold-dim);
+            border-radius: 30px;
+            padding: 0.3rem 0.6rem;
+        }
+        .cart-qty-ctrl button {
+            background: none; border: none; color: var(--gold-primary);
+            font-size: 1.1rem; font-weight: 900; cursor: pointer;
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; transition: background 0.2s;
+        }
+        .cart-qty-ctrl button:hover { background: rgba(212,175,55,0.2); }
+        .cart-qty-val { width: 24px; text-align: center; font-weight: 800; font-size: 0.95rem; }
+        .cart-panel-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border-glass);
+            background: rgba(0,0,0,0.3);
+        }
+        .cart-panel-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+        .cart-panel-total span:last-child { color: #4ade80; }
+        .cart-confirm-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--gold-primary), #B8941E);
+            color: #000;
+            border: none;
+            padding: 1.1rem;
+            border-radius: 14px;
+            font-weight: 900;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 25px rgba(212,175,55,0.3);
+        }
+        .cart-confirm-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(212,175,55,0.4); }
+        .cart-empty-msg { text-align: center; color: var(--text-gray); padding: 3rem 1rem; font-style: italic; }
+
+        .food-add-area { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .added-indicator {
+            font-size: 0.65rem;
+            color: #4ade80;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .added-indicator.show { opacity: 1; }
+
         .glass-panel {
             background: rgba(10, 18, 41, 0.9);
             border: 1px solid var(--border-glass);
@@ -436,8 +547,30 @@
         </div>
     </nav>
 
+    <!-- Cart Panel Overlay -->
+    <div class="cart-panel-overlay" id="cart-panel-overlay" onclick="portal.closeCart()"></div>
+
+    <!-- Sliding Cart Panel -->
+    <div class="cart-panel" id="cart-panel">
+        <div class="cart-panel-header">
+            <h3>🛒 Your Order</h3>
+            <button class="cart-panel-close" onclick="portal.closeCart()">✕</button>
+        </div>
+        <div class="cart-panel-items" id="cart-panel-items">
+            <div class="cart-empty-msg">Your cart is empty.<br>Start adding delicacies!</div>
+        </div>
+        <div class="cart-panel-footer">
+            <div class="cart-panel-total">
+                <span>Total</span>
+                <span id="cart-panel-total-val">₹0</span>
+            </div>
+            <button class="cart-confirm-btn" onclick="portal.placeOrder()">CONFIRM ORDER →</button>
+        </div>
+    </div>
+
     <!-- Cart Bar -->
-    <div class="cart-bar" id="cart-bar" onclick="document.getElementById('cart-modal').style.display='flex'; portal.renderCartModal();" style="cursor:pointer; display:none;">
+    <div class="cart-bar" id="cart-bar" onclick="portal.openCart()" style="cursor:pointer; display:none;">
+
         <div id="cart-info" style="font-size:1rem; font-weight:800; letter-spacing:0.5px;">0 Items</div>
         <div style="background:#050B1A; color:var(--gold-primary); border-radius:12px; padding:0.6rem 1.4rem; font-size:1rem; font-weight:900; letter-spacing:1.5px; box-shadow:0 0 15px rgba(212,175,55,0.4);">ORDER NOW →</div>
     </div>
