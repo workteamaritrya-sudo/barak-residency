@@ -116,7 +116,7 @@ window.sendToAI = async function() {
     const aiLoaderId = 'ai-loading-' + Date.now();
     appendMsg("Thinking...", 'ai', aiLoaderId);
 
-    if (GEMINI_API_KEY === 'REPLACEME_GEMINI_KEY' || !GEMINI_API_KEY) {
+    if (GEMINI_KEY === 'REPLACEME_GEMINI_KEY' || !GEMINI_KEY) {
         document.getElementById(aiLoaderId).remove();
         appendMsg("Advanced AI requires a valid Gemini API Key. Switching to local processing.", 'ai');
         handleLocalAI(msg);
@@ -125,7 +125,7 @@ window.sendToAI = async function() {
 
     try {
         // Try Gemini 1.5 Flash first, then fallback to 1.0 Pro if 400 occurs
-        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -136,7 +136,7 @@ window.sendToAI = async function() {
         // Fallback to Gemini 1.0 Pro if 1.5 Flash fails with 400 or other errors
         if (!res.ok) {
             console.log("[AI] Falling back to Gemini 1.0 Pro...");
-            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
