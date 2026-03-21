@@ -10,7 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <script type="module" src="firebase-sync.js"></script>
+    <script type="module" src="firebase-sync.js?v=3.0"></script>
     <style>
         :root {
             --bg: #050B1A;
@@ -568,7 +568,7 @@
     </div>
 
     <script type="module">
-        import { firebaseHooks, firebaseAuth, firebaseFS } from './firebase-sync.js';
+        import { firebaseHooks, firebaseFS, firebaseAuth } from './firebase-sync.js?v=3.0';
 
         const form = document.getElementById('login-form');
         const errorMsg = document.getElementById('error-msg');

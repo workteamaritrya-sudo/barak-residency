@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Database Initialization | Barak Residency</title>
-    <script type="module" src="firebase-sync.js"></script>
+    <script type="module" src="firebase-sync.js?v=3.0"></script>
     <style>
         body { font-family: sans-serif; background: #050B1A; color: white; padding: 2rem; }
         .card { background: #0A1229; border: 1px solid #D4AF37; padding: 2rem; border-radius: 12px; max-width: 650px; margin: 0 auto; }
@@ -50,7 +50,7 @@ Staff:
     </div>
 
     <script type="module">
-        import { firebaseHooks, firebaseFS, firebaseAuth } from './firebase-sync.js';
+        import { firebaseHooks, firebaseFS, firebaseAuth } from './firebase-sync.js?v=3.0';
 
         // --- 1. INIT STAFF USERS ---
         document.getElementById('init-db').onclick = async () => {
