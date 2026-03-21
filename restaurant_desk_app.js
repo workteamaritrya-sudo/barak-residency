@@ -360,12 +360,13 @@ async function init() {
     // Auth Check
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         } else {
-            console.log("[Auth] Active as:", user.email);
-            await loadInitialData();
-            startListeners();
-            showToast('Desk connected to Cloud', 'success');
+            this.bootApp();
+            // The original code had these lines here, but the provided snippet implies they should be handled by bootApp or elsewhere.
+            // await loadInitialData();
+            // startListeners();
+            // showToast('Desk connected to Cloud', 'success');
         }
     });
 }

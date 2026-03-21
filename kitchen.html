@@ -96,11 +96,11 @@
 
     window.handleLogout = async () => {
         await signOut(auth);
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
     };
 
     onAuthStateChanged(auth, user => {
-        if (!user) window.location.href = 'login.html';
+        if (!user) window.location.href = 'index.html';
     });
 
     onSnapshot(collection(db, 'orders'), snap => {

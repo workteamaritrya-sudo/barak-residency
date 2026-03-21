@@ -139,7 +139,7 @@ async function init() {
     startClock();
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         } else {
             await loadInitialData();
             startListeners();
@@ -840,9 +840,9 @@ async function submitLinkTable() {
 async function handleLogout() {
     try {
         await signOut(auth);
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
     } catch (e) {
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
     }
 }
 

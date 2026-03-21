@@ -489,7 +489,7 @@ window.placeOrder = async function() {
 window.handleLogout = async () => {
     if (confirm('Logout from Waiter Portal?')) {
         await window.firebaseHooks.signOut(window.firebaseAuth);
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
     }
 };
 
@@ -513,7 +513,7 @@ async function boot() {
     const { onAuthStateChanged } = hooks;
     onAuthStateChanged(auth, user => {
         if (!user) {
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         } else {
             startListeners();
             renderMenu(); 
