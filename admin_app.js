@@ -102,8 +102,8 @@ window.sendToAI = async function() {
     appendMsg("Thinking...", 'ai', aiLoaderId);
 
     try {
-        // Use the domain-restricted Gemini API key, shifted to the 8b ultra-light model architecture
-        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${GEMINI_KEY}`, {
+        // Shifted to the user-requested gemini-3.0-flash model architecture
+        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent?key=${GEMINI_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -111,10 +111,10 @@ window.sendToAI = async function() {
             })
         });
 
-        // Fallback to Gemini 1.5 Flash (Standard)
+        // Fallback to gemini-3.0-pro
         if (!res.ok) {
-            console.log("[AI] Falling back to Gemini 1.5 Flash (Standard)...");
-            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
+            console.log("[AI] Falling back to Gemini 3.0 Pro...");
+            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-pro:generateContent?key=${GEMINI_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
