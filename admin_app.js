@@ -11,29 +11,17 @@ import {
     onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-import { firebaseConfig } from './firebase-config.js';
+import { firebaseConfig, aiModel, app } from './firebase-config.js';
 
-let app, db, auth;
+let db, auth;
 try {
-    app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
 } catch (e) {
     console.error("[Firebase] Init failure:", e);
 }
 
-const GEMINI_KEY = "AIzaSyDEbzu1uJ2Ynwso4aFko8pg-tf3aBbWq_U";
 
-let vertexApp, vertexAI, aiModel;
-try {
-    // Spawn secondary app using strictly the AI Key to pass Firebase backend authorization
-    const vertexConfig = { ...firebaseConfig, apiKey: GEMINI_KEY };
-    vertexApp = initializeApp(vertexConfig, "VertexAI-Engine-Admin");
-    vertexAI = getVertexAI(vertexApp);
-    aiModel = getGenerativeModel(vertexAI, { model: "gemini-3-flash" });
-} catch (e) {
-    console.warn("Vertex AI Initialization Failed:", e);
-}
 
 // --- State ---
 let rooms = [];
