@@ -349,8 +349,4 @@ onAuthStateChanged(auth, user => {
     }
 });
 
-setInterval(() => {
-    const now = new Date();
-    document.getElementById('live-clock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    document.getElementById('live-date').innerText = now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
-}, 1000);
+

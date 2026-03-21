@@ -7,6 +7,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        // High-Priority Clock Logic: Loads before heavy modules
+        (function() {
+            function tick() {
+                const now = new Date();
+                const clock = document.getElementById('live-clock');
+                const date = document.getElementById('live-date');
+                if (clock) clock.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                if (date) date.innerText = now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
+            }
+            setInterval(tick, 1000);
+            document.addEventListener('DOMContentLoaded', tick);
+        })();
+    </script>
     <style>
         :root {
             --bg: #050B1A;
@@ -282,7 +296,8 @@
     </div>
 </div>
 
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script type="module" src="admin_app.js?v=royal_v6"></script>
+<script type="module" src="admin_app.js?v=royal_v7"></script>
 </body>
 </html>

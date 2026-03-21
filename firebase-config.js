@@ -17,16 +17,22 @@ export const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 
 // 2. Wrap via App Check (reCAPTCHA Enterprise)
-export let appCheck;
+export let appCheck = null;
 try {
     appCheck = initializeAppCheck(app, {
         provider: new ReCaptchaEnterpriseProvider('6Le-AZIsAAAAAOKajThe1F13klZEYTApRcKlNYd9'), 
         isTokenAutoRefreshEnabled: true
     });
 } catch(e) {
-    console.warn("App Check initialization deferred.");
+    console.warn("App Check deferred:", e.message);
 }
 
 // 3. Initialize Gemini 3 Flash via Vertex AI SDK natively
-export const vertexAI = getVertexAI(app);
-export const aiModel = getGenerativeModel(vertexAI, { model: "gemini-3-flash" });
+export let vertexAI = null;
+export let aiModel = null;
+try {
+    vertexAI = getVertexAI(app);
+    aiModel = getGenerativeModel(vertexAI, { model: "gemini-3-flash" });
+} catch(e) {
+    console.warn("Vertex AI deferred:", e.message);
+}
