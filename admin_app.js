@@ -11,35 +11,20 @@ import {
 import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
 // --- Firebase Config ---
-import { FIREBASE_KEY, GEMINI_KEY } from './secrets.js';
-
-const firebaseConfig = {
-    apiKey: FIREBASE_KEY,
-    authDomain: "barak-residency-59405.firebaseapp.com",
-    projectId: "barak-residency-59405",
-    databaseURL: "https://barak-residency-59405-default-rtdb.firebaseio.com",
-    storageBucket: "barak-residency-59405.firebasestorage.app",
-    messagingSenderId: "3871550492",
-    appId: "1:3871550492:web:2cf49bc0a963b4888f43d9"
-};
+import { firebaseConfig } from './firebase-config.js';
 
 let app, db, auth;
-if (FIREBASE_KEY) {
-    try {
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-    } catch (e) {
-        console.error("[Firebase] Init failure:", e);
-    }
-} else {
-    console.error("[Auth] Missing API Credentials. Cloud synchronization is inactive.");
-    alert("CRITICAL CONFIGURATION: Cloud API Credentials (secrets.js) missing. Advanced owner features are currently offline.");
+try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+} catch (e) {
+    console.error("[Firebase] Init failure:", e);
+    alert("CRITICAL CONFIGURATION: Cloud initialization failed. Advanced owner features are currently offline.");
 }
 
 // --- Gemini Config ---
-const GEMINI_API_KEY = GEMINI_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_KEY = "AIzaSyDEbzu1uJ2Ynwso4aFko8pg-tf3aBbWq_U";
 
 // --- State ---
 let rooms = [];
@@ -116,23 +101,9 @@ window.sendToAI = async function() {
     const aiLoaderId = 'ai-loading-' + Date.now();
     appendMsg("Thinking...", 'ai', aiLoaderId);
 
-    let activeGeminiKey = GEMINI_KEY || localStorage.getItem('barak_gemini_key');
-    if (!activeGeminiKey || activeGeminiKey === 'REPLACEME_GEMINI_KEY') {
-        const userPrompt = prompt("SECURITY LOCK: Please paste your secure Google Gemini API Key. It will be stored exclusively in your browser memory and never uploaded to the public repository.");
-        if (userPrompt && userPrompt.trim().length > 10) {
-            localStorage.setItem('barak_gemini_key', userPrompt.trim());
-            activeGeminiKey = userPrompt.trim();
-        } else {
-            document.getElementById(aiLoaderId).remove();
-            appendMsg("Cloud link denied. Switching to Local processing array.", 'ai');
-            handleLocalAI(msg);
-            return;
-        }
-    }
-
     try {
-        // Try Gemini 1.5 Flash first, then fallback to 1.0 Pro if 400 occurs
-        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeGeminiKey}`, {
+        // Use the domain-restricted Gemini API key
+        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -140,10 +111,10 @@ window.sendToAI = async function() {
             })
         });
 
-        // Fallback to Gemini 1.0 Pro if 1.5 Flash fails with 400 or other errors
+        // Fallback to Gemini 1.0 Pro
         if (!res.ok) {
             console.log("[AI] Falling back to Gemini 1.0 Pro...");
-            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${activeGeminiKey}`, {
+            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -161,16 +132,13 @@ window.sendToAI = async function() {
             handleAICommands(aiTxt); 
         } else {
             console.warn(`AI Bridge Failure: ${res.status}`);
-            if (res.status === 400) {
-                localStorage.removeItem('barak_gemini_key');
-            }
             throw new Error(`Cloud Error ${res.status}`);
         }
     } catch (e) {
         console.warn("AI System Fallback:", e.message);
         if (document.getElementById(aiLoaderId)) document.getElementById(aiLoaderId).remove();
         if (e.message.includes('400')) {
-            appendMsg(`AI Link Interrupted: Corrupted API Key Detected & Purged. Please refresh and provide a secure, working API key via the terminal prompt.`, 'ai');
+            appendMsg(`AI Link Interrupted: Cloud Error 400. API Key invalid or domain restricted incorrectly.`, 'ai');
         } else {
             appendMsg(`AI Link Interrupted: ${e.message}. Using Local Manager.`, 'ai');
         }
