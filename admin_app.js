@@ -6,12 +6,21 @@
 // --- Imports ---
 import { getVertexAI, getGenerativeModel } from "https://esm.run/@firebase/vertexai";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import {
+    getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc,
+    onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc
+} from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 import { firebaseConfig } from './firebase-config.js';
 
-// Use globally synced Firebase instances to prevent database lock crashes
-const db = window.firebaseFS;
-const auth = window.firebaseAuth;
-const { collection, doc, getDoc, getDocs, setDoc, updateDoc, onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc, onAuthStateChanged, signOut } = window.firebaseHooks;
+let app, db, auth;
+try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+} catch (e) {
+    console.error("[Firebase] Init failure:", e);
+}
 
 const GEMINI_KEY = "AIzaSyDEbzu1uJ2Ynwso4aFko8pg-tf3aBbWq_U";
 
