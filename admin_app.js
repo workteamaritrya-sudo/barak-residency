@@ -11,7 +11,7 @@ import { firebaseConfig } from './firebase-config.js';
 // Use globally synced Firebase instances to prevent database lock crashes
 const db = window.firebaseFS;
 const auth = window.firebaseAuth;
-const { collection, doc, getDoc, getDocs, setDoc, updateDoc, onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc } = window.firebaseHooks;
+const { collection, doc, getDoc, getDocs, setDoc, updateDoc, onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc, onAuthStateChanged, signOut } = window.firebaseHooks;
 
 const GEMINI_KEY = "AIzaSyDEbzu1uJ2Ynwso4aFko8pg-tf3aBbWq_U";
 
