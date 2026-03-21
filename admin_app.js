@@ -7,8 +7,8 @@
 import {
     getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc,
     onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc
-} from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
-import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 import { firebaseConfig, aiModel, app } from './firebase-config.js';
 
 let db, auth;

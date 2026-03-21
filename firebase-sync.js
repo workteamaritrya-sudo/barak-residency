@@ -1,9 +1,9 @@
 import { firebaseConfig, app } from "./firebase-config.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-analytics.js";
-import { getDatabase, ref, set, onValue, get, push } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-database.js";
-import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, getDocs, or, enableIndexedDbPersistence, deleteDoc, Timestamp, runTransaction, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-storage.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-analytics.js";
+import { getDatabase, ref, set, onValue, get, push } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, getDocs, or, enableIndexedDbPersistence, deleteDoc, Timestamp, runTransaction, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-storage.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 
 // Initialize Firebase with Public Configuration
 const analytics = getAnalytics(app);
@@ -35,7 +35,7 @@ class FirebaseSyncEngine {
     constructor() {
         this.isSyncing = false;
         this.isReady = false;
-        console.log("[Firebase] Sync Engine Initialized (Firestore Modular SDK)");
+        console.log("[Firebase] Sync Engine Initialized (v11.1.0)");
     }
 
     startListener() {
@@ -55,7 +55,6 @@ class FirebaseSyncEngine {
             const roomsData = {};
             snapshot.forEach(d => {
                 const data = d.data();
-                // Key by both numeric and string forms for bullet-proof lookup
                 const key = data.number;
                 roomsData[key] = data;
                 if (typeof key === 'number') roomsData[String(key)] = data;
@@ -71,7 +70,6 @@ class FirebaseSyncEngine {
                         window.app.renderRoomGrid();
                         window.app.renderRoomOrderPanel();
                         window.app.renderServiceRequests();
-                        // Refresh command center if a room is selected
                         if (window.app.selectedRoomId) window.app.updateCommandCenter();
                     }
                 }
@@ -129,7 +127,7 @@ class FirebaseSyncEngine {
                     window.app.renderServiceRequests();
                     if (hasNew) {
                         this.playReceptionAlert();
-                        this.playKitchenAlert(); // Alert both for service
+                        this.playKitchenAlert();
                     }
                 }
             }
@@ -161,7 +159,6 @@ class FirebaseSyncEngine {
                         window.app.syncState();
                         if (window.app.currentPortal === 'kitchen') window.app.renderAvailabilityTool();
                     }
-                    // For Guest Portal (order.js)
                     if (window.portal) {
                         window.portal.renderMenu();
                     }
@@ -179,25 +176,18 @@ class FirebaseSyncEngine {
                 const roomNum = order.roomNumber || order.roomId || '';
                 const app = window.app;
                 
-                // Portal Detection Logic (Check both currentPortal and currentTab)
                 const isKitchenPortal = app && (app.currentPortal === 'kitchen' || app.currentTab === 'kitchen');
                 const isReceptionPortal = app && (app.currentPortal === 'reception' || app.currentTab === 'dashboard' || app.currentTab === 'reception');
 
-                // ---------- NEW ORDER ARRIVED ----------
                 if (change.type === 'added' && (status === 'Pending' || status === 'Kitchen' || status === 'Placed')) {
-                    // 1. Kitchen beep (Only in Kitchen tab)
                     if (isKitchenPortal) {
                         this.playKitchenAlert();
                         app.showToast(`🔔 New Order: Room ${roomNum} — ${oid}`, 'info');
                     }
-
-                    // 2. Reception alert + print (Only in Reception/Dashboard)
                     if (isReceptionPortal) {
                         this.playReceptionAlert();
                         app.generateKOT({ ...order, id: oid, items: order.items || [] });
                     }
-
-                    // 3. Persistent notification card
                     if (app && app.db && roomNum) {
                         app.db.addNotification(
                             'order',
@@ -208,7 +198,6 @@ class FirebaseSyncEngine {
                     }
                 }
 
-                // ---------- ORDER MARKED READY (by KDS) ----------
                 if (change.type === 'modified' && (status === 'Served' || status === 'ready')) {
                     if (isReceptionPortal) {
                         this.playReceptionAlert();
@@ -224,7 +213,6 @@ class FirebaseSyncEngine {
                     }
                 }
 
-                // ---------- ORDER ON THE WAY ----------
                 if (change.type === 'modified' && status === 'On the Way') {
                     if (app && app.db && roomNum) {
                         app.db.addNotification(
@@ -236,7 +224,6 @@ class FirebaseSyncEngine {
                     }
                 }
 
-                // ---------- ORDER DELIVERED ----------
                 if (change.type === 'modified' && status === 'Delivered') {
                     if (isReceptionPortal) {
                         this.playReceptionAlert();
@@ -245,7 +232,6 @@ class FirebaseSyncEngine {
                 }
             });
 
-            // Rebuild kitchenOrders list
             const orderList = [];
             snapshot.forEach(d => {
                 const data = d.data();
@@ -270,7 +256,6 @@ class FirebaseSyncEngine {
         });
     }
 
-    // --- ALERTS & SOUNDS ---
     playKitchenAlert() {
         const app = window.app;
         if (app && (app.currentPortal === 'kitchen' || app.currentTab === 'kitchen')) {
@@ -299,11 +284,9 @@ class FirebaseSyncEngine {
         this.audioUnlocked = true;
         const btn = document.getElementById('audio-unlock-btn');
         if (btn) btn.innerHTML = "🔊 ALERTS ACTIVE";
-        // Play a silent pip to unlock
         new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==').play().catch(() => {});
     }
 
-    // --- WRITE OPERATIONS (Firestore Transition) ---
     async pushSettingsToCloud() {
         try {
             const url = localStorage.getItem('yukt_menu_sheet_url') || '';
@@ -339,7 +322,6 @@ class FirebaseSyncEngine {
                 updatePayload.billGenerated = false;
             }
             await updateDoc(roomRef, updatePayload);
-            console.log(`[Room] Status updated for ${roomNum} to ${status}`);
         } catch(e) { console.error("Update Room Status Failed", e); }
     }
 
@@ -360,13 +342,9 @@ class FirebaseSyncEngine {
     async pushOrderToCloud(orderObj) {
         try {
             const { collection, doc, setDoc, updateDoc, serverTimestamp, increment, arrayUnion } = window.firebaseHooks;
-            const ordersRef = collection(window.firebaseFS, 'orders');
-            
-            // 1. Identify Order ID
             const oid = orderObj.order_id || orderObj.id || `room-${orderObj.roomNumber}-${Date.now()}`;
             const orderDocRef = doc(window.firebaseFS, 'orders', String(oid));
 
-            // Status Normalization
             let cloudStatus = orderObj.status || 'Pending';
             if (cloudStatus === 'preparing') cloudStatus = 'Kitchen';
             if (cloudStatus === 'ready')     cloudStatus = 'Served';
@@ -381,20 +359,11 @@ class FirebaseSyncEngine {
             };
 
             await setDoc(orderDocRef, finalOrderData);
-            console.log('[Order] Written to Firestore with id:', oid);
 
-            // 2. MISSION: Atomically Inject Detail into Guest Document
             if (orderObj.guestId && orderObj.roomNumber) {
                 const guestRef = doc(window.firebaseFS, 'guests', orderObj.guestId);
-                
-                // Format items for the master ledger
                 const itemsToAppend = (orderObj.items || []).map(i => ({
-                    name: i.name,
-                    qty: i.qty,
-                    price: i.price,
-                    variant: i.variant || 'Full',
-                    orderId: oid,
-                    timestamp: Date.now()
+                    name: i.name, qty: i.qty, price: i.price, variant: i.variant || 'Full', orderId: oid, timestamp: Date.now()
                 }));
 
                 await updateDoc(guestRef, {
@@ -402,7 +371,6 @@ class FirebaseSyncEngine {
                     current_bill: increment(orderObj.total || 0),
                     billItems: arrayUnion(...itemsToAppend) 
                 });
-                console.log('[Ledger] Guest record updated with itemized orders.');
             }
         } catch(e) { console.error("Cloud Order Push Failed", e); }
     }
@@ -426,23 +394,11 @@ class FirebaseSyncEngine {
                 status: 'active'
             };
 
-            console.log('Pushing to Firestore:', dataToSave);
             const guestDoc = await addDoc(guestsRef, dataToSave);
-
-            // Mission 3: Government Compliance Log (Duplicate Snapshot)
             const policeRef = collection(window.firebaseFS, 'police_logs');
-            await addDoc(policeRef, {
-                ...dataToSave,
-                originalGuestId: guestDoc.id,
-                complianceTimestamp: serverTimestamp(),
-                logType: 'GOVT_MANDATORY_LOG'
-            });
-
+            await addDoc(policeRef, { ...dataToSave, originalGuestId: guestDoc.id, complianceTimestamp: serverTimestamp(), logType: 'GOVT_MANDATORY_LOG' });
             return guestDoc.id;
-        } catch(e) { 
-            console.error("Cloud Guest Sync Failed", e); 
-            throw e; 
-        }
+        } catch(e) { throw e; }
     }
 
     async deleteGuestFromCloud(guestId) {
@@ -456,36 +412,15 @@ class FirebaseSyncEngine {
     async finishCheckoutTransaction(roomNumber, billObj, guestId) {
         try {
             const { doc, updateDoc, collection, addDoc, serverTimestamp, deleteDoc } = window.firebaseHooks;
-            
-            // Step B: Create record in ledger
             const ledgerRef = collection(window.firebaseFS, 'ledger');
-            await addDoc(ledgerRef, { 
-                ...billObj, 
-                timestamp: serverTimestamp(),
-                logType: 'ROOM_CHECKOUT'
-            });
-
-            // Step C: Update room collection
+            await addDoc(ledgerRef, { ...billObj, timestamp: serverTimestamp(), logType: 'ROOM_CHECKOUT' });
             const roomRef = doc(window.firebaseFS, 'rooms', roomNumber.toString());
-            await updateDoc(roomRef, {
-                status: 'available',
-                guest: null,
-                currentGuestId: null,
-                orderSerial: 0, // Reset serial
-                last_updated: serverTimestamp()
-            });
-
-            // Step D: Delete from guests collection
+            await updateDoc(roomRef, { status: 'available', guest: null, currentGuestId: null, orderSerial: 0, last_updated: serverTimestamp() });
             if (guestId) {
                 const guestRef = doc(window.firebaseFS, 'guests', guestId);
                 await deleteDoc(guestRef);
             }
-
-            console.log("[Firebase] Checkout Transaction Successful");
-        } catch(e) {
-            console.error("Checkout Transaction Failed", e);
-            throw e;
-        }
+        } catch(e) { throw e; }
     }
 
     async pushBillingToCloud(billObj) {
@@ -493,10 +428,7 @@ class FirebaseSyncEngine {
             const billingRef = collection(window.firebaseFS, 'billing');
             const ledgerRef = collection(window.firebaseFS, 'ledger');
             const payload = { ...billObj, timestamp: serverTimestamp() };
-            await Promise.all([
-                addDoc(billingRef, payload),
-                addDoc(ledgerRef, payload)
-            ]);
+            await Promise.all([ addDoc(billingRef, payload), addDoc(ledgerRef, payload) ]);
         } catch(e) { console.error("Billing sync failed", e); }
     }
 
@@ -509,26 +441,19 @@ class FirebaseSyncEngine {
 
     async updateOrderStatus(orderId, status) {
         try {
-            // Since we store orders with order_id as doc ID via setDoc, update directly
             let cloudStatus = status;
             if (status === 'ready' || status === 'Ready')         cloudStatus = 'Served';
             if (status === 'preparing' || status === 'Kitchen')   cloudStatus = 'Kitchen';
             if (status === 'ontheway' || status === 'On the Way') cloudStatus = 'On the Way';
             if (status === 'Delivered' || status === 'delivered') cloudStatus = 'Delivered';
 
-            // 1. Try direct doc update (fast path — works when setDoc was used)
             try {
                 const orderDocRef = doc(window.firebaseFS, 'orders', String(orderId));
                 await updateDoc(orderDocRef, { status: cloudStatus });
-                console.log('[Status] Updated', orderId, '->', cloudStatus);
                 return;
-            } catch (directErr) { /* fallthrough to query */ }
+            } catch (directErr) {}
 
-            // 2. Fallback: query by order_id field (legacy docs)
-            const q = query(
-                collection(window.firebaseFS, 'orders'),
-                where('order_id', '==', String(orderId))
-            );
+            const q = query(collection(window.firebaseFS, 'orders'), where('order_id', '==', String(orderId)));
             const snap = await getDocs(q);
             if (!snap.empty) {
                 await Promise.all(snap.docs.map(d => updateDoc(d.ref, { status: cloudStatus })));
@@ -541,37 +466,28 @@ class FirebaseSyncEngine {
             const { doc, runTransaction } = window.firebaseHooks;
             const roomRef = doc(window.firebaseFS, 'rooms', String(roomId));
             let nextSerial = 1;
-
             await runTransaction(window.firebaseFS, async (tx) => {
                 const snap = await tx.get(roomRef);
                 const current = snap.exists() ? (snap.data().lifetimeOrderCount || 0) : 0;
                 nextSerial = current + 1;
                 tx.update(roomRef, { lifetimeOrderCount: nextSerial });
             });
-
             return `${roomId}-${nextSerial}`;
-        } catch(e) {
-            console.error("Perpetual sequence failed", e);
-            return `${roomId}-${Date.now().toString().slice(-4)}`;
-        }
+        } catch(e) { return `${roomId}-${Date.now().toString().slice(-4)}`; }
     }
 
     async getUserProfile(email) {
         if (!email) return null;
         try {
-            // 1. Try direct document lookup (efficient)
             const docRef = doc(window.firebaseFS, 'users', email);
-            const docSnap = await firebaseHooks.getDoc(docRef);
+            const docSnap = await getDoc(docRef);
             if (docSnap.exists()) return docSnap.data();
-
-            // 2. Fallback to query by assignedEmail
             const usersRef = collection(window.firebaseFS, 'users');
             const q = query(usersRef, where('assignedEmail', '==', email));
             const snap = await getDocs(q);
             if (!snap.empty) return snap.docs[0].data();
-            
             return null;
-        } catch(e) { console.error("Profile fetch failed", e); return null; }
+        } catch(e) { return null; }
     }
 
     async uploadIdFile(file, guestPhone) {
@@ -579,39 +495,22 @@ class FirebaseSyncEngine {
             const fileName = `guest_ids/${guestPhone}_${Date.now()}.jpg`;
             const storageRef = sRef(window.firebaseST, fileName);
             await uploadBytes(storageRef, file);
-            const url = await getDownloadURL(storageRef);
-            return url;
-        } catch(e) {
-            console.error("File upload failed", e);
-            throw e;
-        }
+            return await getDownloadURL(storageRef);
+        } catch(e) { throw e; }
     }
 
     async pushAllToCloud() {
         this.isSyncing = true;
         try {
-            if (!window.app || !window.app.db || !window.app.db.idb) {
-                this.isSyncing = false; return;
-            }
-            const rooms = window.app.db.rooms;
-            for (let num in rooms) {
-                await this.pushRoomToCloud(rooms[num]);
-            }
-            const tables = window.app.db.restaurantTables;
-            for (let id in tables) {
-                await this.pushTableToCloud(tables[id]);
-            }
+            if (!window.app || !window.app.db || !window.app.db.idb) { this.isSyncing = false; return; }
+            for (let num in window.app.db.rooms) await this.pushRoomToCloud(window.app.db.rooms[num]);
+            for (let id in window.app.db.restaurantTables) await this.pushTableToCloud(window.app.db.restaurantTables[id]);
             const notices = window.app.db.notifications.slice(0, 10);
-            for (let n of notices) {
-                const nRef = doc(window.firebaseFS, 'notifications', n.id);
-                await setDoc(nRef, n);
-            }
-            console.log("[Firebase] Manual Sync Complete");
+            for (let n of notices) await setDoc(doc(window.firebaseFS, 'notifications', n.id), n);
         } catch(e) { console.error("Global Sync Failed", e); }
         this.isSyncing = false;
     }
 
-    // Helper: Local Sync
     syncArrayToIDB(storeName, arrayData) {
         if (!window.app || !window.app.db || !window.app.db.idb) return;
         try {
