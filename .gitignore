@@ -1,0 +1,23 @@
+# Firebase Security (Template tracking only)
+# firebase-config.js is now tracked with PLACEHOLDERS
+secrets.js
+firebase-key.json
+backend/firebase-key.json
+*.pem
+
+# Local Config & Temp Files
+firebase-config.js.bak
+snippet.txt
+test.txt
+firebase-sync-*.js
+firebase-sync-*.txt
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+dist/
+build/

@@ -1,0 +1,51 @@
+Name,Category,PriceFull,PriceHalf,Description,ImageURL,PortionType
+Basmati Rice,Main Course,80,50,Premium long grain steamed rice,https://source.unsplash.com/featured/?basmati-rice,Plate
+Bhuna Khichuri,Main Course,180,100,Ghee-laden yellow lentil rice,https://source.unsplash.com/featured/?khichdi,Plate
+Luchi (4 pcs),Starters,60,0,Deep-fried puffed bread,https://source.unsplash.com/featured/?luchi,Quantity
+Cholar Dal,Main Course,90,0,Bengal gram dal with coconut coconut,https://source.unsplash.com/featured/?chana-dal,Plate
+Begun Bhaja,Starters,40,0,Fried eggplant slices,https://source.unsplash.com/featured/?fried-eggplant,Quantity
+Aloo Posto,Main Course,150,80,Potatoes in poppy seed paste,https://source.unsplash.com/featured/?potato-curry,Plate
+Shukto,Main Course,120,70,Traditional bitter-sweet mixed veg,https://source.unsplash.com/featured/?mixed-vegetable-curry,Plate
+Mochar Ghonto,Main Course,160,0,Banana flower dry curry,https://source.unsplash.com/featured/?banana-flower-curry,Plate
+Dhokar Dalna,Main Course,140,80,Lentil cakes in spicy gravy,https://source.unsplash.com/featured/?lentil-curry,Plate
+Chicken Kosha,Main Course,280,160,Slow-cooked spicy chicken,https://source.unsplash.com/featured/?chicken-curry,Plate
+Mutton Kosha,Main Course,450,250,Traditional spicy mutton curry,https://source.unsplash.com/featured/?mutton-curry,Plate
+Ilish Bhapa,Main Course,450,0,Hilsa steamed in mustard paste,https://source.unsplash.com/featured/?hilsa-fish,Plate
+Rui Macher Jhol,Main Course,180,0,Rohu fish in light cumin gravy,https://source.unsplash.com/featured/?fish-curry,Plate
+Pabda Jhal,Main Course,250,0,Pabda fish in spicy mustard,https://source.unsplash.com/featured/?fish-mustard-curry,Plate
+Chingri Malaikari,Main Course,380,0,Prawns in coconut milk gravy,https://source.unsplash.com/featured/?prawn-curry,Plate
+Bhetki Paturi,Main Course,320,0,Fish steamed in banana leaf,https://source.unsplash.com/featured/?banana-leaf-fish,Plate
+Sorshe Ilish,Main Course,480,0,Hilsa in pungent mustard gravy,https://source.unsplash.com/featured/?hilsa-mustard,Plate
+Katla Kalia,Main Course,220,0,Rich Katla fish gravy,https://source.unsplash.com/featured/?fish-gravy,Plate
+Pomfret Masala,Main Course,300,0,Whole fried pomfret masala,https://source.unsplash.com/featured/?pomfret-fish,Plate
+Chicken Biryani,Main Course,320,180,Kolkata style with potato,https://source.unsplash.com/featured/?chicken-biryani,Plate
+Mutton Biryani,Main Course,420,220,Rich aromatic mutton rice,https://source.unsplash.com/featured/?mutton-biryani,Plate
+Fish Finger (6pcs),Starters,220,0,Crispy breaded fish strips,https://source.unsplash.com/featured/?fish-fingers,Quantity
+Chicken Cutlet,Starters,150,0,Minced chicken deep fried,https://source.unsplash.com/featured/?chicken-cutlet,Quantity
+Veg Chop (2pcs),Starters,40,0,Beetroot and peanut croquettes,https://source.unsplash.com/featured/?vegetable-cutlet,Quantity
+Aloo Dum,Main Course,110,60,Spicy baby potato curry,https://source.unsplash.com/featured/?aloo-dum,Plate
+Channar Dalna,Main Course,180,100,Cottage cheese balls in gravy,https://source.unsplash.com/featured/?paneer-curry,Plate
+Muri Ghonto,Main Course,200,0,Fish head cooked with rice,https://source.unsplash.com/featured/?fish-rice,Plate
+Lau Chingri,Main Course,190,0,Bottle gourd with small prawns,https://source.unsplash.com/featured/?prawn-curry,Plate
+Papad Bhaja,Starters,15,0,Crispy fried papadum,https://source.unsplash.com/featured/?papad,Quantity
+Tomato Chutney,Starters,40,0,Sweet and tangy tomato relish,https://source.unsplash.com/featured/?tomato-chutney,Quantity
+Mishti Doi,Dessert,60,0,Sweet fermented yogurt,https://source.unsplash.com/featured/?mishti-doi,Plate
+Rosogolla (2pcs),Dessert,40,0,Sponge syrupy balls,https://source.unsplash.com/featured/?rasgulla,Quantity
+Gulab Jamun (2pcs),Dessert,50,0,Fried milk solid balls,https://source.unsplash.com/featured/?gulab-jamun,Quantity
+Payesh,Dessert,100,0,Rice pudding with jaggery,https://source.unsplash.com/featured/?kheer,Quantity
+Sandesh (2pcs),Dessert,60,0,Traditional dry milk sweet,https://source.unsplash.com/featured/?sandesh-sweet,Quantity
+Mineral Water 1L,Drinks,20,0,Chilled Bisleri,https://source.unsplash.com/featured/?mineral-water-bottle,Bottle
+Mineral Water 500ml,Drinks,10,0,Travel size water,https://source.unsplash.com/featured/?water-bottle,Bottle
+Milk Tea,Drinks,25,0,Strong Assam CTC Tea,https://source.unsplash.com/featured/?milk-tea,Cup
+Black Tea,Drinks,15,0,Lemon and ginger tea,https://source.unsplash.com/featured/?black-tea,Cup
+Coffee,Drinks,40,0,Instant milk coffee,https://source.unsplash.com/featured/?coffee-cup,Cup
+Sweet Lassi,Drinks,80,0,Thick yogurt drink,https://source.unsplash.com/featured/?lassi,Cup
+Fresh Lime Soda,Drinks,60,0,Sweet or Salted,https://source.unsplash.com/featured/?lime-soda,Cup
+Coca Cola 500ml,Drinks,45,0,Pet bottle chilled,https://source.unsplash.com/featured/?coca-cola,Bottle
+Sprite 500ml,Drinks,45,0,Pet bottle chilled,https://source.unsplash.com/featured/?sprite-drink,Bottle
+Egg Curry (2pcs),Main Course,120,0,Boiled eggs in spicy gravy,https://source.unsplash.com/featured/?egg-curry,Plate
+Chicken Dak Bunglow,Main Course,300,180,Heritage chicken curry with egg,https://source.unsplash.com/featured/?chicken-curry,Plate
+Posto Bora (4pcs),Starters,120,0,Poppy seed fried fritters,https://source.unsplash.com/featured/?fritters,Quantity
+Macher Matha Diye Dal,Main Course,130,0,Roasted Moong dal with fish head,https://source.unsplash.com/featured/?dal-curry,Plate
+Kancha Lanka Murgi,Main Course,290,160,Green chili chicken (spicy),https://source.unsplash.com/featured/?spicy-chicken,Plate
+Bhetki Fry,Starters,180,0,Pure Bhetki fillet fry,https://source.unsplash.com/featured/?fried-fish,Quantity
