@@ -3,15 +3,15 @@
  * Powered by Gemini Pro & Firebase Firestore
  */
 
+// --- Imports ---
+import { getVertexAI, getGenerativeModel } from "https://esm.run/@firebase/vertexai";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { firebaseConfig } from './firebase-config.js';
+
 // Use globally synced Firebase instances to prevent database lock crashes
 const db = window.firebaseFS;
 const auth = window.firebaseAuth;
 const { collection, doc, getDoc, getDocs, setDoc, updateDoc, onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc } = window.firebaseHooks;
-
-// --- Gemini Vertex Config ---
-import { getVertexAI, getGenerativeModel } from "https://esm.run/@firebase/vertexai";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-import { firebaseConfig } from './firebase-config.js';
 
 const GEMINI_KEY = "AIzaSyDEbzu1uJ2Ynwso4aFko8pg-tf3aBbWq_U";
 
