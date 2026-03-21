@@ -116,16 +116,23 @@ window.sendToAI = async function() {
     const aiLoaderId = 'ai-loading-' + Date.now();
     appendMsg("Thinking...", 'ai', aiLoaderId);
 
-    if (GEMINI_KEY === 'REPLACEME_GEMINI_KEY' || !GEMINI_KEY) {
-        document.getElementById(aiLoaderId).remove();
-        appendMsg("Advanced AI requires a valid Gemini API Key. Switching to local processing.", 'ai');
-        handleLocalAI(msg);
-        return;
+    let activeGeminiKey = GEMINI_KEY || localStorage.getItem('barak_gemini_key');
+    if (!activeGeminiKey || activeGeminiKey === 'REPLACEME_GEMINI_KEY') {
+        const userPrompt = prompt("SECURITY LOCK: Please paste your secure Google Gemini API Key. It will be stored exclusively in your browser memory and never uploaded to the public repository.");
+        if (userPrompt && userPrompt.trim().length > 10) {
+            localStorage.setItem('barak_gemini_key', userPrompt.trim());
+            activeGeminiKey = userPrompt.trim();
+        } else {
+            document.getElementById(aiLoaderId).remove();
+            appendMsg("Cloud link denied. Switching to Local processing array.", 'ai');
+            handleLocalAI(msg);
+            return;
+        }
     }
 
     try {
         // Try Gemini 1.5 Flash first, then fallback to 1.0 Pro if 400 occurs
-        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
+        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeGeminiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -136,7 +143,7 @@ window.sendToAI = async function() {
         // Fallback to Gemini 1.0 Pro if 1.5 Flash fails with 400 or other errors
         if (!res.ok) {
             console.log("[AI] Falling back to Gemini 1.0 Pro...");
-            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_KEY}`, {
+            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${activeGeminiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -154,12 +161,19 @@ window.sendToAI = async function() {
             handleAICommands(aiTxt); 
         } else {
             console.warn(`AI Bridge Failure: ${res.status}`);
+            if (res.status === 400) {
+                localStorage.removeItem('barak_gemini_key');
+            }
             throw new Error(`Cloud Error ${res.status}`);
         }
     } catch (e) {
         console.warn("AI System Fallback:", e.message);
         if (document.getElementById(aiLoaderId)) document.getElementById(aiLoaderId).remove();
-        appendMsg(`AI Link Interrupted: ${e.message}. Using Local Manager.`, 'ai');
+        if (e.message.includes('400')) {
+            appendMsg(`AI Link Interrupted: Corrupted API Key Detected & Purged. Please refresh and provide a secure, working API key via the terminal prompt.`, 'ai');
+        } else {
+            appendMsg(`AI Link Interrupted: ${e.message}. Using Local Manager.`, 'ai');
+        }
         handleLocalAI(msg);
     }
 };
