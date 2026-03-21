@@ -20,7 +20,7 @@ export const app = initializeApp(firebaseConfig);
 export let appCheck;
 try {
     appCheck = initializeAppCheck(app, {
-        provider: new ReCaptchaEnterpriseProvider('INSERT_RECAPTCHA_SITE_KEY_HERE'), 
+        provider: new ReCaptchaEnterpriseProvider('6Le-AZIsAAAAAOKajThe1F13klZEYTApRcKlNYd9'), 
         isTokenAutoRefreshEnabled: true
     });
 } catch(e) {

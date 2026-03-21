@@ -4,8 +4,6 @@
  */
 
 // --- Imports ---
-import { getVertexAI, getGenerativeModel } from "https://esm.run/@firebase/vertexai";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import {
     getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc,
     onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc
