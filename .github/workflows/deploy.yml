@@ -19,10 +19,6 @@ jobs:
         run: |
           # Robust replacement for Master Key
           sed -i "s|const MASTER_KEY = .*|const MASTER_KEY = \"${{ secrets.FIREBASE_MASTER_KEY }}\";|" firebase-config.js
-          
-          # Robust replacement for Gemini Key
-          sed -i "s|const RESTRICTED_AI_KEY = .*|const RESTRICTED_AI_KEY = \"${{ secrets.GEMINI_KEY }}\";|" firebase-config.js
-          
           echo "[INFO] Environmental keys injected successfully."
 
       - name: Deploy to GitHub Pages

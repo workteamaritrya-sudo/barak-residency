@@ -476,6 +476,25 @@ class FirebaseSyncEngine {
         } catch(e) { return `${roomId}-${Date.now().toString().slice(-4)}`; }
     }
 
+    async getUserByEmpId(empId) {
+        if (!empId) return null;
+        try {
+            const usersRef = collection(window.firebaseFS, 'users');
+            // Check original and uppercase
+            let q = query(usersRef, where('empId', '==', empId));
+            let snap = await getDocs(q);
+            if (snap.empty) {
+                q = query(usersRef, where('empId', '==', empId.toUpperCase()));
+                snap = await getDocs(q);
+            }
+            if (snap.empty) return null;
+            return { id: snap.docs[0].id, ...snap.docs[0].data() };
+        } catch (e) {
+            console.error("[Sync] empId lookup failed:", e);
+            return null;
+        }
+    }
+
     async getUserProfile(email) {
         if (!email) return null;
         try {

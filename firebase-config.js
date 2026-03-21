@@ -1,11 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app-check.js";
-import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-vertexai.js";
 
 // --- DYNAMIC ENVIRONMENTAL INJECTION (SAFE FOR GITHUB PAGES) ---
 // Note: These values are replaced by the GitHub Actions pipeline during deployment.
 const MASTER_KEY = window.ENV_MASTER_KEY || "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo"; // Original fallback
-const RESTRICTED_AI_KEY = window.ENV_GEMINI_KEY || "AIzaSyDEbzu1uJ2Ynwso4aFko8pg-tf3aBbWq_U"; // Backend injection target
 
 export const firebaseConfig = {
     apiKey: MASTER_KEY, 
@@ -30,16 +28,4 @@ try {
     });
 } catch(e) {
     console.warn("[AppCheck] Deferred:", e.message);
-}
-
-// 3. Initialize Gemini 3 Flash via STABLE Vertex AI SDK
-export let aiModel = null;
-try {
-    const aiConfig = { ...firebaseConfig, apiKey: RESTRICTED_AI_KEY };
-    const aiApp = initializeApp(aiConfig, "Engine-Gemini-Stable");
-    const vertexAI = getVertexAI(aiApp);
-    aiModel = getGenerativeModel(vertexAI, { model: "gemini-3-flash" });
-    console.log("[VertexAI] Gemini 3 Flash Online.");
-} catch(e) {
-    console.warn("[VertexAI] Offline:", e.message);
 }

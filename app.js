@@ -577,7 +577,7 @@ class PMSApp {
         onAuthStateChanged(window.firebaseAuth, async (user) => {
             if (!user) {
                 if (!window.location.href.includes('order.html')) {
-                    window.location.href = 'login.html';
+                    window.location.href = 'index.html';
                 }
                 return;
             }
@@ -778,7 +778,7 @@ class PMSApp {
     async handleLogout() {
         const { signOut } = window.firebaseHooks;
         await signOut(window.firebaseAuth);
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
     }
 
     async systemReset() {
@@ -1089,40 +1089,20 @@ class PMSApp {
 
         if (!title || !pwdInput || !emailGroup) return;
 
-        // Reset view
-        emailGroup.style.display = 'none';
-        pwdLabel.innerHTML = 'Password (<span id="sec-hint"></span>)';
-        const newHint = document.getElementById('sec-hint');
+        // Reset view for High-Security Auth
+        emailGroup.style.display = 'block';
+        pwdLabel.innerHTML = 'Password';
+        const emailLabel = document.querySelector('label[for="sec-email"]');
+        if (emailLabel) emailLabel.innerText = "Employee ID or Email";
+        
+        const portalName = portalId.replace('-',' ').toUpperCase();
+        title.innerText = `${portalName} AUTHENTICATION`;
 
-        const isAdmin = ['rest-desk', 'owner'].includes(portalId);
-
-        if (isAdmin) {
-            title.innerText = "Executive Admin Login";
-            emailGroup.style.display = 'block';
-            pwdLabel.innerText = "Password";
-            if (newHint) newHint.parentElement.style.display = 'none';
-        } else {
-            switch (portalId) {
-                case 'rest-waiter':
-                case 'hotel-waiter':
-                    title.innerText = "Waiter POS Auth";
-                    if (newHint) newHint.innerText = "1234";
-                    break;
-                case 'kitchen':
-                    title.innerText = "Kitchen KDS Auth";
-                    if (newHint) newHint.innerText = "5678";
-                    break;
-            }
-        }
+        if (hint) hint.parentElement.style.display = 'none';
 
         pwdInput.value = '';
         document.getElementById('security-modal').style.display = 'flex';
-
-        if (isAdmin) {
-            document.getElementById('sec-email').focus();
-        } else {
-            pwdInput.focus();
-        }
+        document.getElementById('sec-email').focus();
     }
 
     closeSecurityModal() {
@@ -1146,18 +1126,26 @@ class PMSApp {
         const isAdmin = ['rest-desk', 'owner'].includes(portal);
 
         try {
-            if (isAdmin) {
-                // MISSION: FIXED LOGIN USING FIREBASE AUTH
-                if (window.firebaseHooks && window.firebaseAuth) {
-                    await window.firebaseHooks.signInWithEmailAndPassword(window.firebaseAuth, email, pwd);
-                    isValid = true;
-                } else {
-                    throw new Error("Firebase Auth not initialized.");
+            let authEmail = email;
+            
+            // 1. Resolve ID to Email if necessary
+            if (!email.includes('@')) {
+                if (window.FirebaseSync) {
+                    const profile = await window.FirebaseSync.getUserByEmpId(email);
+                    if (profile && profile.assignedEmail) {
+                        authEmail = profile.assignedEmail;
+                    } else {
+                        throw new Error(`Employee ID "${email}" not found.`);
+                    }
                 }
+            }
+
+            // 2. Perform Firebase Login
+            if (window.firebaseHooks && window.firebaseAuth) {
+                await window.firebaseHooks.signInWithEmailAndPassword(window.firebaseAuth, authEmail, pwd);
+                isValid = true;
             } else {
-                // Waiter/Kitchen remains on PIN for speed in high-pressure environments
-                if (['rest-waiter', 'hotel-waiter'].includes(portal) && pwd === '1234') isValid = true;
-                if (portal === 'kitchen' && pwd === '5678') isValid = true;
+                throw new Error("Security Engine Offline.");
             }
 
             if (!isValid) {
@@ -2151,42 +2139,51 @@ class PMSApp {
             try {
                 const { doc, updateDoc, collection, addDoc, serverTimestamp, deleteDoc, getDoc } = window.firebaseHooks;
 
-                // 1. NaN-Proof Calculations (Mission Fix)
-                const tariff = Number(guest.tariff) || 0;
-                const advance = Number(guest.advance) || 0;
+                // 1. NaN-Proof Calculations (Mission: High-Fidelity Accounting)
+                const tariff = Number(guest.tariff) || Number(room.tariff) || 0;
+                const advance = Number(guest.advance) || Number(guest.advancePaid) || 0;
                 const foodTotal = Number(guest.foodTotal) || 0;
 
-                // The user's specific request for totalBill math
-                const totalBill = tariff - advance;
-
-                const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : guest.checkInTime);
+                const checkInTimeValue = guest.checkInTimestamp || (guest.checkInDate && guest.checkInDate.seconds ? guest.checkInDate.seconds * 1000 : (guest.checkInTime || guest.check_in_date));
                 const days = this.calculateBilledDays(checkInTimeValue);
                 const roomCharges = days * tariff;
-                const finalBalance = (roomCharges + foodTotal) - advance;
+                const totalGross = roomCharges + foodTotal;
+                const finalBalance = totalGross - advance;
 
-                // 2. Step A: Mirror Data to Ledger for permanent records
+                // 2. Mission: Unified Cloud Transaction (Mirror Data to Ledger)
                 const ledgerRef = collection(window.firebaseFS, 'ledger');
                 await addDoc(ledgerRef, {
-                    ...guest,
-                    checkoutSummary: {
+                    room: roomNum,
+                    guestName: guest.guestName || guest.name || "Unknown",
+                    guestPhone: guest.guestPhone || guest.phone || "---",
+                    checkInTime: checkInTimeValue,
+                    closedAt: serverTimestamp(),
+                    logType: 'ROOM_CHECKOUT_TRANSACTION',
+                    amount: finalBalance, // Amount received on settlement
+                    billingSummary: {
                         daysStayed: days,
+                        tariffPerDay: tariff,
                         roomCharges: roomCharges,
                         foodTotal: foodTotal,
                         advancePaid: advance,
-                        totalBillValue: totalBill, // Specific field for requested math
-                        finalSettlement: finalBalance,
-                        checkOutTime: Date.now()
+                        totalGrossValue: totalGross,
+                        finalSettlement: finalBalance
                     },
-                    status: 'completed',
-                    logType: 'ROOM_CHECKOUT_TRANSACTION'
+                    status: 'settled',
+                    orderHistory: guest.billItems || [] 
                 });
 
-                // 3. Step B: Reset Room Identity
+                // 3. Step B: Reset Room identity
                 const roomRef = doc(window.firebaseFS, 'rooms', roomNum.toString());
                 await updateDoc(roomRef, {
                     status: 'available',
                     guest: null,
+                    salutation: null,
+                    guestName: null,
+                    guestPhone: null,
                     currentGuestId: null,
+                    currentStayId: null,
+                    billGenerated: false,
                     orderSerial: 0,
                     last_updated: serverTimestamp()
                 });
