@@ -1,0 +1,27 @@
+name: Deploy to GitHub Pages Securely
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Inject Secrets into Firebase Config
+        run: |
+          sed -i 's|window.ENV_MASTER_KEY || "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo"|"${{ secrets.FIREBASE_MASTER_KEY }}"|g' firebase-config.js
+          sed -i 's|window.ENV_GEMINI_KEY || "AIzaSyDEbzu1uJ2Ynwso4aFko8pg-tf3aBbWq_U"|"${{ secrets.GEMINI_KEY }}"|g' firebase-config.js
+          echo "[INFO] Environmental keys successfully injected."
+
+      - name: Deploy to GitHub Pages
+        uses: JsIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: .
+          token: ${{ secrets.GITHUB_TOKEN }}

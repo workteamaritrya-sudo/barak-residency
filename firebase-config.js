@@ -1,15 +1,14 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app-check.js";
-import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-vertexai-preview.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app-check.js";
+import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-vertexai.js";
 
-// MASTER KEY (For Auth/Firestore)
-const FIREBASE_MASTER_KEY = "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo";
-
-// RESTRICTED GEMINI KEY (For Vertex AI)
-const GEMINI_RESTRICTED_KEY = "AIzaSyDEbzu1uJ2Ynwso4aFko8pg-tf3aBbWq_U";
+// --- DYNAMIC ENVIRONMENTAL INJECTION (SAFE FOR GITHUB PAGES) ---
+// Note: These values are replaced by the GitHub Actions pipeline during deployment.
+const MASTER_KEY = window.ENV_MASTER_KEY || "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo"; // Original fallback
+const RESTRICTED_AI_KEY = window.ENV_GEMINI_KEY || "AIzaSyDEbzu1uJ2Ynwso4aFko8pg-tf3aBbWq_U"; // Backend injection target
 
 export const firebaseConfig = {
-    apiKey: FIREBASE_MASTER_KEY, 
+    apiKey: MASTER_KEY, 
     authDomain: "barak-residency-59405.firebaseapp.com",
     projectId: "barak-residency-59405",
     databaseURL: "https://barak-residency-59405-default-rtdb.firebaseio.com",
@@ -19,7 +18,7 @@ export const firebaseConfig = {
     measurementId: "G-B15QTKNNPL"
 };
 
-// 1. Initialize Primary App (Auth, Firestore, App Check)
+// 1. Initialize Primary App
 export const app = initializeApp(firebaseConfig);
 
 // 2. Initialize App Check (Native Recaptcha Enterprise)
@@ -33,14 +32,14 @@ try {
     console.warn("[AppCheck] Deferred:", e.message);
 }
 
-// 3. Initialize Secondary App strictly for Restricted Vertex AI access
+// 3. Initialize Gemini 3 Flash via STABLE Vertex AI SDK
 export let aiModel = null;
 try {
-    const aiConfig = { ...firebaseConfig, apiKey: GEMINI_RESTRICTED_KEY };
-    const aiApp = initializeApp(aiConfig, "Gemini-Engine-v3");
+    const aiConfig = { ...firebaseConfig, apiKey: RESTRICTED_AI_KEY };
+    const aiApp = initializeApp(aiConfig, "Engine-Gemini-Stable");
     const vertexAI = getVertexAI(aiApp);
     aiModel = getGenerativeModel(vertexAI, { model: "gemini-3-flash" });
     console.log("[VertexAI] Gemini 3 Flash Online.");
 } catch(e) {
-    console.warn("[VertexAI] Deferred:", e.message);
+    console.warn("[VertexAI] Offline:", e.message);
 }

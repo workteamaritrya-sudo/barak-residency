@@ -1,5 +1,5 @@
-# Firebase Security Keys (Restricted)
-firebase-config.js
+# Firebase Security (Template tracking only)
+# firebase-config.js is now tracked with PLACEHOLDERS
 secrets.js
 firebase-key.json
 backend/firebase-key.json
