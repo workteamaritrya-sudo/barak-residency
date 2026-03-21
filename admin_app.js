@@ -97,12 +97,11 @@ window.sendToAI = async function() {
 
     appendMsg(msg, 'user');
     input.value = '';
-    
     const aiLoaderId = 'ai-loading-' + Date.now();
     appendMsg("Thinking...", 'ai', aiLoaderId);
 
     try {
-        let res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-3-flash:generateContent?key=${GEMINI_KEY}`, {
+        let res = await fetch(`https://generativelanguage.googleapis.com/v3/models/gemini-3-flash:generateContent?key=${GEMINI_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -113,7 +112,7 @@ window.sendToAI = async function() {
         // Fallback to pro
         if (!res.ok) {
             console.log(`[AI] Falling back to Pro...`);
-            res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-3-pro:generateContent?key=${GEMINI_KEY}`, {
+            res = await fetch(`https://generativelanguage.googleapis.com/v3/models/gemini-3-pro:generateContent?key=${GEMINI_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
