@@ -43,19 +43,19 @@ Staff:
 - Rest Desk: BR-RD-001  | restdesk@barak.com
 - Password for all staff: password123
                 </pre>
-                <p><i>&#9888;&#65039; You must still add these emails in <b>Firebase Console &#8594; Authentication</b> tab manually.</i></p>
-                <a href="login.html" style="color:#D4AF37; font-weight: bold;">&#8594; Go to Login Page</a>
+                <p><i>✅ The initialization script will now automatically register these emails into the Firebase Authentication system for you.</i></p>
+                <a href="index.html" style="color:#D4AF37; font-weight: bold;">&#8594; Go to Login Page</a>
             </div>
         </div>
     </div>
 
     <script type="module">
-        import { firebaseHooks, firebaseFS } from './firebase-sync.js';
+        import { firebaseHooks, firebaseFS, firebaseAuth } from './firebase-sync.js';
 
         // --- 1. INIT STAFF USERS ---
         document.getElementById('init-db').onclick = async () => {
             const status = document.getElementById('status');
-            status.innerHTML = "<b>Initializing Staff Profiles...</b><br>";
+            status.innerHTML = "<b>Initializing Staff Profiles & Auth...</b><br>";
 
             try {
                 const users = [
@@ -68,9 +68,21 @@ Staff:
                 ];
 
                 for (const user of users) {
+                    // 1. Save to Firestore
                     const docRef = firebaseHooks.doc(firebaseFS, 'users', user.assignedEmail);
                     await firebaseHooks.setDoc(docRef, { ...user, last_initialized: firebaseHooks.serverTimestamp() });
-                    status.innerHTML += `&#9989; <b>${user.empId}</b> (${user.name}) synced.<br>`;
+                    
+                    // 2. Create in Firebase Auth
+                    try {
+                        await firebaseHooks.createUserWithEmailAndPassword(firebaseAuth, user.assignedEmail, 'password123');
+                        status.innerHTML += `&#9989; <b>${user.empId}</b> (${user.name}) Synced & Auth Created.<br>`;
+                    } catch (authErr) {
+                        if (authErr.code === 'auth/email-already-in-use') {
+                            status.innerHTML += `&#9989; <b>${user.empId}</b> (${user.name}) Synced. (Auth already exists)<br>`;
+                        } else {
+                            status.innerHTML += `&#10060; <b>${user.empId}</b> Auth Error: ${authErr.message}<br>`;
+                        }
+                    }
                 }
 
                 status.innerHTML += "<br><b>&#10024; Staff setup complete!</b>";
