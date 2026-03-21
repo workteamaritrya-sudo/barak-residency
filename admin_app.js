@@ -9,6 +9,7 @@ import {
     onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-vertexai.js";
 
 // --- Firebase Config ---
 import { firebaseConfig } from './firebase-config.js';
@@ -23,8 +24,19 @@ try {
     alert("CRITICAL CONFIGURATION: Cloud initialization failed. Advanced owner features are currently offline.");
 }
 
-// --- Gemini Config ---
+// --- Gemini Vertex Config ---
 const GEMINI_KEY = "AIzaSyDEbzu1uJ2Ynwso4aFko8pg-tf3aBbWq_U";
+
+let vertexApp, vertexAI, aiModel;
+try {
+    // Spawn secondary app using strictly the AI Key to pass Firebase backend authorization
+    const vertexConfig = { ...firebaseConfig, apiKey: GEMINI_KEY };
+    vertexApp = initializeApp(vertexConfig, "VertexAI-Engine");
+    vertexAI = getVertexAI(vertexApp);
+    aiModel = getGenerativeModel(vertexAI, { model: "gemini-3-flash" });
+} catch (e) {
+    console.warn("Vertex AI Initialization Failed:", e);
+}
 
 // --- State ---
 let rooms = [];
@@ -101,46 +113,25 @@ window.sendToAI = async function() {
     appendMsg("Thinking...", 'ai', aiLoaderId);
 
     try {
-        let res = await fetch(`https://generativelanguage.googleapis.com/v3/models/gemini-3-flash:generateContent?key=${GEMINI_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: `Role: AI Resident Manager at Barak Residency. Task: Assist owners. Context: ₹${revenue} revenue, ${orders.length} orders. Request: ${msg}` }] }]
-            })
-        });
+        if (!aiModel) throw new Error("Vertex AI engine offline.");
 
-        // Fallback to pro
-        if (!res.ok) {
-            console.log(`[AI] Falling back to Pro...`);
-            res = await fetch(`https://generativelanguage.googleapis.com/v3/models/gemini-3-pro:generateContent?key=${GEMINI_KEY}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: `Role: Manager. Context: ₹${revenue} revenue. Request: ${msg}` }] }]
-                })
-            });
-        }
+        const prompt = `Role: AI Resident Manager at Barak Residency. Task: Assist owners. Context: ₹${revenue} revenue, ${orders.length} orders. Request: ${msg}`;
+        const result = await aiModel.generateContent(prompt);
+        const resData = await result.response;
+        const aiTxt = resData.text();
 
         if (document.getElementById(aiLoaderId)) document.getElementById(aiLoaderId).remove();
 
-        if (res.ok) {
-            const data = await res.json();
-            const aiTxt = data.candidates?.[0]?.content?.parts?.[0]?.text || "Neural link clear. Please rephrase.";
+        if (aiTxt) {
             appendMsg(aiTxt, 'ai');
             handleAICommands(aiTxt); 
         } else {
-            const errText = await res.text();
-            console.warn(`[AI Bridge Failure] Status: ${res.status} | Details:`, errText);
-            throw new Error(`Cloud Error ${res.status}: ${errText.substring(0, 100)}`);
+            throw new Error("No signal from AI backend.");
         }
     } catch (e) {
-        console.warn("AI System Fallback:", e.message);
         if (document.getElementById(aiLoaderId)) document.getElementById(aiLoaderId).remove();
-        if (e.message.includes('400') || e.message.includes('403')) {
-            appendMsg(`API Restriction Blocked By Google Cloud:\n\n${e.message}`, 'ai');
-        } else {
-            appendMsg(`AI Link Interrupted: ${e.message}. Using Local Manager.`, 'ai');
-        }
+        console.warn("AI System Fallback:", e.message);
+        appendMsg(`AI Link Interrupted: ${e.message}. Using Local Manager.`, 'ai');
         handleLocalAI(msg);
     }
 };
