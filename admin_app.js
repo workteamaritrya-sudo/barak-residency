@@ -102,8 +102,8 @@ window.sendToAI = async function() {
     appendMsg("Thinking...", 'ai', aiLoaderId);
 
     try {
-        // Use the domain-restricted Gemini API key
-        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
+        // Use the domain-restricted Gemini API key, shifted to the 8b ultra-light model architecture
+        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${GEMINI_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -111,10 +111,10 @@ window.sendToAI = async function() {
             })
         });
 
-        // Fallback to Gemini 1.0 Pro
+        // Fallback to Gemini 1.5 Flash (Standard)
         if (!res.ok) {
-            console.log("[AI] Falling back to Gemini 1.0 Pro...");
-            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_KEY}`, {
+            console.log("[AI] Falling back to Gemini 1.5 Flash (Standard)...");
+            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -131,14 +131,15 @@ window.sendToAI = async function() {
             appendMsg(aiTxt, 'ai');
             handleAICommands(aiTxt); 
         } else {
-            console.warn(`AI Bridge Failure: ${res.status}`);
-            throw new Error(`Cloud Error ${res.status}`);
+            const errText = await res.text();
+            console.warn(`[AI Bridge Failure] Status: ${res.status} | Details:`, errText);
+            throw new Error(`Cloud Error ${res.status}: ${errText.substring(0, 100)}`);
         }
     } catch (e) {
         console.warn("AI System Fallback:", e.message);
         if (document.getElementById(aiLoaderId)) document.getElementById(aiLoaderId).remove();
-        if (e.message.includes('400')) {
-            appendMsg(`AI Link Interrupted: Cloud Error 400. API Key invalid or domain restricted incorrectly.`, 'ai');
+        if (e.message.includes('400') || e.message.includes('403')) {
+            appendMsg(`API Restriction Blocked By Google Cloud:\n\n${e.message}`, 'ai');
         } else {
             appendMsg(`AI Link Interrupted: ${e.message}. Using Local Manager.`, 'ai');
         }
