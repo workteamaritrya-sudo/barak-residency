@@ -342,7 +342,8 @@ window.handleLogout = async function() {
 
 onAuthStateChanged(auth, user => {
     if (!user) {
-        window.location.href = 'index.html';
+        console.warn("[Auth] No session detected. Redirect suspended for debug.");
+        // window.location.href = 'index.html'; // REMOVED to prevent bounce during debug
     } else {
         console.log("[Auth] Owner authenticated.");
         startListeners();
