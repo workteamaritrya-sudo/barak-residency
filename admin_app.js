@@ -102,8 +102,21 @@ window.sendToAI = async function() {
     appendMsg("Thinking...", 'ai', aiLoaderId);
 
     try {
-        // Shifted to the user-requested gemini-3.0-flash model architecture
-        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent?key=${GEMINI_KEY}`, {
+        // Query the API directly to see what models it actually permits in the current year
+        const modelListRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_KEY}`);
+        let activeModel = 'gemini-1.5-flash';
+        if (modelListRes.ok) {
+            const listData = await modelListRes.json();
+            const models = listData.models.filter(m => m.name.includes('flash') && m.supportedGenerationMethods.includes('generateContent'));
+            if (models.length > 0) {
+                // Extracts highest flash version dynamically (e.g., 'models/gemini-2.5-flash', 'models/gemini-1.5-flash', etc.)
+                activeModel = models[models.length - 1].name.split('/')[1]; 
+                console.log("[AI] Auto-detected Google Cloud Model:", activeModel);
+            }
+        }
+
+        // Dynamically shift to the detected model architecture
+        let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${GEMINI_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -111,10 +124,11 @@ window.sendToAI = async function() {
             })
         });
 
-        // Fallback to gemini-3.0-pro
+        // Fallback sequentially using simple string manipulation if main fails (e.g. 1.5-flash -> 1.0-pro or 2.0-pro)
         if (!res.ok) {
-            console.log("[AI] Falling back to Gemini 3.0 Pro...");
-            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-pro:generateContent?key=${GEMINI_KEY}`, {
+            const fbModel = activeModel.includes('flash') ? activeModel.replace('flash', 'pro') : 'gemini-pro';
+            console.log(`[AI] Falling back to ${fbModel}...`);
+            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${fbModel}:generateContent?key=${GEMINI_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
