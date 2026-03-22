@@ -409,6 +409,8 @@
         .mt-3 { margin-top: 0.75rem; }
         .color-success { color: #4ade80; }
     </style>
+
+    <link rel="icon" href="br.png" type="image/png">
 </head>
 <body>
     <header id="app-header">
@@ -433,19 +435,19 @@
             
             <div class="feature-grid">
                 <div class="f-card" id="f-card-service" onclick="portal.switchView('service')">
-                    <div class="f-icon">🛎️</div>
+                    <div class="f-icon">ðŸ›Žï¸</div>
                     <div class="f-label">Service</div>
                 </div>
                 <div class="f-card" onclick="portal.switchSubTab('wifi')">
-                    <div class="f-icon">📶</div>
+                    <div class="f-icon">ðŸ“¶</div>
                     <div class="f-label">WiFi</div>
                 </div>
                 <div class="f-card" onclick="portal.switchSubTab('laundry')">
-                    <div class="f-icon">🧺</div>
+                    <div class="f-icon">ðŸ§º</div>
                     <div class="f-label">Laundry</div>
                 </div>
                 <div class="f-card" id="f-card-order" onclick="portal.switchView('menu')">
-                    <div class="f-icon">🍱</div>
+                    <div class="f-icon">ðŸ±</div>
                     <div class="f-label">Order Food</div>
                 </div>
             </div>
@@ -454,7 +456,7 @@
                 <div class="order-preview-card" id="active-order-preview" style="display: none; flex: 2; margin-top: 0;" onclick="portal.showTracker()">
                     <div class="pulse-dot"></div>
                     <div class="preview-text">Tracking Active Order...</div>
-                    <div class="preview-arrow">→</div>
+                    <div class="preview-arrow">â†’</div>
                 </div>
                 
                 <div class="order-preview-card" style="flex: 1; margin-top: 0; justify-content: center;" onclick="portal.showTracker()">
@@ -466,7 +468,7 @@
         <!-- WiFi Modal -->
         <div id="view-wifi" class="overlay" style="display: none;">
             <div class="glass-panel" style="width: 85%; max-width: 400px; padding: 2rem; text-align: center;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">📶</div>
+                <div style="font-size: 3rem; margin-bottom: 1rem;">ðŸ“¶</div>
                 <h2 style="color: var(--gold-primary); margin-bottom: 1.5rem;">Complimentary WiFi</h2>
                 <div class="glass-section" style="text-align: left; margin-bottom: 1.5rem;">
                     <div class="mb-2"><span style="color: var(--text-gray); font-size: 0.8rem;">NETWORK</span><br><strong>Barak_Guest_5G</strong></div>
@@ -479,7 +481,7 @@
         <!-- Laundry Modal -->
         <div id="view-laundry" class="overlay" style="display: none;">
             <div class="glass-panel" style="width: 85%; max-width: 400px; padding: 2rem; text-align: center;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">🧺</div>
+                <div style="font-size: 3rem; margin-bottom: 1rem;">ðŸ§º</div>
                 <h2 style="color: var(--gold-primary); margin-bottom: 1rem;">Laundry Service</h2>
                 <p style="color: var(--text-gray); font-size: 0.9rem; margin-bottom: 2rem;">Tap below to notify house keeping. Our staff will collect your laundry shortly.</p>
                 <button class="add-btn btn-block" onclick="portal.sendQuickRequest('Laundry Pickup')">REQUEST PICKUP</button>
@@ -500,7 +502,7 @@
                     <h3>Feeling Hungry?</h3>
                     <p>Chef's specials are ready to be served.</p>
                 </div>
-                <div class="banner-img">🍲</div>
+                <div class="banner-img">ðŸ²</div>
             </div>
 
             <div class="food-grid" id="menu-grid">
@@ -513,10 +515,10 @@
             <div class="glass-section mb-6">
                 <h3 class="gold-text mb-2">QUICK REQUESTS</h3>
                 <div class="service-quick-grid">
-                    <button class="service-btn" onclick="portal.sendQuickRequest('Water')">💧 Water</button>
-                    <button class="service-btn" onclick="portal.sendQuickRequest('Cleaning')">🧹 Cleaning</button>
-                    <button class="service-btn" onclick="portal.sendQuickRequest('Towel')">🧻 Towels</button>
-                    <button class="service-btn" onclick="portal.sendQuickRequest('Blanket')">🛌 Blanket</button>
+                    <button class="service-btn" onclick="portal.sendQuickRequest('Water')">ðŸ’§ Water</button>
+                    <button class="service-btn" onclick="portal.sendQuickRequest('Cleaning')">ðŸ§¹ Cleaning</button>
+                    <button class="service-btn" onclick="portal.sendQuickRequest('Towel')">ðŸ§» Towels</button>
+                    <button class="service-btn" onclick="portal.sendQuickRequest('Blanket')">ðŸ›Œ Blanket</button>
                 </div>
             </div>
             
@@ -531,19 +533,19 @@
     <!-- Bottom Navigation Bar -->
     <nav class="bottom-nav tint-blur">
         <div class="nav-item active" onclick="portal.switchView('dashboard')" id="nav-dashboard">
-            <div class="nav-icon">🏠</div>
+            <div class="nav-icon">ðŸ </div>
             <div class="nav-text">Home</div>
         </div>
         <div class="nav-item" onclick="portal.switchView('menu')" id="nav-menu">
-            <div class="nav-icon">🍴</div>
+            <div class="nav-icon">ðŸ´</div>
             <div class="nav-text">Order</div>
         </div>
         <div class="nav-item" onclick="portal.switchView('service')" id="nav-service">
-            <div class="nav-icon">🛎️</div>
+            <div class="nav-icon">ðŸ›Žï¸</div>
             <div class="nav-text">Service</div>
         </div>
         <div class="nav-item" onclick="showTracker()" id="nav-tracker">
-            <div class="nav-icon">📦</div>
+            <div class="nav-icon">ðŸ“¦</div>
             <div class="nav-text">Status</div>
         </div>
     </nav>
@@ -554,8 +556,8 @@
     <!-- Sliding Cart Panel -->
     <div class="cart-panel" id="cart-panel">
         <div class="cart-panel-header">
-            <h3>🛒 Your Order</h3>
-            <button class="cart-panel-close" onclick="portal.closeCart()">✕</button>
+            <h3>ðŸ›’ Your Order</h3>
+            <button class="cart-panel-close" onclick="portal.closeCart()">âœ•</button>
         </div>
         <div class="cart-panel-items" id="cart-panel-items">
             <div class="cart-empty-msg">Your cart is empty.<br>Start adding delicacies!</div>
@@ -563,9 +565,9 @@
         <div class="cart-panel-footer">
             <div class="cart-panel-total">
                 <span>Total</span>
-                <span id="cart-panel-total-val">₹0</span>
+                <span id="cart-panel-total-val">â‚¹0</span>
             </div>
-            <button class="cart-confirm-btn" onclick="portal.placeOrder()">CONFIRM ORDER →</button>
+            <button class="cart-confirm-btn" onclick="portal.placeOrder()">CONFIRM ORDER â†’</button>
         </div>
     </div>
 
@@ -573,7 +575,7 @@
     <div class="cart-bar" id="cart-bar" onclick="portal.openCart()" style="cursor:pointer; display:none;">
 
         <div id="cart-info" style="font-size:1rem; font-weight:800; letter-spacing:0.5px;">0 Items</div>
-        <div style="background:#050B1A; color:var(--gold-primary); border-radius:12px; padding:0.6rem 1.4rem; font-size:1rem; font-weight:900; letter-spacing:1.5px; box-shadow:0 0 15px rgba(212,175,55,0.4);">ORDER NOW →</div>
+        <div style="background:#050B1A; color:var(--gold-primary); border-radius:12px; padding:0.6rem 1.4rem; font-size:1rem; font-weight:900; letter-spacing:1.5px; box-shadow:0 0 15px rgba(212,175,55,0.4);">ORDER NOW â†’</div>
     </div>
 
         <!-- Cart Modal -->
@@ -583,10 +585,10 @@
             <div id="cart-modal-items" style="max-height:250px; overflow-y:auto; margin-bottom:1.5rem;"></div>
             <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem; color:var(--color-green-400); margin-bottom:1.5rem;">
                 <span>Total</span>
-                <span id="cart-modal-total">₹0</span>
+                <span id="cart-modal-total">â‚¹0</span>
             </div>
             <button class="btn btn-primary btn-block mb-3" style="padding:1rem; font-size:1.1rem; background:var(--gold-primary); color:black; font-weight:bold;" onclick="portal.placeOrder()">CONFIRM ORDER</button>
-            <button class="btn btn-outline btn-block" style="padding:0.8rem; color:var(--text-gray); border-color:var(--text-gray);" onclick="document.getElementById('cart-modal').style.display='none'">← Continue Browsing</button>
+            <button class="btn btn-outline btn-block" style="padding:0.8rem; color:var(--text-gray); border-color:var(--text-gray);" onclick="document.getElementById('cart-modal').style.display='none'">â† Continue Browsing</button>
         </div>
     </div>
 
@@ -647,7 +649,7 @@
 
     <!-- Success Screen -->
     <div class="overlay" id="success-screen">
-        <div class="success-tick">✨</div>
+        <div class="success-tick">âœ¨</div>
         <h1 style="color: var(--gold-primary); margin-bottom: 1rem;">ORDER PLACED</h1>
         <p class="text-gray">Our chef has started the magic.<br>Track your meal live.</p>
         <button class="btn add-btn" style="margin-top: 2rem;" onclick="showTracker()">VIEW TRACKER</button>
@@ -655,7 +657,7 @@
 
     <!-- Service Confirmation Modal -->
     <div id="service-confirm-modal" class="overlay" style="background: rgba(5, 11, 26, 0.98); display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-        <div class="success-tick" style="font-size: 6rem; margin-bottom: 2rem;">🛎️</div>
+        <div class="success-tick" style="font-size: 6rem; margin-bottom: 2rem;">ðŸ›Žï¸</div>
         <h2 style="color: var(--gold-primary); font-size: 2.2rem; margin-bottom: 1rem; letter-spacing: 1px;">REQUEST RECEIVED</h2>
         <p id="service-marketing-txt" style="color: var(--text-gray); font-size: 1.1rem; max-width: 80%; line-height: 1.6; margin-bottom: 2.5rem;">
             Your comfort is our priority. Our staff has been notified and will be at your service shortly. 

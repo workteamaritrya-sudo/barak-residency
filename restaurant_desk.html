@@ -7,12 +7,14 @@
     <title>Restaurant Desk | Barak Residency</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="restaurant_portal.css?v=2.0">
+
+    <link rel="icon" href="br.png" type="image/png">
 </head>
 
 <body>
     <div class="page">
         <div class="luxury-portal-header">
-            <div class="luxury-identity">BARAK RESIDENCY — RESTAURANT DESK <span
+            <div class="luxury-identity">BARAK RESIDENCY â€” RESTAURANT DESK <span
                     style="font-size:0.6rem;opacity:0.5;vertical-align:top;">v2.0-FIXED</span></div>
             <div style="display:flex; gap:1rem; align-items:center;">
                 <div class="portal-time-luxury" id="clock">--:-- --</div>
@@ -34,11 +36,11 @@
                 </div>
                 <span id="desk-revenue-display"
                     style="font-size:1.05rem; font-weight:700; color:var(--gold-primary); display:none; filter:blur(4px);">Today:
-                    ₹0</span>
+                    â‚¹0</span>
                 <button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem;"
-                    onclick="deskApp.toggleRevVisibility()">👁 Revenue</button>
+                    onclick="deskApp.toggleRevVisibility()">ðŸ‘ Revenue</button>
                 <button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem;"
-                    onclick="deskApp.openAvailabilityModal()">🍴 Menu Availability</button>
+                    onclick="deskApp.openAvailabilityModal()">ðŸ´ Menu Availability</button>
             </div>
             <div style="display:flex; gap:1rem;">
                 <button class="btn btn-primary" style="padding:0.6rem 1.2rem;" onclick="deskApp.generatePickupOrder()">+
@@ -54,7 +56,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
                     <h2 style="margin:0; font-family:'Outfit'; color:white; letter-spacing:1px; font-size:1.2rem; text-transform:uppercase;">Live Table Grid</h2>
                 </div>
-                <!-- ✅ Correct ID that restaurant_desk_app.js uses -->
+                <!-- âœ… Correct ID that restaurant_desk_app.js uses -->
                 <div class="desk-table-grid" id="rest-desk-table-grid"></div>
             </div>
 
@@ -73,7 +75,7 @@
                 <!-- Active Pickups -->
                 <div class="sidebar-section" style="margin-top:1rem;">
                     <h3>Active Pickups</h3>
-                    <!-- ✅ Correct ID that restaurant_desk_app.js uses -->
+                    <!-- âœ… Correct ID that restaurant_desk_app.js uses -->
                     <div id="rest-desk-pickup-list" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
                 </div>
 
@@ -84,7 +86,7 @@
                         <button class="btn btn-outline" style="font-size:0.7rem; padding:0.2rem 0.5rem;"
                             onclick="deskApp.clearNotifications()">Clear</button>
                     </div>
-                    <!-- ✅ Matches renderNotificationSidebar() -->
+                    <!-- âœ… Matches renderNotificationSidebar() -->
                     <div id="desk-notifications-list"
                         style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.85rem;"></div>
                 </div>
@@ -92,31 +94,31 @@
         </div>
     </div>
 
-    <!-- ════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      CHECKOUT MODAL  (required by selectDeskCheckout)
-     ════════════════════════════════════ -->
+     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="checkout-modal" class="modal-overlay" style="display:none; z-index:10010;">
         <div class="security-box"
             style="width:500px; max-width:96vw; padding:2rem; position:relative; max-height:85vh; display:flex; flex-direction:column;">
             <button onclick="document.getElementById('checkout-modal').style.display='none'"
                 style="position:absolute;top:1rem;right:1rem;background:transparent;border:none;color:white;font-size:1.6rem;cursor:pointer;">&times;</button>
-            <!-- ✅ Correct ID -->
+            <!-- âœ… Correct ID -->
             <h3 id="checkout-modal-title" style="color:var(--gold-primary); margin-bottom:1.25rem; text-align:center;">
             </h3>
-            <!-- ✅ Correct ID -->
+            <!-- âœ… Correct ID -->
             <div id="checkout-modal-content" style="flex:1;overflow-y:auto;margin-bottom:1.5rem; color:white;"></div>
             <div style="display:flex;gap:1rem;">
                 <button class="btn btn-success" style="flex:2;padding:1rem;font-size:1.05rem;font-weight:700;"
-                    onclick="window.deskApp.printAndCloseTable()">✅ PRINT &amp; CLOSE TABLE</button>
+                    onclick="window.deskApp.printAndCloseTable()">âœ… PRINT &amp; CLOSE TABLE</button>
                 <button class="btn btn-outline" style="flex:1;padding:1rem;"
                     onclick="document.getElementById('checkout-modal').style.display='none'">Cancel</button>
             </div>
         </div>
     </div>
 
-    <!-- ════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      PICKUP ORDER MENU MODAL
-     ════════════════════════════════════ -->
+     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="pickup-modal" class="modal-overlay" style="display:none; z-index:10015;">
         <div class="security-box"
             style="width:900px; max-width:98vw; height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden;">
@@ -149,7 +151,7 @@
                         <div
                             style="display:flex; justify-content:space-between; margin-bottom:1rem; font-size:1.2rem; font-weight:800;">
                             <span>Total</span>
-                            <span style="color:#4ADE80;">₹<span id="pickup-cart-total">0</span></span>
+                            <span style="color:#4ADE80;">â‚¹<span id="pickup-cart-total">0</span></span>
                         </div>
                         <button class="btn btn-primary btn-block" style="padding:1rem; font-size:1.1rem;"
                             onclick="window.deskApp.submitPickupOrder()">PLACE PICKUP ORDER</button>
@@ -169,9 +171,9 @@
         </div>
     </div>
 
-    <!-- ════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      SMART CHECK-IN & RESERVATION MODALS 
-     ════════════════════════════════════ -->
+     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="smart-checkin-modal" class="modal-overlay"
         style="display:none; z-index:20002; background:rgba(2,10,24,0.98); backdrop-filter:blur(15px);">
         <div class="security-box"
@@ -182,7 +184,7 @@
                     EXECUTIVE ONBOARDING</h2>
                 <button class="btn btn-outline"
                     onclick="document.getElementById('smart-checkin-modal').style.display='none'"
-                    style="border-radius:50%; width:40px; height:40px; padding:0; color:white; border-color:white;">✕</button>
+                    style="border-radius:50%; width:40px; height:40px; padding:0; color:white; border-color:white;">âœ•</button>
             </div>
 
             <div class="smart-checkin-stepper"
@@ -283,7 +285,7 @@
     </div>
 
     <div id="print-area"></div>
-    <div id="sync-status" class="sync-ok">● Firebase Connected</div>
+    <div id="sync-status" class="sync-ok">â— Firebase Connected</div>
 
     <script type="module" src="restaurant_desk_app.js?v=2.0"></script>
 </body>
