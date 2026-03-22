@@ -357,16 +357,15 @@ function startListeners() {
 async function init() {
     startClock();
 
-    // Auth Check
+    // Auth Check — note: this is a plain function, not a class method,
+    // so we directly call the data/listener functions.
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
             window.location.href = 'index.html';
         } else {
-            this.bootApp();
-            // The original code had these lines here, but the provided snippet implies they should be handled by bootApp or elsewhere.
-            // await loadInitialData();
-            // startListeners();
-            // showToast('Desk connected to Cloud', 'success');
+            await loadInitialData();
+            startListeners();
+            showToast('Desk connected to Cloud ☁️', 'success');
         }
     });
 }

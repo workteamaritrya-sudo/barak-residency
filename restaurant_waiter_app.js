@@ -688,7 +688,7 @@ async function placeOrder() {
                 : Number(total),
             total_price: Number(total),
             status: 'preparing',
-            orderType: 'Table',
+            orderType: 'table',
             guestName: currentGuestName || 'Walk-in',
             pax: currentPax || 1,
             timestamp: Date.now()

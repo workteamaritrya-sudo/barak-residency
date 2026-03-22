@@ -325,89 +325,140 @@ async function loadHistory(uid) {
 function startHotelNotifListener() {
     if (hotelNotifUnsub) hotelNotifUnsub();
 
-    // Listen to BOTH serviceRequests and checkoutClearance
+    // Hotel: service requests (pending housekeep, etc.)
     const serviceUnsub = onSnapshot(
         query(collection(db, 'serviceRequests'), where('status', '==', 'pending'), orderBy('timestamp', 'desc'), limit(30)),
         snap => {
             const tasks = snap.docs.map(d => ({ id: d.id, ...d.data(), _col: 'serviceRequests' }));
-            renderHotelTasks(tasks, 'service');
+            _hotelServiceTasks = tasks;
+            _renderHotelCombined();
         }, err => console.warn('[HotelNotif]', err)
     );
 
+    // Hotel: checkout clearance requests
     const checkoutUnsub = onSnapshot(
         query(collection(db, 'checkoutClearance'), where('staffStatus', '==', 'pending'), orderBy('timestamp', 'desc'), limit(20)),
         snap => {
             const tasks = snap.docs.map(d => ({ id: d.id, ...d.data(), _col: 'checkoutClearance' }));
-            renderHotelTasks(tasks, 'checkout');
+            _hotelCheckoutTasks = tasks;
+            _renderHotelCombined();
         }, err => console.warn('[CheckoutNotif]', err)
     );
 
-    hotelNotifUnsub = () => { serviceUnsub(); checkoutUnsub(); };
+    // Hotel: ROOM food orders that are 'Ready' — hotel staff picks up and delivers to room
+    const roomOrderUnsub = onSnapshot(
+        query(collection(db, 'orders'),
+            where('orderType', '==', 'room'),
+            where('status', 'in', ['Ready', 'Pending', 'Kitchen']),
+            orderBy('timestamp', 'desc'), limit(30)),
+        snap => {
+            _hotelRoomOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // Alert on newly ready room orders
+            _hotelRoomOrders.filter(o => o.status === 'Ready').forEach(o => {
+                if (!seenNotifIds.has(o.id + '_room_ready')) {
+                    seenNotifIds.add(o.id + '_room_ready');
+                    localStorage.setItem('sr_seen_ids', JSON.stringify([...seenNotifIds]));
+                    playAlertSound();
+                    showSystemNotification('🍽️ Room Food Ready!',
+                        `Order for Room ${o.roomNumber || '?'} — ${(o.items||[]).map(i=>i.name).slice(0,2).join(', ')}`);
+                }
+            });
+
+            _renderHotelCombined();
+        }, err => console.warn('[HotelRoomOrder]', err)
+    );
+
+    hotelNotifUnsub = () => { serviceUnsub(); checkoutUnsub(); roomOrderUnsub(); };
 }
 
-// Combined render for hotel notifications
-let _hotelServiceTasks = [];
+// Combined render for hotel (service tasks + checkout + room food orders)
+let _hotelServiceTasks  = [];
 let _hotelCheckoutTasks = [];
+let _hotelRoomOrders    = [];
 
-function renderHotelTasks(tasks, type) {
-    if (type === 'service')  _hotelServiceTasks  = tasks;
-    if (type === 'checkout') _hotelCheckoutTasks = tasks;
-
+function _renderHotelCombined() {
     const combined = [..._hotelCheckoutTasks, ..._hotelServiceTasks];
+    renderHotelTasks(combined, 'all');
+
+    // Render room food orders in hotel task inbox as a separate block
     const container = document.getElementById('hotel-notif-list');
-    const badge = document.getElementById('hotel-notif-count');
-    const pulse = document.getElementById('hotel-pulse');
-
-    // Check for NEW tasks and play sound
-    let hasNew = false;
-    combined.forEach(t => {
-        if (!seenNotifIds.has(t.id)) {
-            hasNew = true;
-            seenNotifIds.add(t.id);
-            showSystemNotification(
-                t._col === 'checkoutClearance' ? '🔴 Checkout Clearance Required' : '🧹 Task Alert',
-                t.message || t.type || 'New task from reception'
-            );
-        }
-    });
-    if (hasNew) {
-        playAlertSound();
-        localStorage.setItem('sr_seen_ids', JSON.stringify([...seenNotifIds]));
-    }
-
-    const count = combined.length;
-    if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
-    if (pulse) pulse.style.display = count > 0 ? 'inline-block' : 'none';
-
     if (!container) return;
-    if (count === 0) {
-        container.innerHTML = '<div class="empty-state">No pending tasks. All clear 👍</div>';
-        return;
-    }
 
-    container.innerHTML = combined.map(t => {
-        const isCheckout = t._col === 'checkoutClearance';
-        const time = t.timestamp ? new Date(t.timestamp?.seconds ? t.timestamp.seconds*1000 : t.timestamp).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '—';
-        const typeClass = isCheckout ? 'type-checkout' : (t.type === 'housekeeping' ? 'type-housekeep' : 'type-service');
-        const icon = isCheckout ? '🔴' : (t.type === 'housekeeping' ? '🧹' : '🛎️');
-        const title = isCheckout ? `CHECKOUT CLEARANCE — Room ${t.roomNumber}` : `${icon} ${(t.type || 'Service').toUpperCase()} — Room ${t.roomNumber}`;
-
-        const actions = isCheckout
-            ? `<button class="btn-notif btn-done"  onclick="markCheckoutClear('${t.id}', '${t.roomNumber}')">✅ Room Clear</button>
-               <button class="btn-notif btn-issue" onclick="markCheckoutIssue('${t.id}', '${t.roomNumber}')">⚠️ Issue Found</button>`
-            : `<button class="btn-notif btn-done"  onclick="markServiceDone('${t.id}')">✅ Mark Done</button>
-               <button class="btn-notif btn-dismiss" onclick="dismissTask('${t.id}', 'serviceRequests')">Dismiss</button>`;
-
-        return `<div class="notif-item ${typeClass}" id="ntask-${t.id}">
+    const roomOrderHtml = _hotelRoomOrders.map(o => {
+        const isReady = o.status === 'Ready';
+        const time = o.timestamp ? new Date(o.timestamp?.seconds ? o.timestamp.seconds*1000 : o.timestamp).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '—';
+        const items = (o.items||[]).slice(0,3).map(i=>i.name).join(', ');
+        const typeClass = isReady ? 'type-ready' : 'type-order';
+        return `<div class="notif-item ${typeClass}" id="hro-${o.id}">
             <div class="notif-header">
-                <span class="notif-title">${title}</span>
+                <span class="notif-title">🍽️ Room ${o.roomNumber || '?'} Order</span>
                 <span class="notif-time">${time}</span>
             </div>
-            <div class="notif-msg">${t.message || t.note || 'New task from reception desk'}</div>
-            <div class="notif-actions">${actions}</div>
+            <div class="notif-msg">${items || 'Food order'}</div>
+            <div style="font-size:0.72rem;font-weight:700;color:${isReady ? 'var(--green)' : '#FBBF24'};margin-bottom:0.6rem;">${isReady ? 'READY — Pick up from Kitchen' : (o.status||'PENDING').toUpperCase()}</div>
+            <div class="notif-actions">
+                ${isReady ? `<button class="btn-notif btn-done" onclick="markOrderDelivered('${o.id}')">✅ Delivered to Room</button>` : '<span style="font-size:0.7rem;color:var(--text-mute);">Kitchen preparing…</span>'}
+            </div>
         </div>`;
     }).join('');
+
+    if (roomOrderHtml) {
+        container.innerHTML += roomOrderHtml;
+    }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESTAURANT STAFF NOTIFICATIONS — TABLE orders only (NOT room orders)
+// Listens to: orders with orderType='table'|'pickup'|'guest' that are Kitchen/Ready
+// ─────────────────────────────────────────────────────────────────────────────
+let _seenOrderIds = new Set(JSON.parse(localStorage.getItem('order_seen_ids') || '[]'));
+
+function startRestNotifListener() {
+    if (restNotifUnsub) restNotifUnsub();
+
+    // Restaurant: TABLE food orders only (not room orders)
+    const tableOrderSub = onSnapshot(
+        query(collection(db, 'orders'),
+            where('orderType', 'in', ['table', 'pickup', 'guest']),
+            where('status', 'in', ['Ready', 'Pending', 'Kitchen']),
+            orderBy('timestamp', 'desc'), limit(40)),
+        snap => {
+            const orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // Alert on newly ready table orders
+            orders.filter(o => o.status === 'Ready').forEach(o => {
+                if (!_seenOrderIds.has(o.id + '_ready')) {
+                    _seenOrderIds.add(o.id + '_ready');
+                    localStorage.setItem('order_seen_ids', JSON.stringify([..._seenOrderIds]));
+                    playAlertSound();
+                    showSystemNotification('🍽️ Food Ready for Pickup!',
+                        `Order #${o.id.slice(-6)} for Table ${o.tableId || '?'} — ${(o.items||[]).map(i=>i.name).slice(0,2).join(', ')}`);
+                }
+            });
+
+            renderRestTasks(orders);
+        },
+        err => {
+            // Fallback: if compound query fails (index not yet created), fetch all active orders and filter client-side
+            console.warn('[RestNotif] Index may be missing, falling back to all orders:', err.message);
+            const allSub = onSnapshot(
+                query(collection(db, 'orders'), where('status', 'in', ['Ready', 'Pending', 'Kitchen']), orderBy('timestamp', 'desc'), limit(60)),
+                snap2 => {
+                    const allOrders = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+                    // Client-side filter: exclude room orders for restaurant staff
+                    const restOrders = allOrders.filter(o => o.orderType !== 'room');
+                    renderRestTasks(restOrders);
+                }
+            );
+            restNotifUnsub = () => allSub();
+        }
+    );
+
+    restNotifUnsub = () => tableOrderSub();
+}
+
+
 
 // ─── Hotel Task Actions ───────────────────────────────────────────────────────
 
@@ -475,40 +526,60 @@ window.dismissTask = async function (id, col) {
     } catch (e) { console.warn(e); }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RESTAURANT STAFF NOTIFICATIONS
-// Listens to: orders with status "Ready" (kitchen marked done)
-// Staff sees "pick up from kitchen" → marks "Delivered"
-// ─────────────────────────────────────────────────────────────────────────────
-let _seenOrderIds = new Set(JSON.parse(localStorage.getItem('order_seen_ids') || '[]'));
 
-function startRestNotifListener() {
-    if (restNotifUnsub) restNotifUnsub();
+// ─── renderHotelTasks — renders the combined hotel task inbox ─────────────────
+function renderHotelTasks(combined) {
+    const container = document.getElementById('hotel-notif-list');
+    const badge = document.getElementById('hotel-notif-count');
+    const pulse = document.getElementById('hotel-pulse');
 
-    // Listen to orders that are "ready" (kitchen done) — needs staff to pick up
-    const readySub = onSnapshot(
-        query(collection(db, 'orders'), where('status', 'in', ['Ready', 'Pending', 'Kitchen']), orderBy('timestamp', 'desc'), limit(40)),
-        snap => {
-            const orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Check for NEW tasks and play sound
+    let hasNew = false;
+    combined.forEach(t => {
+        if (!seenNotifIds.has(t.id)) {
+            hasNew = true;
+            seenNotifIds.add(t.id);
+            showSystemNotification(
+                t._col === 'checkoutClearance' ? '🔴 Checkout Clearance Required' : '🧹 Task Alert',
+                t.message || t.type || 'New task from reception'
+            );
+        }
+    });
+    if (hasNew) {
+        playAlertSound();
+        localStorage.setItem('sr_seen_ids', JSON.stringify([...seenNotifIds]));
+    }
 
-            // Alert on newly ready orders
-            orders.filter(o => o.status === 'Ready').forEach(o => {
-                if (!_seenOrderIds.has(o.id + '_ready')) {
-                    _seenOrderIds.add(o.id + '_ready');
-                    localStorage.setItem('order_seen_ids', JSON.stringify([..._seenOrderIds]));
-                    playAlertSound();
-                    showSystemNotification('🍽️ Food Ready for Pickup!',
-                        `Order #${o.id} for ${o.guestName || 'Guest'} — Room ${o.roomNumber || o.tableId || '?'}`);
-                }
-            });
+    const count = combined.length;
+    if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
+    if (pulse) pulse.style.display = count > 0 ? 'inline-block' : 'none';
 
-            renderRestTasks(orders);
-        },
-        err => console.warn('[RestNotif]', err)
-    );
+    if (!container) return;
+    if (count === 0) {
+        container.innerHTML = '<div class="empty-state">No pending tasks. All clear 👍</div>';
+        return;
+    }
 
-    restNotifUnsub = () => readySub();
+    container.innerHTML = combined.map(t => {
+        const isCheckout = t._col === 'checkoutClearance';
+        const time = t.timestamp ? new Date(t.timestamp?.seconds ? t.timestamp.seconds*1000 : t.timestamp).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '—';
+        const typeClass = isCheckout ? 'type-checkout' : (t.type === 'housekeeping' ? 'type-housekeep' : 'type-service');
+        const icon = isCheckout ? '🔴' : (t.type === 'housekeeping' ? '🧹' : '🛎️');
+        const title = isCheckout ? `CHECKOUT CLEARANCE — Room ${t.roomNumber}` : `${icon} ${(t.type || 'Service').toUpperCase()} — Room ${t.roomNumber}`;
+        const actions = isCheckout
+            ? `<button class="btn-notif btn-done"  onclick="markCheckoutClear('${t.id}','${t.roomNumber}')">✅ Room Clear</button>
+               <button class="btn-notif btn-issue" onclick="markCheckoutIssue('${t.id}','${t.roomNumber}')">⚠️ Issue Found</button>`
+            : `<button class="btn-notif btn-done"  onclick="markServiceDone('${t.id}')">✅ Mark Done</button>
+               <button class="btn-notif btn-dismiss" onclick="dismissTask('${t.id}','serviceRequests')">Dismiss</button>`;
+        return `<div class="notif-item ${typeClass}" id="ntask-${t.id}">
+            <div class="notif-header"><span class="notif-title">${title}</span><span class="notif-time">${time}</span></div>
+            <div class="notif-msg">${t.message || t.note || 'New task from reception desk'}</div>
+            <div class="notif-actions">${actions}</div>
+        </div>`;
+    }).join('');
 }
+
+
 
 function renderRestTasks(orders) {
     const container = document.getElementById('rest-notif-list');
