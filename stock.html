@@ -21,7 +21,7 @@
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Inter',sans-serif; background:var(--bg); color:#fff; min-height:100vh; }
 
-        /* â”€â”€ Top Bar â”€â”€ */
+        /* ── Top Bar ── */
         .topbar {
             background:var(--surface); border-bottom:1px solid var(--border);
             padding:1rem 1.5rem; display:flex; align-items:center;
@@ -30,10 +30,10 @@
         .topbar-brand { font-family:'Cormorant Garamond',serif; color:var(--gold); font-size:1.3rem; letter-spacing:3px; }
         .topbar-sub { font-size:0.6rem; letter-spacing:3px; color:var(--text-mute); text-transform:uppercase; }
 
-        /* â”€â”€ Container â”€â”€ */
+        /* ── Container ── */
         .container { max-width:960px; margin:0 auto; padding:1.5rem 1rem 6rem; }
 
-        /* â”€â”€ Stats Row â”€â”€ */
+        /* ── Stats Row ── */
         .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.5rem; }
         .stat-card {
             background:var(--surface); border:1px solid var(--border); border-radius:16px;
@@ -42,7 +42,7 @@
         .stat-card h4 { font-size:0.6rem; letter-spacing:2px; color:var(--text-mute); text-transform:uppercase; margin-bottom:0.6rem; }
         .stat-card .sv { font-size:1.8rem; font-weight:100; }
 
-        /* â”€â”€ Add Item Form (Admin Only) â”€â”€ */
+        /* ── Add Item Form (Admin Only) ── */
         .add-section {
             background:var(--surface); border:1px solid var(--gold-border);
             border-radius:20px; padding:1.5rem; margin-bottom:1.5rem;
@@ -68,7 +68,7 @@
         }
         .btn-add:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(212,175,55,0.3); }
 
-        /* â”€â”€ Search / Filter â”€â”€ */
+        /* ── Search / Filter ── */
         .filter-row {
             display:flex; gap:0.8rem; margin-bottom:1.2rem; flex-wrap:wrap;
         }
@@ -82,7 +82,7 @@
             color:#fff; padding:0.7rem 1rem; font-family:'Inter',sans-serif; font-size:0.85rem;
         }
 
-        /* â”€â”€ Stock Table â”€â”€ */
+        /* ── Stock Table ── */
         .stock-table-wrap { overflow-x:auto; }
         table { width:100%; border-collapse:collapse; font-size:0.82rem; }
         thead th {
@@ -101,7 +101,7 @@
         .pill-low     { background:rgba(245,158,11,0.12); color:var(--amber); border:1px solid rgba(245,158,11,0.3); }
         .pill-critical{ background:rgba(239,68,68,0.12); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
 
-        /* â”€â”€ Action buttons â”€â”€ */
+        /* ── Action buttons ── */
         .btn-use {
             padding:0.35rem 0.9rem; border-radius:8px; font-size:0.68rem; font-weight:700;
             letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:0.2s;
@@ -115,7 +115,7 @@
         }
         .btn-del:hover { background:rgba(239,68,68,0.25); }
 
-        /* â”€â”€ Toast â”€â”€ */
+        /* ── Toast ── */
         .toast-container { position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999; display:flex; flex-direction:column; gap:0.5rem; }
         .toast {
             padding:0.75rem 1.2rem; border-radius:10px; font-weight:600; font-size:0.82rem;
@@ -127,7 +127,7 @@
 
         @keyframes fadeUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
 
-        /* â”€â”€ Auth Overlay â”€â”€ */
+        /* ── Auth Overlay ── */
         #auth-overlay {
             position:fixed; inset:0; background:var(--bg);
             display:flex; align-items:center; justify-content:center;
@@ -147,8 +147,6 @@
         }
         #auth-msg { font-size:0.78rem; color:var(--red); margin-top:0.8rem; }
     </style>
-
-    <link rel="icon" href="br.png" type="image/png">
 </head>
 <body>
 
@@ -156,7 +154,7 @@
 <div id="auth-overlay">
     <div class="auth-card">
         <h2>BARAK RESIDENCY</h2>
-        <p>Stock Management Â· Sign In</p>
+        <p>Stock Management · Sign In</p>
         <input type="email" id="auth-email" placeholder="staff@barakresidency.in"
             style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:12px;color:#fff;padding:0.8rem 1rem;font-size:0.85rem;margin-bottom:0.8rem;">
         <input type="password" id="auth-pass" placeholder="Password"
@@ -198,7 +196,7 @@
 
     <!-- Add Item (Admin Only) -->
     <div class="add-section" id="add-section" style="display:none;">
-        <h3>âž• Add Stock Item</h3>
+        <h3>➕ Add Stock Item</h3>
         <div class="form-row">
             <input type="text" id="add-name" placeholder="Item Name (e.g. Rice)">
             <select id="add-category">
@@ -226,7 +224,7 @@
 
     <!-- Filter / Search -->
     <div class="filter-row">
-        <input class="search-input" type="text" id="stock-search" placeholder="ðŸ”  Search itemsâ€¦" oninput="renderStock()">
+        <input class="search-input" type="text" id="stock-search" placeholder="🔍  Search items…" oninput="renderStock()">
         <select class="filter-select" id="stock-cat-filter" onchange="renderStock()">
             <option value="">All Categories</option>
             <option value="Grains & Rice">Grains &amp; Rice</option>
@@ -264,7 +262,7 @@
                 </tr>
             </thead>
             <tbody id="stock-tbody">
-                <tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-mute);">Loading inventoryâ€¦</td></tr>
+                <tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-mute);">Loading inventory…</td></tr>
             </tbody>
         </table>
     </div>

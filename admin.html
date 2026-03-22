@@ -83,8 +83,6 @@
             setTimeout(tick, 0); 
         })();
     </script>
-
-    <link rel="icon" href="br.png" type="image/png">
 </head>
 <body>
 
@@ -101,16 +99,16 @@
         </div>
     </div>
 
-    <div class="nav-item active" onclick="window.switchAdminTab('dashboard-view', this)"><i>ðŸ </i> Dashboard</div>
-    <div class="nav-item" onclick="window.switchAdminTab('hotel-view', this)"><i>ðŸ›Žï¸</i> Hotel Overview</div>
-    <div class="nav-item" onclick="window.switchAdminTab('rest-view', this)"><i>ðŸ½ï¸</i> Restaurant Stats</div>
-    <div class="nav-item" onclick="window.switchAdminTab('finance-view', this)"><i>ðŸ“‹</i> Financial Reports</div>
-    <div class="nav-item" onclick="window.switchAdminTab('attendance-view', this)"><i>ðŸ•</i> Staff Attendance</div>
-    <div class="nav-item" onclick="window.switchAdminTab('staff-mgmt-view', this)"><i>ðŸ‘¥</i> Staff Management</div>
-    <div class="nav-item" onclick="window.switchAdminTab('stock-view', this)"><i>ðŸ“¦</i> Stock Overview</div>
+    <div class="nav-item active" onclick="window.switchAdminTab('dashboard-view', this)"><i>🏠</i> Dashboard</div>
+    <div class="nav-item" onclick="window.switchAdminTab('hotel-view', this)"><i>🛎️</i> Hotel Overview</div>
+    <div class="nav-item" onclick="window.switchAdminTab('rest-view', this)"><i>🍽️</i> Restaurant Stats</div>
+    <div class="nav-item" onclick="window.switchAdminTab('finance-view', this)"><i>📋</i> Financial Reports</div>
+    <div class="nav-item" onclick="window.switchAdminTab('attendance-view', this)"><i>🕐</i> Staff Attendance</div>
+    <div class="nav-item" onclick="window.switchAdminTab('staff-mgmt-view', this)"><i>👥</i> Staff Management</div>
+    <div class="nav-item" onclick="window.switchAdminTab('stock-view', this)"><i>📦</i> Stock Overview</div>
     
     <div style="margin-top: auto;">
-        <div class="nav-item" onclick="window.handleLogout()"><i>ðŸšª</i> Sign Out</div>
+        <div class="nav-item" onclick="window.handleLogout()"><i>🚪</i> Sign Out</div>
     </div>
 </aside>
 
@@ -130,12 +128,12 @@
         <div class="stat-card">
             <h4>Room Occupancy</h4>
             <div class="val" id="stat-rooms">0 / 26</div>
-            <div class="stat-trend trend-up">â†‘ Live Sync</div>
+            <div class="stat-trend trend-up">↑ Live Sync</div>
         </div>
         <div class="stat-card">
             <h4>Live Revenue</h4>
-            <div class="val" id="stat-revenue">â‚¹ 0</div>
-            <div class="stat-trend trend-up">â†‘ Real-time</div>
+            <div class="val" id="stat-revenue">₹ 0</div>
+            <div class="stat-trend trend-up">↑ Real-time</div>
         </div>
         <div class="stat-card">
             <h4>Active Orders</h4>
@@ -150,7 +148,7 @@
         <div class="stat-card">
             <h4>Staff Present</h4>
             <div class="val" id="stat-staff">0</div>
-            <div class="stat-trend" style="color:#A78BFA;">â†‘ Live Â· Today</div>
+            <div class="stat-trend" style="color:#A78BFA;">↑ Live · Today</div>
         </div>
     </div>
 
