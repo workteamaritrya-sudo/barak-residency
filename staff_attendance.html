@@ -388,6 +388,23 @@
     <!-- ═══ HOTEL STAFF PORTAL ═══ -->
     <div id="portal-hotel" class="portal-section active">
 
+        <!-- Place Order Button -->
+        <button
+            id="btn-open-waiter"
+            onclick="openHotelWaiter()"
+            style="
+                width:100%; padding:1.1rem; margin-bottom:1.2rem;
+                border:none; border-radius:20px; cursor:pointer;
+                background:linear-gradient(135deg,#C9A227,#D4AF37);
+                color:#000; font-family:'Inter',sans-serif;
+                font-size:0.9rem; font-weight:800; letter-spacing:2px;
+                text-transform:uppercase; transition:0.25s;
+                box-shadow:0 6px 20px rgba(212,175,55,0.3);
+            "
+            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 28px rgba(212,175,55,0.4)'"
+            onmouseout="this.style.transform=''; this.style.boxShadow='0 6px 20px rgba(212,175,55,0.3)'"
+        >🍽️&nbsp; Place Room Order</button>
+
         <!-- Active Notifications -->
         <div class="notif-card">
             <h3>
@@ -430,10 +447,55 @@
     <button class="btn-logout" onclick="staffLogout()">🚪 Sign Out</button>
 </div>
 
-<!-- Hidden audio for notification alert (plays even when screen is off via Web Push later) -->
+<!-- Hidden audio for notification alert -->
 <audio id="notif-audio" preload="auto">
     <source src="receptionnotificationalert.mp3.mpeg" type="audio/mpeg">
 </audio>
+
+<!-- ══════ Hotel Waiter Full-Screen Overlay ══════ -->
+<div id="waiter-overlay" style="
+    display:none;
+    position:fixed; inset:0; z-index:10000;
+    background:#050B18;
+    flex-direction:column;
+    animation:slideUp 0.32s cubic-bezier(.22,1,.36,1);
+">
+    <!-- Top bar -->
+    <div style="
+        display:flex; align-items:center; justify-content:space-between;
+        padding:0.9rem 1.2rem;
+        background:rgba(212,175,55,0.07);
+        border-bottom:1px solid rgba(212,175,55,0.2);
+        flex-shrink:0;
+    ">
+        <span style="font-family:'Cormorant Garamond',serif; font-size:1.2rem; color:#D4AF37; letter-spacing:3px; font-weight:600;">ROOM ORDER</span>
+        <button
+            onclick="closeHotelWaiter()"
+            style="
+                background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4);
+                color:#FCA5A5; border-radius:10px; padding:0.5rem 1.1rem;
+                font-family:'Inter',sans-serif; font-size:0.8rem; font-weight:700;
+                letter-spacing:1px; cursor:pointer; transition:0.2s;
+            "
+            onmouseover="this.style.background='rgba(239,68,68,0.3)'"
+            onmouseout="this.style.background='rgba(239,68,68,0.15)'"
+        >✕ Close</button>
+    </div>
+    <!-- Iframe loads hotel_waiter.html in full -->
+    <iframe
+        id="waiter-iframe"
+        src=""
+        style="flex:1; border:none; width:100%; height:100%;"
+        allow="camera; microphone"
+    ></iframe>
+</div>
+
+<style>
+@keyframes slideUp {
+    from { opacity:0; transform:translateY(40px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+</style>
 
 <script>
     /* ── Tab switcher (non-module) ── */
@@ -459,6 +521,52 @@
         document.getElementById('pbtn-hotel').classList.toggle('active', p === 'hotel');
         document.getElementById('pbtn-restaurant').classList.toggle('active', p === 'restaurant');
     }
+
+    /* ── Hotel Waiter Overlay ── */
+    function openHotelWaiter() {
+        const overlay = document.getElementById('waiter-overlay');
+        const iframe  = document.getElementById('waiter-iframe');
+
+        // Lazy-load: only set src the first time (keeps session alive on re-open)
+        if (!iframe.src || iframe.src === window.location.href || iframe.src === 'about:blank') {
+            iframe.src = 'hotel_waiter.html';
+        }
+
+        overlay.style.display = 'flex';
+        // Restart animation
+        overlay.style.animation = 'none';
+        requestAnimationFrame(() => {
+            overlay.style.animation = 'slideUp 0.32s cubic-bezier(.22,1,.36,1)';
+        });
+
+        // Prevent body scroll while overlay is open
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeHotelWaiter() {
+        const overlay = document.getElementById('waiter-overlay');
+        overlay.style.animation = 'none';
+        overlay.style.opacity   = '0';
+        overlay.style.transform = 'translateY(30px)';
+        overlay.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            overlay.style.opacity   = '';
+            overlay.style.transform = '';
+            overlay.style.transition = '';
+        }, 220);
+
+        document.body.style.overflow = '';
+    }
+
+    // Close with ESC key
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            const overlay = document.getElementById('waiter-overlay');
+            if (overlay && overlay.style.display === 'flex') closeHotelWaiter();
+        }
+    });
 </script>
 
 <script type="module" src="staff_attendance.js?v=2.0"></script>
