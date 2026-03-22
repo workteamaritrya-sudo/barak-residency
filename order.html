@@ -356,9 +356,10 @@
         .cart-qty-ctrl button:hover { background: rgba(212,175,55,0.2); }
         .cart-qty-val { width: 24px; text-align: center; font-weight: 800; font-size: 0.95rem; }
         .cart-panel-footer {
-            padding: 1.5rem;
+            padding: 1.5rem 1.5rem 100px 1.5rem; /* Enhanced bottom clearance for mobile navigation bars */
             border-top: 1px solid var(--border-glass);
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
         }
         .cart-panel-total {
             display: flex;

@@ -3873,6 +3873,25 @@ class PMSApp {
             return;
         }
 
+        // ── Checkout Clearance Gate ────────────────────────────────
+        // If a clearance was requested but not yet approved by staff, block checkout
+        if (this._pendingClearanceId) {
+            const { doc, getDoc } = window.firebaseHooks;
+            const snap = await getDoc(doc(window.firebaseFS, 'checkoutClearance', this._pendingClearanceId));
+            if (snap.exists()) {
+                const data = snap.data();
+                if (data.staffStatus === 'pending') {
+                    this.showToast('⏳ Waiting for staff to clear the room first.', 'warning');
+                    return;
+                }
+                if (data.staffStatus === 'issue') {
+                    this.showToast(`⚠️ Issue found by staff: ${data.issueNote || 'Please resolve before checkout.'}`, 'error');
+                    return;
+                }
+                // 'cleared' — allow proceed
+            }
+        }
+
         this.showToast("Saving Final Invoice & Clearing Room...", "info");
 
         try {
@@ -3925,6 +3944,95 @@ class PMSApp {
     }
 
     generateInvoice() { this.generateFinalBill(); }
+
+    // ── 🧹 Raise Housekeeping Request from Reception ─────────────────────────
+    async raiseHousekeepingRequest() {
+        if (!this.selectedRoomId) {
+            this.showToast('Please select a room first.', 'warning');
+            return;
+        }
+        const room = this.db.rooms[this.selectedRoomId] || {};
+        const note = prompt(`Housekeeping note for Room ${this.selectedRoomId} (optional):`) || 'General housekeeping required';
+        try {
+            const { collection, addDoc, serverTimestamp } = window.firebaseHooks;
+            await addDoc(collection(window.firebaseFS, 'serviceRequests'), {
+                type:       'housekeeping',
+                roomNumber: String(this.selectedRoomId),
+                guestName:  room.guestName || 'Guest',
+                message:    note,
+                status:     'pending',
+                source:     'reception',
+                timestamp:  serverTimestamp()
+            });
+            this.showToast(`🧹 Housekeeping request sent to hotel staff for Room ${this.selectedRoomId}`, 'success');
+        } catch (e) {
+            this.showToast('Failed to raise request: ' + e.message, 'error');
+        }
+    }
+
+    // ── 🔴 Request Checkout Clearance (sends to hotel staff) ─────────────────
+    async requestCheckoutClearance() {
+        if (!this.selectedRoomId) {
+            this.showToast('Please select an occupied room first.', 'warning');
+            return;
+        }
+        const room = this.db.rooms[this.selectedRoomId] || {};
+        try {
+            const { collection, addDoc, onSnapshot, serverTimestamp, query, where, orderBy, limit } = window.firebaseHooks;
+
+            // Write a clearance request — hotel staff app will see and must respond
+            const ref = await addDoc(collection(window.firebaseFS, 'checkoutClearance'), {
+                roomNumber:  String(this.selectedRoomId),
+                guestName:   room.guestName || 'Guest',
+                message:     `Checkout clearance required for Room ${this.selectedRoomId} — ${room.guestName || 'Guest'}`,
+                staffStatus: 'pending',
+                requestedAt: serverTimestamp(),
+                timestamp:   serverTimestamp(),
+                source:      'reception'
+            });
+
+            this._pendingClearanceId = ref.id;
+
+            // Show the gate UI
+            const gate = document.getElementById('cc-checkout-gate');
+            const reqBtn = document.getElementById('cc-checkout-req-btn');
+            const finalBtn = document.getElementById('cc-finalize-btn');
+            if (gate) gate.style.display = 'block';
+            if (reqBtn) { reqBtn.textContent = '⏳ Clearance Requested'; reqBtn.disabled = true; }
+
+            this.showToast(`🔴 Checkout clearance sent to hotel staff for Room ${this.selectedRoomId}`, 'success');
+
+            // Live listener — when staff responds, update the gate
+            if (this._clearanceUnsub) this._clearanceUnsub();
+            this._clearanceUnsub = onSnapshot(
+                doc(window.firebaseFS, 'checkoutClearance', ref.id),
+                snap => {
+                    if (!snap.exists()) return;
+                    const data = snap.data();
+                    const statusEl = document.getElementById('cc-gate-status');
+
+                    if (data.staffStatus === 'cleared') {
+                        if (statusEl) statusEl.innerHTML = `<span style="color:#22C55E;">✅ Cleared by ${data.clearedBy || 'Staff'} — Checkout Unlocked</span>`;
+                        if (gate) gate.style.borderColor = 'rgba(34,197,94,0.4)';
+                        // Unlock the finalize button
+                        if (finalBtn) { finalBtn.style.display = 'flex'; finalBtn.style.opacity = '1'; }
+                        if (reqBtn) reqBtn.style.display = 'none';
+                        // Also add a notification at reception
+                        this.showToast('✅ Room cleared by staff — Checkout Finalize is now unlocked!', 'success');
+                        if (this._clearanceUnsub) this._clearanceUnsub();
+                    } else if (data.staffStatus === 'issue') {
+                        if (statusEl) statusEl.innerHTML = `<span style="color:#EF4444;">⚠️ Issue: ${data.issueNote || 'Problem found — resolve first'}</span>`;
+                        if (gate) gate.style.borderColor = 'rgba(239,68,68,0.6)';
+                        if (reqBtn) { reqBtn.textContent = '↩️ Re-request After Fixing'; reqBtn.disabled = false; }
+                        this._pendingClearanceId = null;
+                        this.showToast(`⚠️ Staff found issue: ${data.issueNote || 'Problem in room'}`, 'error');
+                    }
+                }
+            );
+        } catch (e) {
+            this.showToast('Failed to request clearance: ' + e.message, 'error');
+        }
+    }
 
     renderKDS() {
         const grid = document.getElementById('kds-grid-container') || document.getElementById('kds-grid');
