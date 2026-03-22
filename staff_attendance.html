@@ -426,10 +426,27 @@
     <!-- ═══ RESTAURANT STAFF PORTAL ═══ -->
     <div id="portal-restaurant" class="portal-section">
 
+        <!-- Place Table Order Button -->
+        <button
+            id="btn-open-rest-waiter"
+            onclick="openRestWaiter()"
+            style="
+                width:100%; padding:1.1rem; margin-bottom:1.2rem;
+                border:none; border-radius:20px; cursor:pointer;
+                background:linear-gradient(135deg,#1a6e3c,#22C55E);
+                color:#fff; font-family:'Inter',sans-serif;
+                font-size:0.9rem; font-weight:800; letter-spacing:2px;
+                text-transform:uppercase; transition:0.25s;
+                box-shadow:0 6px 20px rgba(34,197,94,0.25);
+            "
+            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 28px rgba(34,197,94,0.4)'"
+            onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(34,197,94,0.25)'"
+        >🛎️&nbsp; Place Table Order</button>
+
         <!-- Active Food Orders (from kitchen) -->
         <div class="notif-card">
             <h3>
-                <span><span class="pulse-dot" id="rest-pulse" style="display:none;"></span>Food & Orders</span>
+                <span><span class="pulse-dot" id="rest-pulse" style="display:none;"></span>Food &amp; Orders</span>
                 <span class="badge-count" id="rest-notif-count" style="display:none;">0</span>
             </h3>
             <div id="rest-notif-list">
@@ -497,6 +514,41 @@
 }
 </style>
 
+<!-- ══════ Restaurant Waiter Full-Screen Overlay ══════ -->
+<div id="rest-waiter-overlay" style="
+    display:none;
+    position:fixed; inset:0; z-index:10001;
+    background:#050B18;
+    flex-direction:column;
+">
+    <div style="
+        display:flex; align-items:center; justify-content:space-between;
+        padding:0.9rem 1.2rem;
+        background:rgba(34,197,94,0.07);
+        border-bottom:1px solid rgba(34,197,94,0.2);
+        flex-shrink:0;
+    ">
+        <span style="font-family:'Cormorant Garamond',serif; font-size:1.2rem; color:#22C55E; letter-spacing:3px; font-weight:600;">TABLE ORDER</span>
+        <button
+            onclick="closeRestWaiter()"
+            style="
+                background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4);
+                color:#FCA5A5; border-radius:10px; padding:0.5rem 1.1rem;
+                font-family:'Inter',sans-serif; font-size:0.8rem; font-weight:700;
+                letter-spacing:1px; cursor:pointer; transition:0.2s;
+            "
+            onmouseover="this.style.background='rgba(239,68,68,0.3)'"
+            onmouseout="this.style.background='rgba(239,68,68,0.15)'"
+        >✕ Close</button>
+    </div>
+    <iframe
+        id="rest-waiter-iframe"
+        src=""
+        style="flex:1; border:none; width:100%; height:100%;"
+        allow="camera; microphone"
+    ></iframe>
+</div>
+
 <script>
     /* ── Tab switcher (non-module) ── */
     function showTab(tab) {
@@ -526,45 +578,49 @@
     function openHotelWaiter() {
         const overlay = document.getElementById('waiter-overlay');
         const iframe  = document.getElementById('waiter-iframe');
-
-        // Lazy-load: only set src the first time (keeps session alive on re-open)
         if (!iframe.src || iframe.src === window.location.href || iframe.src === 'about:blank') {
-            iframe.src = 'hotel_waiter.html';
+            iframe.src = 'hotel_waiter.html?embedded=1';
         }
-
         overlay.style.display = 'flex';
-        // Restart animation
         overlay.style.animation = 'none';
-        requestAnimationFrame(() => {
-            overlay.style.animation = 'slideUp 0.32s cubic-bezier(.22,1,.36,1)';
-        });
-
-        // Prevent body scroll while overlay is open
+        requestAnimationFrame(() => { overlay.style.animation = 'slideUp 0.32s cubic-bezier(.22,1,.36,1)'; });
         document.body.style.overflow = 'hidden';
     }
-
     function closeHotelWaiter() {
         const overlay = document.getElementById('waiter-overlay');
-        overlay.style.animation = 'none';
-        overlay.style.opacity   = '0';
-        overlay.style.transform = 'translateY(30px)';
+        overlay.style.opacity = '0'; overlay.style.transform = 'translateY(30px)';
         overlay.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+        setTimeout(() => { overlay.style.display='none'; overlay.style.opacity=''; overlay.style.transform=''; overlay.style.transition=''; }, 220);
+        document.body.style.overflow = '';
+    }
 
-        setTimeout(() => {
-            overlay.style.display = 'none';
-            overlay.style.opacity   = '';
-            overlay.style.transform = '';
-            overlay.style.transition = '';
-        }, 220);
-
+    /* ── Restaurant Waiter Overlay ── */
+    function openRestWaiter() {
+        const overlay = document.getElementById('rest-waiter-overlay');
+        const iframe  = document.getElementById('rest-waiter-iframe');
+        if (!iframe.src || iframe.src === window.location.href || iframe.src === 'about:blank') {
+            iframe.src = 'restaurant_waiter.html?embedded=1';
+        }
+        overlay.style.display = 'flex';
+        overlay.style.animation = 'none';
+        requestAnimationFrame(() => { overlay.style.animation = 'slideUp 0.32s cubic-bezier(.22,1,.36,1)'; });
+        document.body.style.overflow = 'hidden';
+    }
+    function closeRestWaiter() {
+        const overlay = document.getElementById('rest-waiter-overlay');
+        overlay.style.opacity = '0'; overlay.style.transform = 'translateY(30px)';
+        overlay.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+        setTimeout(() => { overlay.style.display='none'; overlay.style.opacity=''; overlay.style.transform=''; overlay.style.transition=''; }, 220);
         document.body.style.overflow = '';
     }
 
     // Close with ESC key
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
-            const overlay = document.getElementById('waiter-overlay');
-            if (overlay && overlay.style.display === 'flex') closeHotelWaiter();
+            const hw = document.getElementById('waiter-overlay');
+            if (hw && hw.style.display === 'flex') closeHotelWaiter();
+            const rw = document.getElementById('rest-waiter-overlay');
+            if (rw && rw.style.display === 'flex') closeRestWaiter();
         }
     });
 </script>

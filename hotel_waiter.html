@@ -69,7 +69,17 @@
         <div class="main-area">
             <div class="header">
                 <div class="identity">BARAK RESIDENCY — HOTEL WAITER</div>
-                <button onclick="window.handleLogout()" style="background:transparent; border:1px solid #EF4444; color:#FCA5A5; padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer;">Logout</button>
+                <!-- In embedded (staff portal overlay) mode, hide logout and show close button instead -->
+                <button id="btn-hw-logout"
+                    onclick="window.handleLogout()"
+                    style="background:transparent; border:1px solid #EF4444; color:#FCA5A5; padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer;">
+                    Logout
+                </button>
+                <button id="btn-hw-close"
+                    onclick="if(window.parent && window.parent.closeHotelWaiter) window.parent.closeHotelWaiter(); else window.history.back();"
+                    style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#FCA5A5; padding:0.4rem 0.9rem; border-radius:6px; cursor:pointer; font-weight:700; font-size:0.8rem;">
+                    ✕ Close
+                </button>
             </div>
             <div class="controls">
                 <select id="waiter-room-select" class="room-select" onchange="window.selectRoom(this.value)">
@@ -127,6 +137,18 @@
         </div>
     </div>
 
+    <!-- Embedded-mode detection: hide logout, show close button when loaded inside staff portal overlay -->
+    <script>
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('embedded') === '1') {
+                const logoutBtn = document.getElementById('btn-hw-logout');
+                const closeBtn  = document.getElementById('btn-hw-close');
+                if (logoutBtn) logoutBtn.style.display = 'none';
+                if (closeBtn)  closeBtn.style.display  = 'inline-block';
+            }
+        })();
+    </script>
     <script type="module" src="firebase-config.js"></script>
     <script type="module" src="firebase-sync.js"></script>
     <script type="module" src="hotel_waiter_app.js"></script>

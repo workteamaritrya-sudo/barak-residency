@@ -442,7 +442,7 @@ window.placeOrder = async function() {
                 total_price: total,
                 status: 'Pending',
                 timestamp: serverTimestamp(),
-                orderType: 'Room'
+                orderType: 'room'
             };
             await setDoc(doc(db, 'orders', orderId), orderObj);
             showToast(`Order ${orderId} placed!`, 'success');

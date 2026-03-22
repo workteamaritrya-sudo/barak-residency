@@ -25,7 +25,9 @@ let activeOrders = [];
 let ledgerEntries = [];
 let totalRevenue = 0;
 let menu = [];
-let staffAttendanceRecords = []; // NEW
+let staffAttendanceRecords = [];
+let staffProfiles = [];
+let stockItems = [];
 
 // --- Real-time Listeners ---
 function startListeners() {
@@ -67,6 +69,20 @@ function startListeners() {
 
     onSnapshot(collection(db, 'menuItems'), snap => {
         menu = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    });
+
+    // 5. Staff Profiles (for Staff Management tab)
+    onSnapshot(collection(db, 'staffProfiles'), snap => {
+        staffProfiles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const view = document.getElementById('staff-mgmt-view');
+        if (view && view.style.display !== 'none') renderStaffMgmtView();
+    });
+
+    // 6. Stock (live inventory)
+    onSnapshot(collection(db, 'stock'), snap => {
+        stockItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const view = document.getElementById('stock-view');
+        if (view && view.style.display !== 'none') renderStockAdminView();
     });
 }
 
@@ -132,6 +148,8 @@ window.switchAdminTab = function(tabId, el) {
     if (tabId === 'rest-view')       { title.innerText = "RESTAURANT ANALYTICS"; renderRestView(); }
     if (tabId === 'finance-view')    { title.innerText = "FINANCIAL INTELLIGENCE"; renderFinanceView(); }
     if (tabId === 'attendance-view') { title.innerText = "STAFF ATTENDANCE REPORTS"; renderAttendanceView(); }
+    if (tabId === 'staff-mgmt-view') { title.innerText = "STAFF MANAGEMENT"; renderStaffMgmtView(); }
+    if (tabId === 'stock-view')      { title.innerText = "STOCK & INVENTORY"; renderStockAdminView(); }
 };
 
 function renderHotelView() {
@@ -336,6 +354,142 @@ window.exportAttendanceCSV = function () {
     a.click();
     URL.revokeObjectURL(url);
 };
+
+// ─── Staff Management View ───────────────────────────────────────────────────
+function renderStaffMgmtView() {
+    const container = document.getElementById('staff-mgmt-view');
+    if (!container) return;
+
+    const teamColor = { hotel: '#D4AF37', restaurant: '#22C55E', both: '#A78BFA' };
+    const sortedProfiles = [...staffProfiles].sort((a,b) => (a.name||'').localeCompare(b.name||''));
+
+    container.innerHTML = `
+    <style>
+        .staff-card { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:16px; padding:1.2rem 1.5rem; display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; transition:0.2s; }
+        .staff-card:hover { background:rgba(255,255,255,0.03); }
+        .staff-avatar { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1rem; flex-shrink:0; }
+        .btn-remove { padding:0.4rem 0.9rem; border-radius:8px; font-size:0.7rem; font-weight:700; letter-spacing:1px; cursor:pointer; background:rgba(239,68,68,0.1); color:#EF4444; border:1px solid rgba(239,68,68,0.3); transition:0.2s; }
+        .btn-remove:hover { background:rgba(239,68,68,0.25); }
+        .team-pill { padding:2px 10px; border-radius:20px; font-size:0.62rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+    </style>
+
+    <div class="analytics-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+            <h3>Staff Roster (${sortedProfiles.length} staff)</h3>
+            <a href="staff_attendance.html" target="_blank" style="font-size:0.75rem;color:var(--gold);opacity:0.7;text-decoration:none;">➕ Register New Staff →</a>
+        </div>
+        ${sortedProfiles.length === 0 ? '<div style="text-align:center;opacity:0.3;padding:3rem;">No staff registered yet</div>' :
+        sortedProfiles.map(s => {
+            const initial = (s.name || '?').charAt(0).toUpperCase();
+            const team = s.team || 'hotel';
+            const col = teamColor[team] || '#D4AF37';
+            const regDate = s.registeredAt?.seconds
+                ? new Date(s.registeredAt.seconds * 1000).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
+                : '—';
+            return `<div class="staff-card">
+                <div style="display:flex;gap:1rem;align-items:center;">
+                    <div class="staff-avatar" style="background:${col}20;color:${col};border:2px solid ${col}40;">${initial}</div>
+                    <div>
+                        <div style="font-weight:700;font-size:0.95rem;">${s.name || '—'}</div>
+                        <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-top:0.15rem;">${s.email || ''} · ${s.department || '—'}</div>
+                        <div style="margin-top:0.4rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+                            <span class="team-pill" style="background:${col}18;color:${col};border:1px solid ${col}35;">${team.toUpperCase()}</span>
+                            <span style="font-size:0.62rem;color:rgba(255,255,255,0.3);">Since ${regDate}</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-remove" onclick="window.removeStaff('${s.id}', '${(s.name||'').replace(/'/g,'')}')">🗑 Remove</button>
+            </div>`;
+        }).join('')}
+    </div>`;
+}
+
+window.removeStaff = async function(uid, name) {
+    if (!confirm(`Remove staff member "${name}"?\nThis will delete their profile. Attendance records will be kept.`)) return;
+    try {
+        await deleteDoc(doc(db, 'staffProfiles', uid));
+        // Optionally: also disable Auth — but we can't do that from client-side without Admin SDK
+        // So we just remove the profile. The account still exists but portal won't load without a profile.
+        console.log(`[Admin] Removed staff: ${name} (${uid})`);
+    } catch (e) {
+        alert('Failed to remove staff: ' + e.message);
+    }
+};
+
+// ─── Stock Admin View ─────────────────────────────────────────────────────────
+function renderStockAdminView() {
+    const container = document.getElementById('stock-view');
+    if (!container) return;
+
+    const total    = stockItems.length;
+    const low      = stockItems.filter(i => (Number(i.qty)||0) <= (Number(i.lowThresh)||5) && (Number(i.qty)||0) > 0).length;
+    const critical = stockItems.filter(i => (Number(i.qty)||0) <= 0).length;
+    const ok       = total - low - critical;
+
+    const sorted = [...stockItems].sort((a,b) => (a.name||'').localeCompare(b.name||''));
+
+    container.innerHTML = `
+    <style>
+        .stock-stat { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:14px; padding:1.2rem 1.5rem; text-align:center; }
+        .stock-stat h4 { font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;opacity:0.4;margin-bottom:0.5rem; }
+        .stock-stat .sv { font-size:1.8rem;font-weight:100; }
+        .spill { display:inline-block;padding:2px 10px;border-radius:20px;font-size:0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase; }
+        .spill-ok       { background:rgba(34,197,94,0.12);color:#22C55E;border:1px solid rgba(34,197,94,0.3); }
+        .spill-low      { background:rgba(245,158,11,0.12);color:#F59E0B;border:1px solid rgba(245,158,11,0.3); }
+        .spill-critical { background:rgba(239,68,68,0.12);color:#EF4444;border:1px solid rgba(239,68,68,0.3); }
+    </style>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
+        <div class="stock-stat"><h4>Total Items</h4><div class="sv" style="color:var(--gold);">${total}</div></div>
+        <div class="stock-stat"><h4>Low Stock</h4><div class="sv" style="color:#F59E0B;">${low}</div></div>
+        <div class="stock-stat"><h4>Out of Stock</h4><div class="sv" style="color:#EF4444;">${critical}</div></div>
+    </div>
+
+    <div class="analytics-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+            <h3>Live Inventory</h3>
+            <a href="stock.html" target="_blank"
+                style="padding:0.5rem 1.1rem;background:rgba(212,175,55,0.12);color:var(--gold);border:1px solid rgba(212,175,55,0.3);border-radius:10px;font-size:0.75rem;font-weight:700;text-decoration:none;letter-spacing:1px;">
+                ⚙ Manage Stock
+            </a>
+        </div>
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--glass-border);color:var(--gold-primary);">
+                        <th style="padding:0.8rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;opacity:0.5;">Item</th>
+                        <th style="padding:0.8rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;opacity:0.5;">Category</th>
+                        <th style="padding:0.8rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;opacity:0.5;">Qty</th>
+                        <th style="padding:0.8rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;opacity:0.5;">Status</th>
+                        <th style="padding:0.8rem 1rem;text-align:left;font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;opacity:0.5;">Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sorted.length === 0
+                        ? `<tr><td colspan="5" style="text-align:center;padding:3rem;opacity:0.3;">No stock items yet — <a href="stock.html" target="_blank" style="color:var(--gold);">Add from Stock Manager</a></td></tr>`
+                        : sorted.map(item => {
+                            const qty = Number(item.qty)||0;
+                            const thresh = Number(item.lowThresh)||5;
+                            const status = qty <= 0 ? 'critical' : qty <= thresh ? 'low' : 'ok';
+                            const pillLabel = status === 'ok' ? 'OK' : status === 'low' ? 'Low' : 'Out';
+                            const qtyColor = status === 'critical' ? '#EF4444' : status === 'low' ? '#F59E0B' : '#22C55E';
+                            const ts = item.updatedAt?.seconds
+                                ? new Date(item.updatedAt.seconds*1000).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})
+                                : '—';
+                            return `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                                <td style="padding:0.8rem 1rem;font-weight:700;">${item.name||'—'}</td>
+                                <td style="padding:0.8rem 1rem;opacity:0.5;">${item.category||'—'}</td>
+                                <td style="padding:0.8rem 1rem;color:${qtyColor};font-weight:800;font-size:1rem;">${qty} <span style="font-size:0.7rem;opacity:0.5;">${item.unit||'pcs'}</span></td>
+                                <td style="padding:0.8rem 1rem;"><span class="spill spill-${status}">${pillLabel}</span></td>
+                                <td style="padding:0.8rem 1rem;opacity:0.4;font-size:0.75rem;">${ts}</td>
+                            </tr>`;
+                        }).join('')
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>`;
+}
 
 // --- Global Actions ---
 window.handleLogout = async () => {
