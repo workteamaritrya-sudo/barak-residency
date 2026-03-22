@@ -87,14 +87,16 @@ function playAlertSound() {
     }
 }
 
-// Unlock audio context on first user interaction (required by browsers)
+// Unlock audio context and request native push notifications on first interaction
 document.addEventListener('touchstart', () => {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
+    requestPushPermission();
 }, { once: true });
 document.addEventListener('click', () => {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
+    requestPushPermission();
 }, { once: true });
 
 //  Web Push Notification (for background/Screen-Off alerts) 
@@ -719,9 +721,11 @@ onAuthStateChanged(auth, async user => {
             await requestPushPermission();
 
             // Start the right notification listeners
-            const team = profile.team || 'hotel';
-            if (team === 'hotel' || team === 'both') startHotelNotifListener();
-            if (team === 'restaurant' || team === 'both') startRestNotifListener();
+            if (profile) {
+                const team = profile.team || 'hotel';
+                if (team === 'hotel' || team === 'both') startHotelNotifListener();
+                if (team === 'restaurant' || team === 'both') startRestNotifListener();
+            }
 
         } catch (err) {
             console.error('[Auth]', err);
@@ -736,3 +740,15 @@ onAuthStateChanged(auth, async user => {
     if (btnL) { btnL.disabled = false; btnL.textContent = 'Sign In'; }
     if (btnR) { btnR.disabled = false; btnR.textContent = 'Create Account'; }
 });
+
+// Stock Hub (Staff update wrapper)
+window.openStockApp = function() {
+    const frame = document.getElementById('stock-iframe');
+    if (frame && !frame.src) frame.src = 'stock.html?embedded=1';
+    const overlay = document.getElementById('stock-app-overlay');
+    if (overlay) overlay.style.display = 'flex';
+};
+window.closeStockApp = function() {
+    const overlay = document.getElementById('stock-app-overlay');
+    if (overlay) overlay.style.display = 'none';
+};

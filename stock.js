@@ -40,15 +40,7 @@ function showToast(msg, type = 'info') {
 
 //  Auth 
 window.doLogin = async function () {
-    const email = document.getElementById('auth-email').value.trim();
-    const pass  = document.getElementById('auth-pass').value;
-    const msg   = document.getElementById('auth-msg');
-    msg.textContent = '';
-    try {
-        await signInWithEmailAndPassword(auth, email, pass);
-    } catch (e) {
-        msg.textContent = 'Invalid credentials. Try again.';
-    }
+    // Deprecated: Login now happens via index.html
 };
 
 window.doLogout = async function () {
@@ -81,7 +73,6 @@ onAuthStateChanged(auth, async user => {
         currentUser = user;
         isAdmin = await checkAdmin(user);
 
-        document.getElementById('auth-overlay').style.display = 'none';
         document.getElementById('user-badge').textContent = user.email + (isAdmin ? ' · Admin' : ' · Staff');
         if (isAdmin) {
             document.getElementById('add-section').style.display = 'block';
@@ -90,9 +81,11 @@ onAuthStateChanged(auth, async user => {
     } else {
         currentUser = null;
         isAdmin = false;
-        document.getElementById('auth-overlay').style.display = 'flex';
-        stockItems = [];
-        renderStock();
+        
+        // Don't redirect if we are embedded and just briefly logging off/loading
+        if (!window.location.search.includes('embedded=1')) {
+            window.location.href = 'index.html';
+        }
     }
 });
 

@@ -610,6 +610,8 @@
 
                 if (currentEmpId.includes('ADM') || role.includes("admin") || role.includes("owner")) {
                     window.location.href = 'admin.html';
+                } else if (currentEmpId.includes('STK') || role.includes('stock')) {
+                    window.location.href = 'stock.html';
                 } else if (currentEmpId.includes('RW') || (role.includes("rest") && role.includes("waiter"))) {
                     window.location.href = 'restaurant_waiter.html';
                 } else if (currentEmpId.includes('RD') || (role.includes("rest") && role.includes("desk"))) {
@@ -649,6 +651,8 @@
 
                         if (empIdUpper.includes('ADM') || role.includes("admin") || role.includes("owner")) {
                             window.location.href = 'admin.html'; return;
+                        } else if (empIdUpper.includes('STK') || role.includes("stock")) {
+                            window.location.href = 'stock.html'; return;
                         } else if (empIdUpper.includes('RW') || (role.includes("rest") && role.includes("waiter"))) {
                             window.location.href = 'restaurant_waiter.html'; return;
                         } else if (empIdUpper.includes('RD') || (role.includes("rest") && role.includes("desk"))) {
