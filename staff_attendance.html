@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barak Residency — Staff Portal</title>
+    <title>Staff Portal</title>
     <meta name="description" content="Unified Staff Portal for Barak Residency hotel and restaurant teams.">
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="staff_manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -462,7 +462,19 @@
         </div>
     </div>
 
+    <button onclick="openStockApp()" style="width:100%; padding:0.9rem; margin-top:1.5rem; margin-bottom:0.5rem; border:1px solid rgba(212,175,55,0.4); border-radius:12px; background:transparent; color:var(--gold); font-family:'Inter',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:0.2s;"> Update Stock / Inventory</button>
     <button class="btn-logout" onclick="staffLogout()"> Sign Out</button>
+</div>
+
+<!-- Stock Management Overlay -->
+<div id="stock-app-overlay" style="
+    display:none;
+    position:fixed; inset:0; z-index:10000;
+    background:#050B18;
+    flex-direction:column;
+    animation:slideUp 0.32s cubic-bezier(.22,1,.36,1);
+">
+    <iframe id="stock-iframe" style="flex:1; border:none; width:100%; height:100%;" loading="lazy"></iframe>
 </div>
 
 <!-- Hidden audio for notification alert -->

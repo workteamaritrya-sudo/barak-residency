@@ -126,44 +126,10 @@
         .toast.info    { background:#D4AF37; color:#000; }
 
         @keyframes fadeUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
-
-        /*  Auth Overlay  */
-        #auth-overlay {
-            position:fixed; inset:0; background:var(--bg);
-            display:flex; align-items:center; justify-content:center;
-            z-index:9999;
-        }
-        .auth-card {
-            background:var(--surface); border:1px solid var(--border); border-radius:20px;
-            padding:2.5rem 2rem; width:100%; max-width:380px; text-align:center;
-        }
-        .auth-card h2 { font-family:'Cormorant Garamond',serif; color:var(--gold); font-size:1.5rem; letter-spacing:3px; margin-bottom:0.5rem; }
-        .auth-card p { font-size:0.72rem; color:var(--text-mute); letter-spacing:2px; text-transform:uppercase; margin-bottom:1.5rem; }
-        .btn-auth {
-            width:100%; padding:0.9rem; border:none; border-radius:12px;
-            background:linear-gradient(135deg,#C9A227,var(--gold)); color:#000;
-            font-weight:700; font-size:0.9rem; letter-spacing:2px; text-transform:uppercase;
-            cursor:pointer; margin-top:0.5rem;
-        }
-        #auth-msg { font-size:0.78rem; color:var(--red); margin-top:0.8rem; }
     </style>
     <link rel="icon" href="br.png" type="image/png">
 </head>
 <body>
-
-<!-- Auth Overlay -->
-<div id="auth-overlay">
-    <div class="auth-card">
-        <h2>BARAK RESIDENCY</h2>
-        <p>Stock Management · Sign In</p>
-        <input type="email" id="auth-email" placeholder="staff@barakresidency.in"
-            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:12px;color:#fff;padding:0.8rem 1rem;font-size:0.85rem;margin-bottom:0.8rem;">
-        <input type="password" id="auth-pass" placeholder="Password"
-            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:12px;color:#fff;padding:0.8rem 1rem;font-size:0.85rem;">
-        <button class="btn-auth" onclick="doLogin()">Sign In</button>
-        <div id="auth-msg"></div>
-    </div>
-</div>
 
 <!-- Top Bar -->
 <div class="topbar">
@@ -173,9 +139,18 @@
     </div>
     <div style="display:flex;gap:0.8rem;align-items:center;">
         <span id="user-badge" style="font-size:0.7rem;color:var(--text-mute);"></span>
-        <button onclick="doLogout()" style="background:transparent;border:1px solid var(--border);color:var(--text-mute);border-radius:8px;padding:0.4rem 0.8rem;font-size:0.72rem;cursor:pointer;">Sign Out</button>
+        <button id="btn-close-stk" onclick="if(window.parent&&window.parent.closeStockApp)window.parent.closeStockApp();else window.history.back();" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#FCA5A5;border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.75rem;cursor:pointer;letter-spacing:1px;"> CLOSE</button>
+        <button id="btn-logout" onclick="doLogout()" style="background:transparent;border:1px solid var(--border);color:var(--text-mute);border-radius:8px;padding:0.4rem 0.8rem;font-size:0.72rem;cursor:pointer;">Sign Out</button>
     </div>
 </div>
+
+<script>
+    // Embedded Mode logic
+    if (window.location.search.includes('embedded=1')) {
+        document.getElementById('btn-logout').style.display = 'none';
+        document.getElementById('btn-close-stk').style.display = 'inline-block';
+    }
+</script>
 
 <div class="container">
 
