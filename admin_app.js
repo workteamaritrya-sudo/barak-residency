@@ -282,7 +282,7 @@ function renderAttendanceView() {
     <div class="body-section">
         <div class="section-header">
             <h3>Attendance Log</h3>
-            <button class="btn-export" onclick="window.exportAttendanceCSV()">⬇ Export CSV</button>
+            <button class="btn-export" onclick="window.exportAttendanceCSV()"> Export CSV</button>
         </div>
 
         <div style="overflow-x:auto;">
@@ -355,7 +355,7 @@ window.exportAttendanceCSV = function () {
     URL.revokeObjectURL(url);
 };
 
-// ─── Staff Management View ───────────────────────────────────────────────────
+//  Staff Management View 
 function renderStaffMgmtView() {
     const container = document.getElementById('staff-mgmt-view');
     if (!container) return;
@@ -376,7 +376,7 @@ function renderStaffMgmtView() {
     <div class="analytics-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
             <h3>Staff Roster (${sortedProfiles.length} staff)</h3>
-            <a href="staff_attendance.html" target="_blank" style="font-size:0.75rem;color:var(--gold);opacity:0.7;text-decoration:none;">➕ Register New Staff →</a>
+            <a href="staff_attendance.html" target="_blank" style="font-size:0.75rem;color:var(--gold);opacity:0.7;text-decoration:none;"> Register New Staff →</a>
         </div>
         ${sortedProfiles.length === 0 ? '<div style="text-align:center;opacity:0.3;padding:3rem;">No staff registered yet</div>' :
         sortedProfiles.map(s => {
@@ -398,7 +398,7 @@ function renderStaffMgmtView() {
                         </div>
                     </div>
                 </div>
-                <button class="btn-remove" onclick="window.removeStaff('${s.id}', '${(s.name||'').replace(/'/g,'')}')">🗑 Remove</button>
+                <button class="btn-remove" onclick="window.removeStaff('${s.id}', '${(s.name||'').replace(/'/g,'')}')"> Remove</button>
             </div>`;
         }).join('')}
     </div>`;
@@ -416,7 +416,7 @@ window.removeStaff = async function(uid, name) {
     }
 };
 
-// ─── Stock Admin View ─────────────────────────────────────────────────────────
+//  Stock Admin View 
 function renderStockAdminView() {
     const container = document.getElementById('stock-view');
     if (!container) return;
@@ -450,7 +450,7 @@ function renderStockAdminView() {
             <h3>Live Inventory</h3>
             <a href="stock.html" target="_blank"
                 style="padding:0.5rem 1.1rem;background:rgba(212,175,55,0.12);color:var(--gold);border:1px solid rgba(212,175,55,0.3);border-radius:10px;font-size:0.75rem;font-weight:700;text-decoration:none;letter-spacing:1px;">
-                ⚙ Manage Stock
+                 Manage Stock
             </a>
         </div>
         <div style="overflow-x:auto;">

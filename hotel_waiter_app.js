@@ -1,11 +1,11 @@
 /**
- * ══════════════════════════════════════════════════════════════════════════════
+ * 
  * BARAK RESIDENCY — Hotel Waiter App
  * Standalone · Firebase Firestore · Order for Hotel Rooms
- * ══════════════════════════════════════════════════════════════════════════════
+ * 
  */
 
-// ── Global References (Late-bound) ───────────────────────────
+//  Global References (Late-bound) 
 let db, auth, hooks;
 
 function refreshFirebaseRefs() {
@@ -28,7 +28,7 @@ async function pushNotification(type, message, target, data = null) {
     } catch (e) { console.warn('[Notification] Push failed', e); }
 }
 
-// ── Master Menu Fallback ──────────────────────────────────
+//  Master Menu Fallback 
 const BARAK_MENU = [
     {id:'m1-basmat',name:'Basmati Rice',category:'Main Course',price:80,priceHalf:50,description:'Premium long grain steamed rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
     {id:'m2-bhunak',name:'Bhuna Khichuri',category:'Main Course',price:180,priceHalf:100,description:'Ghee-laden yellow lentil rice',imageUrl:'https://images.unsplash.com/photo-1645177639578-56e89d924bb1?w=400',portionType:'Plate',isAvailable:true},
@@ -82,7 +82,7 @@ const BARAK_MENU = [
     {id:'m50-bhetf',name:'Bhetki Fry',category:'Starters',price:180,priceHalf:0,description:'Pure Bhetki fillet fry',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true}
 ];
 
-// ── State ──────────────────────────────────────────────────
+//  State 
 let rooms = {};
 let menu = BARAK_MENU; 
 let waiterCart = [];
@@ -91,7 +91,7 @@ let addonOrderId = null;
 let unavailableItems = [];
 let kitchenOrders = [];
 
-// ── Listeners ──────────────────────────────────────────
+//  Listeners 
 function startListeners() {
     const { collection, onSnapshot, query, orderBy, limit, doc } = hooks;
 
@@ -150,13 +150,13 @@ function startListeners() {
     });
 }
 
-// ── UI Logic ──────────────────────────────────────────
+//  UI Logic 
 
 function populateRoomSelect() {
     const select = document.getElementById('waiter-room-select');
     if (!select) return;
     const currentVal = select.value;
-    select.innerHTML = '<option value="">📋 Select Room...</option>';
+    select.innerHTML = '<option value=""> Select Room...</option>';
     
     // Sort room numbers naturally
     const sortedRooms = Object.values(rooms).sort((a,b) => Number(a.number) - Number(b.number));
@@ -387,7 +387,7 @@ window.enterAddonMode = function(orderId) {
     showToast('Add-on Mode Active', 'info');
 };
 
-// ── Actions ──────────────────────────────────────────
+//  Actions 
 
 async function getNextGlobalSerial(roomNum) {
     const { doc, runTransaction } = hooks;
@@ -481,7 +481,7 @@ window.placeOrder = async function() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerText = '🚀 PLACE ORDER';
+            btn.innerText = ' PLACE ORDER';
         }
     }
 };

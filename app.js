@@ -3873,7 +3873,7 @@ class PMSApp {
             return;
         }
 
-        // ── Checkout Clearance Gate ────────────────────────────────
+        //  Checkout Clearance Gate 
         // If a clearance was requested but not yet approved by staff, block checkout
         if (this._pendingClearanceId) {
             const { doc, getDoc } = window.firebaseHooks;
@@ -3885,7 +3885,7 @@ class PMSApp {
                     return;
                 }
                 if (data.staffStatus === 'issue') {
-                    this.showToast(`⚠️ Issue found by staff: ${data.issueNote || 'Please resolve before checkout.'}`, 'error');
+                    this.showToast(`️ Issue found by staff: ${data.issueNote || 'Please resolve before checkout.'}`, 'error');
                     return;
                 }
                 // 'cleared' — allow proceed
@@ -3945,7 +3945,7 @@ class PMSApp {
 
     generateInvoice() { this.generateFinalBill(); }
 
-    // ── 🧹 Raise Housekeeping Request from Reception ─────────────────────────
+    //   Raise Housekeeping Request from Reception 
     async raiseHousekeepingRequest() {
         if (!this.selectedRoomId) {
             this.showToast('Please select a room first.', 'warning');
@@ -3964,13 +3964,13 @@ class PMSApp {
                 source:     'reception',
                 timestamp:  serverTimestamp()
             });
-            this.showToast(`🧹 Housekeeping request sent to hotel staff for Room ${this.selectedRoomId}`, 'success');
+            this.showToast(` Housekeeping request sent to hotel staff for Room ${this.selectedRoomId}`, 'success');
         } catch (e) {
             this.showToast('Failed to raise request: ' + e.message, 'error');
         }
     }
 
-    // ── 🔴 Request Checkout Clearance (sends to hotel staff) ─────────────────
+    //   Request Checkout Clearance (sends to hotel staff) 
     async requestCheckoutClearance() {
         if (!this.selectedRoomId) {
             this.showToast('Please select an occupied room first.', 'warning');
@@ -4000,7 +4000,7 @@ class PMSApp {
             if (gate) gate.style.display = 'block';
             if (reqBtn) { reqBtn.textContent = '⏳ Clearance Requested'; reqBtn.disabled = true; }
 
-            this.showToast(`🔴 Checkout clearance sent to hotel staff for Room ${this.selectedRoomId}`, 'success');
+            this.showToast(` Checkout clearance sent to hotel staff for Room ${this.selectedRoomId}`, 'success');
 
             // Live listener — when staff responds, update the gate
             if (this._clearanceUnsub) this._clearanceUnsub();
@@ -4012,20 +4012,20 @@ class PMSApp {
                     const statusEl = document.getElementById('cc-gate-status');
 
                     if (data.staffStatus === 'cleared') {
-                        if (statusEl) statusEl.innerHTML = `<span style="color:#22C55E;">✅ Cleared by ${data.clearedBy || 'Staff'} — Checkout Unlocked</span>`;
+                        if (statusEl) statusEl.innerHTML = `<span style="color:#22C55E;"> Cleared by ${data.clearedBy || 'Staff'} — Checkout Unlocked</span>`;
                         if (gate) gate.style.borderColor = 'rgba(34,197,94,0.4)';
                         // Unlock the finalize button
                         if (finalBtn) { finalBtn.style.display = 'flex'; finalBtn.style.opacity = '1'; }
                         if (reqBtn) reqBtn.style.display = 'none';
                         // Also add a notification at reception
-                        this.showToast('✅ Room cleared by staff — Checkout Finalize is now unlocked!', 'success');
+                        this.showToast(' Room cleared by staff — Checkout Finalize is now unlocked!', 'success');
                         if (this._clearanceUnsub) this._clearanceUnsub();
                     } else if (data.staffStatus === 'issue') {
-                        if (statusEl) statusEl.innerHTML = `<span style="color:#EF4444;">⚠️ Issue: ${data.issueNote || 'Problem found — resolve first'}</span>`;
+                        if (statusEl) statusEl.innerHTML = `<span style="color:#EF4444;">️ Issue: ${data.issueNote || 'Problem found — resolve first'}</span>`;
                         if (gate) gate.style.borderColor = 'rgba(239,68,68,0.6)';
                         if (reqBtn) { reqBtn.textContent = '↩️ Re-request After Fixing'; reqBtn.disabled = false; }
                         this._pendingClearanceId = null;
-                        this.showToast(`⚠️ Staff found issue: ${data.issueNote || 'Problem in room'}`, 'error');
+                        this.showToast(`️ Staff found issue: ${data.issueNote || 'Problem in room'}`, 'error');
                     }
                 }
             );
@@ -5274,7 +5274,7 @@ class PMSApp {
             grid.innerHTML = '';
             rooms.sort((a, b) => Number(a.number) - Number(b.number)).forEach(room => {
                 const color = room.status === 'occupied' ? '#D4AF37' : room.status === 'reserved' ? '#a855f7' : '#4ade80';
-                const icon = room.status === 'occupied' ? '🛌' : room.status === 'reserved' ? '📅' : '✅';
+                const icon = room.status === 'occupied' ? '' : room.status === 'reserved' ? '' : '';
                 const name = room.guestName ? `<div style="font-size:0.7rem; color:${color}; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${room.salutation || ''} ${room.guestName}</div>` : '';
                 grid.innerHTML += `<div style="background:rgba(255,255,255,0.04); border:1px solid ${color}33; border-top:3px solid ${color}; border-radius:8px; padding:0.75rem; cursor:pointer;" onclick="app.selectRoom('${room.number}'); app.switchTab('dashboard');">
                     <div style="display:flex; justify-content:space-between; align-items:center;">

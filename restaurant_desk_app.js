@@ -1,9 +1,9 @@
 /**
- * ════════════════════════════════════════════════════════════
+ * 
  * BARAK RESIDENCY — Restaurant Desk App
  * Standalone · Firebase Firestore · No localStorage dependency
  * KDS-connected via shared Firestore orders collection
- * ════════════════════════════════════════════════════════════
+ * 
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
@@ -14,7 +14,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
-// ── Firebase Config ───────────────────────────────────────
+//  Firebase Config 
 const firebaseConfig = {
     apiKey: "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo",
     authDomain: "barak-residency-59405.firebaseapp.com",
@@ -29,7 +29,7 @@ const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
 
-// ── Master Menu Fallback ──────────────────────────────────
+//  Master Menu Fallback 
 const SHARED_MENU = [
     { id: 'm1-basmat', name: 'Basmati Rice', category: 'Main Course', price: 80, priceHalf: 50, description: 'Premium long grain steamed rice', imageUrl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400', portionType: 'Plate', isAvailable: true },
     { id: 'm2-bhunak', name: 'Bhuna Khichuri', category: 'Main Course', price: 180, priceHalf: 100, description: 'Ghee-laden yellow lentil rice', imageUrl: 'https://images.unsplash.com/photo-1645177639578-56e89d924bb1?w=400', portionType: 'Plate', isAvailable: true },
@@ -83,7 +83,7 @@ const SHARED_MENU = [
     { id: 'm50-bhetf', name: 'Bhetki Fry', category: 'Starters', price: 180, priceHalf: 0, description: 'Pure Bhetki fillet fry', imageUrl: 'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400', portionType: 'Quantity', isAvailable: true }
 ];
 
-// ── State ─────────────────────────────────────────────────
+//  State 
 let tables = {};
 let menu = JSON.parse(JSON.stringify(SHARED_MENU)); // Deep copy master base
 let notifications = [];
@@ -94,11 +94,11 @@ let activePickups = [];
 let pickupCounter = 0;
 let pickupCart = [];
 
-// ── Check-in & Reservation State ──────────────────────────
+//  Check-in & Reservation State 
 let capturedGuestPhoto = null;
 let capturedIdFiles = [];
 
-// ── Passcode Protection ───────────────────────────────────
+//  Passcode Protection 
 function verifyPasscode() {
     const input = document.getElementById('desk-pass-input').value;
     if (input === '2026') {
@@ -113,7 +113,7 @@ function verifyPasscode() {
     }
 }
 
-// ── Check-in & Reservation UI ─────────────────────────────
+//  Check-in & Reservation UI 
 
 function showCheckInForm() {
     document.getElementById('smart-checkin-modal').style.display = 'flex';
@@ -245,7 +245,7 @@ async function submitReservation() {
     }
 }
 
-// ── Firebase Helpers ──────────────────────────────────────
+//  Firebase Helpers 
 
 async function pushTableToCloud(tableObj) {
     try {
@@ -287,7 +287,7 @@ async function updateOrderStatus(orderId, status) {
     } catch (e) { console.error('[Status] Update failed', e); }
 }
 
-// ── Real-time Listeners ───────────────────────────────────
+//  Real-time Listeners 
 
 function startListeners() {
     // Tables — real-time from Firestore
@@ -352,7 +352,7 @@ function startListeners() {
     });
 }
 
-// ── Init ──────────────────────────────────────────────────
+//  Init 
 
 async function init() {
     startClock();
@@ -365,7 +365,7 @@ async function init() {
         } else {
             await loadInitialData();
             startListeners();
-            showToast('Desk connected to Cloud ☁️', 'success');
+            showToast('Desk connected to Cloud ️', 'success');
         }
     });
 }
@@ -463,7 +463,7 @@ function getDefaultMenu() {
     ];
 }
 
-// ── Clock ─────────────────────────────────────────────────
+//  Clock 
 
 function startClock() {
     const update = () => {
@@ -492,7 +492,7 @@ function timeOnlyIST(ts) {
     return new Date(ts).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit' });
 }
 
-// ── Render Restaurant Desk ────────────────────────────────
+//  Render Restaurant Desk 
 
 function renderRestDesk() {
     const grid = document.getElementById('rest-desk-table-grid');
@@ -513,7 +513,7 @@ function renderRestDesk() {
                     // Get live total from kitchenOrders + table.orders
                     const billOrders = (table.orders || []).filter(o => o.id === b.billID || o.order_id === b.billID);
                     const billTotal = billOrders.reduce((s, o) => s + (o.total || o.total_price || 0), 0);
-                    const linkedTag = b.colorIndex === 5 ? `🔗 ${b.linkGroupId || 'L'}:` : '';
+                    const linkedTag = b.colorIndex === 5 ? ` ${b.linkGroupId || 'L'}:` : '';
                     guestDivs += `<div onclick="event.stopPropagation();window.deskApp.selectDeskCheckout('${table.id}','${b.billID}')"
                         style="color:${c};font-weight:bold;margin-bottom:0.3rem;cursor:pointer;padding:0.2rem;border-radius:4px;border:1px solid ${b.colorIndex === 5 ? '#A020F0' : 'transparent'};">
                         ${linkedTag} ${b.billID} | ${b.guestName} <span style="color:#4ADE80;">₹${billTotal}</span></div>`;
@@ -584,7 +584,7 @@ function renderRestDesk() {
     updateRevDisplay();
 }
 
-// ── Checkout ──────────────────────────────────────────────
+//  Checkout 
 
 function selectDeskCheckout(tableId, billId = null) {
     const table = tables[tableId]; if (!table || table.status !== 'occupied') return;
@@ -612,7 +612,7 @@ function selectDeskCheckout(tableId, billId = null) {
                         <div style="font-size:0.8rem; color:var(--text-gray);">${b.guestName || 'Walk-in'} — ${b.pax || 1} PAX</div>
                     </div>
                     ${isPaid ?
-                `<span style="color:#10B981; font-weight:800; font-size:0.8rem;">PAID ✓</span>` :
+                `<span style="color:#10B981; font-weight:800; font-size:0.8rem;">PAID </span>` :
                 `<button class="btn btn-primary" style="padding:0.4rem 0.8rem; font-size:0.75rem; background:#10B981; border:none;" 
                             onclick="window.deskApp.checkoutBill('${tableId}', '${id}', ${total})">CHECKOUT</button>`
             }
@@ -727,7 +727,7 @@ function printBill(tableId, total) {
     window.print();
 }
 
-// ── Pickup Orders ─────────────────────────────────────────
+//  Pickup Orders 
 
 async function generatePickupOrder() {
     pickupCart = [];
@@ -994,7 +994,7 @@ async function markPickupDelivered(id) {
 }
 
 
-// ── Notifications Sidebar ─────────────────────────────────
+//  Notifications Sidebar 
 
 function renderNotificationSidebar() {
     const container = document.getElementById('desk-notifications-list');
@@ -1024,7 +1024,7 @@ function renderNotificationSidebar() {
             actionHtml = `<button class="btn ${isPrinted ? 'btn-outline' : 'btn-primary'} btn-block mt-2"
                 style="font-size:0.75rem;padding:0.4rem;${isPrinted ? 'opacity:0.6;' : 'background:#F59E0B;border:none;color:#000;'}"
                 onclick="window.deskApp.printKOT('${n.id}','${n.data.orderId}','${n.data.tableId}')">
-                ${isPrinted ? 'PRINTED ✓' : 'PRINT 2 KOT'}</button>`;
+                ${isPrinted ? 'PRINTED ' : 'PRINT 2 KOT'}</button>`;
         }
 
         div.innerHTML = `
@@ -1068,7 +1068,7 @@ async function clearNotifications() {
     showToast('Notifications cleared', 'success');
 }
 
-// ── Revenue ───────────────────────────────────────────────
+//  Revenue 
 
 function toggleRevVisibility(btn) {
     const display = document.getElementById('desk-revenue-display');
@@ -1090,7 +1090,7 @@ function updateRevDisplay() {
     if (el && el.classList.contains('revealed')) el.textContent = `₹ ${restaurantRevenue.toLocaleString('en-IN')}`;
 }
 
-// ── Food Availability ─────────────────────────────────────
+//  Food Availability 
 
 function openAvailabilityModal() {
     renderAvailabilityTool();
@@ -1109,7 +1109,7 @@ function renderAvailabilityTool() {
         row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:1rem;background:rgba(255,255,255,0.03);border-radius:12px;margin-bottom:0.75rem;border:1px solid var(--glass-border);';
         row.innerHTML = `
             <div style="display:flex;align-items:center;gap:1rem;">
-                <div style="width:40px;height:40px;background:var(--glass);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">${item.icon || '🍽'}</div>
+                <div style="width:40px;height:40px;background:var(--glass);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">${item.icon || ''}</div>
                 <div>
                     <div style="font-weight:700;color:white;">${itemName}</div>
                     <div style="font-size:0.8rem;color:var(--gold-primary);">₹${itemPrice}</div>
@@ -1142,7 +1142,7 @@ async function handleLogout() {
     }
 }
 
-// ── Expose to window ──────────────────────────────────────
+//  Expose to window 
 async function submitPickupQuick() {
     if (pickupCart.length === 0) { showToast('Cart is empty', 'warning'); return; }
     await submitPickupOrder();
@@ -1170,5 +1170,5 @@ window.openAvailabilityModal = openAvailabilityModal;
 window.executeAddPickupToCart = executeAddPickupToCart; // Added for pickup modal
 window.updatePickupQty = updatePickupQty; // Added for pickup modal
 
-// ── Boot ──────────────────────────────────────────────────
+//  Boot 
 init().catch(e => console.error('[Desk Boot] Failed:', e));

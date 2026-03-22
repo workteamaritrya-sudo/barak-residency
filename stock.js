@@ -1,11 +1,11 @@
 /**
- * ══════════════════════════════════════════════════════════════════════════
+ * 
  * BARAK RESIDENCY — Stock / Inventory Management
  * Collections: stock
  * • Admin: can add items, set thresholds, delete items
  * • Staff: can only "Mark Used" (decrement qty) — cannot add new items
  * • All users: real-time list, filter by category/status, search
- * ══════════════════════════════════════════════════════════════════════════
+ * 
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
@@ -23,12 +23,12 @@ const db   = getFirestore(app);
 const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
-// ── State ────────────────────────────────────────────────────────────────────
+//  State 
 let stockItems = [];
 let currentUser = null;
 let isAdmin = false;
 
-// ── Toast ────────────────────────────────────────────────────────────────────
+//  Toast 
 function showToast(msg, type = 'info') {
     const container = document.getElementById('toast-container');
     const t = document.createElement('div');
@@ -38,7 +38,7 @@ function showToast(msg, type = 'info') {
     setTimeout(() => t.remove(), 3000);
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+//  Auth 
 window.doLogin = async function () {
     const email = document.getElementById('auth-email').value.trim();
     const pass  = document.getElementById('auth-pass').value;
@@ -55,17 +55,22 @@ window.doLogout = async function () {
     await signOut(auth);
 };
 
-// Check if user is admin by reading staffProfiles or a simple email whitelist
+// Check if user is admin/stock manager
 async function checkAdmin(user) {
     try {
-        // Try staffProfiles first
+        // Try staffProfiles first (uid based)
+        let role = '';
         const snap = await getDoc(doc(db, 'staffProfiles', user.uid));
         if (snap.exists()) {
-            const role = (snap.data().role || '').toLowerCase();
-            return role === 'admin' || role === 'manager';
+            role = (snap.data().role || '').toLowerCase();
+        } else {
+            // Fallback: check users collection (email based, used by initialize.html)
+            const snap2 = await getDoc(doc(db, 'users', user.email));
+            if (snap2.exists()) {
+                role = (snap2.data().role || '').toLowerCase();
+            }
         }
-        // Fallback: check admin email list in settings
-        return false;
+        return role === 'admin' || role === 'manager' || role === 'stock';
     } catch (e) {
         return false;
     }
@@ -91,7 +96,7 @@ onAuthStateChanged(auth, async user => {
     }
 });
 
-// ── Real-time Stock Listener ──────────────────────────────────────────────────
+//  Real-time Stock Listener 
 function startStockListener() {
     const q = query(collection(db, 'stock'), orderBy('name', 'asc'));
     onSnapshot(q, snap => {
@@ -110,7 +115,7 @@ function startStockListener() {
     });
 }
 
-// ── Stats ─────────────────────────────────────────────────────────────────────
+//  Stats 
 function updateStats() {
     const total    = stockItems.length;
     const low      = stockItems.filter(i => getStatus(i) === 'low').length;
@@ -128,7 +133,7 @@ function getStatus(item) {
     return 'ok';
 }
 
-// ── Render Table ──────────────────────────────────────────────────────────────
+//  Render Table 
 window.renderStock = function () {
     const search   = (document.getElementById('stock-search')?.value || '').toLowerCase();
     const catF     = document.getElementById('stock-cat-filter')?.value || '';
@@ -160,7 +165,7 @@ window.renderStock = function () {
             : '—';
 
         const deleteBtn = isAdmin
-            ? `<button class="btn-del" onclick="deleteItem('${item.id}', '${(item.name||'').replace(/'/g,'')}')">🗑 Delete</button>`
+            ? `<button class="btn-del" onclick="deleteItem('${item.id}', '${(item.name||'').replace(/'/g,'')}')"> Delete</button>`
             : '';
 
         return `<tr>
@@ -171,14 +176,14 @@ window.renderStock = function () {
             <td><span class="pill ${pillClass}">${statusLabel}</span></td>
             <td style="color:var(--text-mute);font-size:0.75rem;">${ts}</td>
             <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-                <button class="btn-use" onclick="markUsed('${item.id}', ${qty}, '${(item.name||'').replace(/'/g,'')}')">➖ Use 1</button>
+                <button class="btn-use" onclick="markUsed('${item.id}', ${qty}, '${(item.name||'').replace(/'/g,'')}')"> Use 1</button>
                 ${deleteBtn}
             </td>
         </tr>`;
     }).join('');
 };
 
-// ── Add Stock Item (Admin Only) ───────────────────────────────────────────────
+//  Add Stock Item (Admin Only) 
 window.addStockItem = async function () {
     if (!isAdmin) { showToast('Only admin can add items', 'error'); return; }
 
@@ -197,7 +202,7 @@ window.addStockItem = async function () {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         });
-        showToast(`✅ ${name} added to inventory`, 'success');
+        showToast(` ${name} added to inventory`, 'success');
         // Clear form
         ['add-name','add-qty','add-unit','add-low-thresh'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         document.getElementById('add-category').value = '';
@@ -206,7 +211,7 @@ window.addStockItem = async function () {
     }
 };
 
-// ── Mark Used (Staff & Admin) ─────────────────────────────────────────────────
+//  Mark Used (Staff & Admin) 
 window.markUsed = async function (id, currentQty, name) {
     if (!currentUser) { showToast('Please sign in', 'error'); return; }
     if (currentQty <= 0) { showToast(`${name} is already out of stock`, 'error'); return; }
@@ -222,20 +227,20 @@ window.markUsed = async function (id, currentQty, name) {
             updatedAt:  serverTimestamp(),
             lastUsedBy: currentUser?.email || 'Staff'
         });
-        showToast(`✅ ${name} updated: ${currentQty} → ${newQty}`, 'success');
+        showToast(` ${name} updated: ${currentQty} → ${newQty}`, 'success');
     } catch (e) {
         showToast('Update failed: ' + e.message, 'error');
     }
 };
 
-// ── Delete Item (Admin Only) ──────────────────────────────────────────────────
+//  Delete Item (Admin Only) 
 window.deleteItem = async function (id, name) {
     if (!isAdmin) { showToast('Only admin can delete items', 'error'); return; }
     if (!confirm(`Delete "${name}" from inventory?`)) return;
 
     try {
         await deleteDoc(doc(db, 'stock', id));
-        showToast(`🗑 ${name} removed`, 'info');
+        showToast(` ${name} removed`, 'info');
     } catch (e) {
         showToast('Delete failed: ' + e.message, 'error');
     }

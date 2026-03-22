@@ -1,8 +1,8 @@
 /**
- * ════════════════════════════════════════════════════════════
+ * 
  * BARAK RESIDENCY — Restaurant Waiter App
  * Standalone · Firebase Firestore · No localStorage dependency
- * ════════════════════════════════════════════════════════════
+ * 
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
@@ -13,7 +13,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
-// ── Firebase Config ───────────────────────────────────────
+//  Firebase Config 
 const firebaseConfig = {
     apiKey: "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo",
     authDomain: "barak-residency-59405.firebaseapp.com",
@@ -28,7 +28,7 @@ const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
 
-// ── State ─────────────────────────────────────────────────
+//  State 
 let tables = {};
 let menu = [];
 let cart = [];
@@ -43,7 +43,7 @@ let currentLinkContext = null;
 let unavailableItems = [];
 let _isPlacingOrder = false;
 
-// ── Firebase Helpers ──────────────────────────────────────
+//  Firebase Helpers 
 
 async function getNextOrderSerial(tableId) {
     try {
@@ -97,7 +97,7 @@ async function pushNotification(type, message, target, data = null) {
     } catch (e) { console.warn('[Notification] Push failed', e); }
 }
 
-// ── Real-time Listeners ───────────────────────────────────
+//  Real-time Listeners 
 
 function startListeners() {
     onSnapshot(collection(db, 'tables'), (snap) => {
@@ -133,7 +133,7 @@ function startListeners() {
     });
 }
 
-// ── Init ──────────────────────────────────────────────────
+//  Init 
 
 async function init() {
     startClock();
@@ -258,7 +258,7 @@ function getDefaultMenu() {
         ];
 }
 
-// ── Clock ─────────────────────────────────────────────────
+//  Clock 
 
 function startClock() {
     const update = () => {
@@ -274,7 +274,7 @@ function startClock() {
     update(); setInterval(update, 1000);
 }
 
-// ── Toast ─────────────────────────────────────────────────
+//  Toast 
 
 function showToast(msg, type = 'info') {
     const t = document.createElement('div');
@@ -286,7 +286,7 @@ function showToast(msg, type = 'info') {
     setTimeout(() => t.remove(), 3000);
 }
 
-// ── Table Sidebar ─────────────────────────────────────────
+//  Table Sidebar 
 
 function renderTableSidebar() {
     const list = document.getElementById('rest-waiter-table-list');
@@ -329,7 +329,7 @@ function renderTableSidebar() {
     });
 }
 
-// ── Table Selection ───────────────────────────────────────
+//  Table Selection 
 
 function handleTableClick(table) {
     document.getElementById('tci-tableid').value = table.id;
@@ -465,7 +465,7 @@ function selectTable(table, ctx) {
     renderCart();
 }
 
-// ── Menu ──────────────────────────────────────────────────
+//  Menu 
 
 function renderMenu(search = '') {
     const grid = document.getElementById('rest-waiter-menu-grid');
@@ -525,7 +525,7 @@ function renderMenu(search = '') {
 
 function filterMenu(val) { renderMenu(val); }
 
-// ── Cart ──────────────────────────────────────────────────
+//  Cart 
 
 let pendingPortionItem = null;
 let pendingPortionVariant = null;
@@ -630,7 +630,7 @@ function renderCart() {
     }
 }
 
-// ── Place Order ───────────────────────────────────────────
+//  Place Order 
 
 function showOrderConfirm() {
     if (!activeTableId || cart.length === 0) return;
@@ -763,7 +763,7 @@ function showSuccessOverlay(order, isAddon) {
     }, 1500);
 }
 
-// ── Link Table ────────────────────────────────────────────
+//  Link Table 
 
 function showLinkTableModal() {
     const info = document.getElementById('rest-waiter-table-info').innerText;
@@ -846,7 +846,7 @@ async function handleLogout() {
     }
 }
 
-// ── Export to window ──────────────────────────────────────
+//  Export to window 
 // All functions exposed so inline HTML onclick handlers work
 window.waiterApp = {
     promptVariant, qpSelectVariant, qpBack, addToCartFromModal,
@@ -869,7 +869,7 @@ window.qpBack = qpBack;
 window.addToCartFromModal = addToCartFromModal;
 window.app = { promptVariant }; // For menu-add-btn onclick compatibility
 
-// ── Boot ──────────────────────────────────────────────────
+//  Boot 
 init().catch(e => {
     console.error('[Boot] Failed:', e);
     showToast('App Boot Failure', 'warning');
