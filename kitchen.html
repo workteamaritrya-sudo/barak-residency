@@ -54,6 +54,7 @@
 
         .kds-empty { grid-column: 1 / -1; height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.2; }
     </style>
+    <link rel="icon" href="br.png" type="image/png">
 </head>
 <body>
 
@@ -70,7 +71,7 @@
 
 <div class="kds-container" id="kds-grid">
     <div class="kds-empty">
-        <span style="font-size: 4rem;">🍳</span>
+        <span style="font-size: 4rem;"></span>
         <h3>Waiting for orders...</h3>
     </div>
 </div>
@@ -109,7 +110,7 @@
             .filter(o => o.status === 'Pending' || o.status === 'Processing' || o.status === 'Ready');
         
         if (orders.length === 0) {
-            grid.innerHTML = '<div class="kds-empty"><span style="font-size: 4rem;">🍳</span><h3>Waiting for orders...</h3></div>';
+            grid.innerHTML = '<div class="kds-empty"><span style="font-size: 4rem;"></span><h3>Waiting for orders...</h3></div>';
             return;
         }
 

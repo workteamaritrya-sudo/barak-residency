@@ -182,7 +182,7 @@ class FirebaseSyncEngine {
                 if (change.type === 'added' && (status === 'Pending' || status === 'Kitchen' || status === 'Placed')) {
                     if (isKitchenPortal) {
                         this.playKitchenAlert();
-                        app.showToast(`🔔 New Order: Room ${roomNum} — ${oid}`, 'info');
+                        app.showToast(` New Order: Room ${roomNum} — ${oid}`, 'info');
                     }
                     if (isReceptionPortal) {
                         this.playReceptionAlert();
@@ -191,7 +191,7 @@ class FirebaseSyncEngine {
                     if (app && app.db && roomNum) {
                         app.db.addNotification(
                             'order',
-                            `🛎 New Order — Room ${roomNum} | ID: ${oid}`,
+                            ` New Order — Room ${roomNum} | ID: ${oid}`,
                             'reception',
                             { type: 'room', orderId: oid, roomNumber: roomNum, items: order.items || [] }
                         );
@@ -201,12 +201,12 @@ class FirebaseSyncEngine {
                 if (change.type === 'modified' && (status === 'Served' || status === 'ready')) {
                     if (isReceptionPortal) {
                         this.playReceptionAlert();
-                        app.showToast(`✅ FOOD READY: Room ${roomNum} — ${oid}`, 'success');
+                        app.showToast(` FOOD READY: Room ${roomNum} — ${oid}`, 'success');
                     }
                     if (app && app.db && roomNum) {
                         app.db.addNotification(
                             'ready',
-                            `✅ READY for Pickup — Room ${roomNum} | ${oid}`,
+                            ` READY for Pickup — Room ${roomNum} | ${oid}`,
                             'reception',
                             { type: 'room', orderId: oid, roomNumber: roomNum, items: order.items || [] }
                         );
@@ -217,7 +217,7 @@ class FirebaseSyncEngine {
                     if (app && app.db && roomNum) {
                         app.db.addNotification(
                             'info',
-                            `🛵 On the Way — Room ${roomNum} | ${oid}`,
+                            ` On the Way — Room ${roomNum} | ${oid}`,
                             'reception',
                             { type: 'room', orderId: oid, roomNumber: roomNum, items: order.items || [] }
                         );
@@ -227,7 +227,7 @@ class FirebaseSyncEngine {
                 if (change.type === 'modified' && status === 'Delivered') {
                     if (isReceptionPortal) {
                         this.playReceptionAlert();
-                        app.showToast(`✔ Delivered — Room ${roomNum} | Bill Updated`, 'success');
+                        app.showToast(` Delivered — Room ${roomNum} | Bill Updated`, 'success');
                     }
                 }
             });
@@ -283,7 +283,7 @@ class FirebaseSyncEngine {
     unlockAudio() {
         this.audioUnlocked = true;
         const btn = document.getElementById('audio-unlock-btn');
-        if (btn) btn.innerHTML = "🔊 ALERTS ACTIVE";
+        if (btn) btn.innerHTML = " ALERTS ACTIVE";
         new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==').play().catch(() => {});
     }
 

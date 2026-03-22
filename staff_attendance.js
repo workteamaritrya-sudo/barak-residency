@@ -1,9 +1,9 @@
 /**
- * ══════════════════════════════════════════════════════════════════════════
+ * 
  * BARAK RESIDENCY — Staff Unified Portal v2.0
  * Collections:  staffProfiles, staffAttendance, serviceRequests,
  *               checkoutClearance, orders, notifications
- * ══════════════════════════════════════════════════════════════════════════
+ * 
  *
  * HOTEL STAFF  : Housekeeping alerts, Checkout-clearance gate, Service requests
  * REST STAFF   : Food-ready alerts, kitchen-order pickup notifications
@@ -26,12 +26,12 @@ import {
 }                              from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 import { firebaseConfig, app } from "./firebase-config.js";
 
-// ─── Firebase Setup ──────────────────────────────────────────────────────────
+//  Firebase Setup 
 const db   = getFirestore(app);
 const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
-// ─── State ───────────────────────────────────────────────────────────────────
+//  State 
 let currentProfile   = null;
 let attendanceUnsub  = null;
 let hotelNotifUnsub  = null;
@@ -39,22 +39,22 @@ let restNotifUnsub   = null;
 let clockInterval    = null;
 let seenNotifIds     = new Set(JSON.parse(localStorage.getItem('sr_seen_ids') || '[]'));
 
-// ─── Shift Detection ─────────────────────────────────────────────────────────
+//  Shift Detection 
 function detectShift(d = new Date()) {
     const h = d.getHours();
-    if (h >= 5  && h < 12) return { label:"Morning Shift",   emoji:"🌅", cls:"pill-morning",   badgeStyle:"background:rgba(251,191,36,0.15);color:#FBBF24;border:1px solid rgba(251,191,36,0.3);" };
-    if (h >= 12 && h < 17) return { label:"Afternoon Shift", emoji:"☀️",  cls:"pill-afternoon", badgeStyle:"background:rgba(245,158,11,0.15);color:#F59E0B;border:1px solid rgba(245,158,11,0.3);" };
-    if (h >= 17 && h < 21) return { label:"Evening Shift",   emoji:"🌆", cls:"pill-evening",   badgeStyle:"background:rgba(139,92,246,0.15);color:#A78BFA;border:1px solid rgba(139,92,246,0.3);" };
-    return                         { label:"Night Shift",    emoji:"🌙", cls:"pill-night",     badgeStyle:"background:rgba(59,130,246,0.15);color:#93C5FD;border:1px solid rgba(59,130,246,0.3);" };
+    if (h >= 5  && h < 12) return { label:"Morning Shift",   emoji:"", cls:"pill-morning",   badgeStyle:"background:rgba(251,191,36,0.15);color:#FBBF24;border:1px solid rgba(251,191,36,0.3);" };
+    if (h >= 12 && h < 17) return { label:"Afternoon Shift", emoji:"️",  cls:"pill-afternoon", badgeStyle:"background:rgba(245,158,11,0.15);color:#F59E0B;border:1px solid rgba(245,158,11,0.3);" };
+    if (h >= 17 && h < 21) return { label:"Evening Shift",   emoji:"", cls:"pill-evening",   badgeStyle:"background:rgba(139,92,246,0.15);color:#A78BFA;border:1px solid rgba(139,92,246,0.3);" };
+    return                         { label:"Night Shift",    emoji:"", cls:"pill-night",     badgeStyle:"background:rgba(59,130,246,0.15);color:#93C5FD;border:1px solid rgba(59,130,246,0.3);" };
 }
 
 function greeting(name) {
     const f = (name || 'Friend').split(' ')[0];
     const h = new Date().getHours();
-    if (h < 12) return `Good Morning, ${f}! 🌅`;
-    if (h < 17) return `Good Afternoon, ${f}! ☀️`;
-    if (h < 21) return `Good Evening, ${f}! 🌆`;
-    return `Good Night, ${f}! 🌙`;
+    if (h < 12) return `Good Morning, ${f}! `;
+    if (h < 17) return `Good Afternoon, ${f}! ️`;
+    if (h < 21) return `Good Evening, ${f}! `;
+    return `Good Night, ${f}! `;
 }
 
 function todayStr() {
@@ -63,7 +63,7 @@ function todayStr() {
 }
 function todayDocId(uid) { return `${uid}_${todayStr()}`; }
 
-// ─── Audio Notification (works even with screen off via AudioContext) ─────────
+//  Audio Notification (works even with screen off via AudioContext) 
 let audioCtx = null;
 function playAlertSound() {
     // Try real audio first (best quality)
@@ -97,7 +97,7 @@ document.addEventListener('click', () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
 }, { once: true });
 
-// ─── Web Push Notification (for background/Screen-Off alerts) ─────────────────
+//  Web Push Notification (for background/Screen-Off alerts) 
 async function requestPushPermission() {
     if (!('Notification' in window)) return;
     if (Notification.permission === 'default') {
@@ -117,7 +117,7 @@ function showSystemNotification(title, body) {
     }
 }
 
-// ─── Clock ───────────────────────────────────────────────────────────────────
+//  Clock 
 function startClock() {
     const tick = () => {
         const now  = new Date();
@@ -136,7 +136,7 @@ function startClock() {
     clockInterval = setInterval(tick, 1000);
 }
 
-// ─── UI Helpers ───────────────────────────────────────────────────────────────
+//  UI Helpers 
 function setMsg(id, text, type = 'error') {
     const el = document.getElementById(id);
     if (!el) return;
@@ -166,7 +166,7 @@ function showDashboard() {
     startClock();
 }
 
-// ─── Profile Loading ──────────────────────────────────────────────────────────
+//  Profile Loading 
 async function loadProfile(uid) {
     const snap = await getDoc(doc(db, 'staffProfiles', uid));
     return snap.exists() ? snap.data() : null;
@@ -195,7 +195,7 @@ function populateDashboard(profile) {
     }
 }
 
-// ─── Attendance Listener ──────────────────────────────────────────────────────
+//  Attendance Listener 
 function listenToday(uid) {
     const docRef = doc(db, 'staffAttendance', todayDocId(uid));
     if (attendanceUnsub) attendanceUnsub();
@@ -229,7 +229,7 @@ function listenToday(uid) {
     });
 }
 
-// ─── Punch In / Out ───────────────────────────────────────────────────────────
+//  Punch In / Out 
 window.punchIn = async function () {
     const user = auth.currentUser;
     if (!user || !currentProfile) return;
@@ -244,10 +244,10 @@ window.punchIn = async function () {
             shift: shift.label, shiftLabel: shift.label.split(' ')[0],
             shiftEmoji: shift.emoji, status: 'In', updatedAt: serverTimestamp()
         }, { merge: true });
-        setStatus('punch-status', '✅ Punched in!', 'success');
+        setStatus('punch-status', ' Punched in!', 'success');
         loadHistory(user.uid);
     } catch (e) {
-        setStatus('punch-status', '❌ ' + e.message, 'error');
+        setStatus('punch-status', ' ' + e.message, 'error');
     }
 };
 
@@ -267,14 +267,14 @@ window.punchOut = async function () {
             outTime: Timestamp.fromDate(now), status: 'Out',
             durationMins, updatedAt: serverTimestamp()
         }, { merge: true });
-        setStatus('punch-status', '✅ Punched out. See you next shift!', 'success');
+        setStatus('punch-status', ' Punched out. See you next shift!', 'success');
         loadHistory(user.uid);
     } catch (e) {
-        setStatus('punch-status', '❌ ' + e.message, 'error');
+        setStatus('punch-status', ' ' + e.message, 'error');
     }
 };
 
-// ─── 7-Day History ────────────────────────────────────────────────────────────
+//  7-Day History 
 async function loadHistory(uid) {
     const days = [];
     for (let i = 0; i < 7; i++) {
@@ -317,11 +317,11 @@ async function loadHistory(uid) {
     if (rEl) rEl.innerHTML = html;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // HOTEL STAFF NOTIFICATIONS
 // Listens to: serviceRequests + checkoutClearance
 // Staff marks tasks done → auto-updates reception desk
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 function startHotelNotifListener() {
     if (hotelNotifUnsub) hotelNotifUnsub();
 
@@ -360,7 +360,7 @@ function startHotelNotifListener() {
                     seenNotifIds.add(o.id + '_room_ready');
                     localStorage.setItem('sr_seen_ids', JSON.stringify([...seenNotifIds]));
                     playAlertSound();
-                    showSystemNotification('🍽️ Room Food Ready!',
+                    showSystemNotification('️ Room Food Ready!',
                         `Order for Room ${o.roomNumber || '?'} — ${(o.items||[]).map(i=>i.name).slice(0,2).join(', ')}`);
                 }
             });
@@ -392,13 +392,13 @@ function _renderHotelCombined() {
         const typeClass = isReady ? 'type-ready' : 'type-order';
         return `<div class="notif-item ${typeClass}" id="hro-${o.id}">
             <div class="notif-header">
-                <span class="notif-title">🍽️ Room ${o.roomNumber || '?'} Order</span>
+                <span class="notif-title">️ Room ${o.roomNumber || '?'} Order</span>
                 <span class="notif-time">${time}</span>
             </div>
             <div class="notif-msg">${items || 'Food order'}</div>
             <div style="font-size:0.72rem;font-weight:700;color:${isReady ? 'var(--green)' : '#FBBF24'};margin-bottom:0.6rem;">${isReady ? 'READY — Pick up from Kitchen' : (o.status||'PENDING').toUpperCase()}</div>
             <div class="notif-actions">
-                ${isReady ? `<button class="btn-notif btn-done" onclick="markOrderDelivered('${o.id}')">✅ Delivered to Room</button>` : '<span style="font-size:0.7rem;color:var(--text-mute);">Kitchen preparing…</span>'}
+                ${isReady ? `<button class="btn-notif btn-done" onclick="markOrderDelivered('${o.id}')"> Delivered to Room</button>` : '<span style="font-size:0.7rem;color:var(--text-mute);">Kitchen preparing…</span>'}
             </div>
         </div>`;
     }).join('');
@@ -408,10 +408,10 @@ function _renderHotelCombined() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // RESTAURANT STAFF NOTIFICATIONS — TABLE orders only (NOT room orders)
 // Listens to: orders with orderType='table'|'pickup'|'guest' that are Kitchen/Ready
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 let _seenOrderIds = new Set(JSON.parse(localStorage.getItem('order_seen_ids') || '[]'));
 
 function startRestNotifListener() {
@@ -432,7 +432,7 @@ function startRestNotifListener() {
                     _seenOrderIds.add(o.id + '_ready');
                     localStorage.setItem('order_seen_ids', JSON.stringify([..._seenOrderIds]));
                     playAlertSound();
-                    showSystemNotification('🍽️ Food Ready for Pickup!',
+                    showSystemNotification('️ Food Ready for Pickup!',
                         `Order #${o.id.slice(-6)} for Table ${o.tableId || '?'} — ${(o.items||[]).map(i=>i.name).slice(0,2).join(', ')}`);
                 }
             });
@@ -460,7 +460,7 @@ function startRestNotifListener() {
 
 
 
-// ─── Hotel Task Actions ───────────────────────────────────────────────────────
+//  Hotel Task Actions 
 
 /** Staff marks a service request (cleaning, etc.) as done — auto-updates reception */
 window.markServiceDone = async function (id) {
@@ -527,7 +527,7 @@ window.dismissTask = async function (id, col) {
 };
 
 
-// ─── renderHotelTasks — renders the combined hotel task inbox ─────────────────
+//  renderHotelTasks — renders the combined hotel task inbox 
 function renderHotelTasks(combined) {
     const container = document.getElementById('hotel-notif-list');
     const badge = document.getElementById('hotel-notif-count');
@@ -540,7 +540,7 @@ function renderHotelTasks(combined) {
             hasNew = true;
             seenNotifIds.add(t.id);
             showSystemNotification(
-                t._col === 'checkoutClearance' ? '🔴 Checkout Clearance Required' : '🧹 Task Alert',
+                t._col === 'checkoutClearance' ? ' Checkout Clearance Required' : ' Task Alert',
                 t.message || t.type || 'New task from reception'
             );
         }
@@ -556,7 +556,7 @@ function renderHotelTasks(combined) {
 
     if (!container) return;
     if (count === 0) {
-        container.innerHTML = '<div class="empty-state">No pending tasks. All clear 👍</div>';
+        container.innerHTML = '<div class="empty-state">No pending tasks. All clear </div>';
         return;
     }
 
@@ -564,12 +564,12 @@ function renderHotelTasks(combined) {
         const isCheckout = t._col === 'checkoutClearance';
         const time = t.timestamp ? new Date(t.timestamp?.seconds ? t.timestamp.seconds*1000 : t.timestamp).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '—';
         const typeClass = isCheckout ? 'type-checkout' : (t.type === 'housekeeping' ? 'type-housekeep' : 'type-service');
-        const icon = isCheckout ? '🔴' : (t.type === 'housekeeping' ? '🧹' : '🛎️');
+        const icon = isCheckout ? '' : (t.type === 'housekeeping' ? '' : '️');
         const title = isCheckout ? `CHECKOUT CLEARANCE — Room ${t.roomNumber}` : `${icon} ${(t.type || 'Service').toUpperCase()} — Room ${t.roomNumber}`;
         const actions = isCheckout
-            ? `<button class="btn-notif btn-done"  onclick="markCheckoutClear('${t.id}','${t.roomNumber}')">✅ Room Clear</button>
-               <button class="btn-notif btn-issue" onclick="markCheckoutIssue('${t.id}','${t.roomNumber}')">⚠️ Issue Found</button>`
-            : `<button class="btn-notif btn-done"  onclick="markServiceDone('${t.id}')">✅ Mark Done</button>
+            ? `<button class="btn-notif btn-done"  onclick="markCheckoutClear('${t.id}','${t.roomNumber}')"> Room Clear</button>
+               <button class="btn-notif btn-issue" onclick="markCheckoutIssue('${t.id}','${t.roomNumber}')">️ Issue Found</button>`
+            : `<button class="btn-notif btn-done"  onclick="markServiceDone('${t.id}')"> Mark Done</button>
                <button class="btn-notif btn-dismiss" onclick="dismissTask('${t.id}','serviceRequests')">Dismiss</button>`;
         return `<div class="notif-item ${typeClass}" id="ntask-${t.id}">
             <div class="notif-header"><span class="notif-title">${title}</span><span class="notif-time">${time}</span></div>
@@ -612,7 +612,7 @@ function renderRestTasks(orders) {
         const itemStr = items + (moreCount > 0 ? ` +${moreCount} more` : '');
 
         const actions = isReady
-            ? `<button class="btn-notif btn-done" onclick="markOrderDelivered('${o.id}')">✅ Picked Up from Kitchen</button>`
+            ? `<button class="btn-notif btn-done" onclick="markOrderDelivered('${o.id}')"> Picked Up from Kitchen</button>`
             : `<span style="font-size:0.7rem;color:var(--text-mute);">Waiting for kitchen...</span>`;
 
         return `<div class="notif-item ${typeClass}" id="order-${o.id}">
@@ -642,7 +642,7 @@ window.markOrderDelivered = async function (orderId) {
     } catch (e) { alert('Failed: ' + e.message); }
 };
 
-// ─── Register ─────────────────────────────────────────────────────────────────
+//  Register 
 document.getElementById('register-form').addEventListener('submit', async e => {
     e.preventDefault();
     clearMsg('register-msg');
@@ -661,7 +661,7 @@ document.getElementById('register-form').addEventListener('submit', async e => {
             uid: cred.user.uid, name, email, department: dept, team, role: 'Staff',
             registeredAt: serverTimestamp()
         });
-        setMsg('register-msg', `Welcome, ${name.split(' ')[0]}! 🎉 Logging you in…`, 'success');
+        setMsg('register-msg', `Welcome, ${name.split(' ')[0]}!  Logging you in…`, 'success');
     } catch (err) {
         let m = err.message;
         if (err.code === 'auth/email-already-in-use') m = 'This email is already registered. Please log in.';
@@ -671,7 +671,7 @@ document.getElementById('register-form').addEventListener('submit', async e => {
     }
 });
 
-// ─── Login ────────────────────────────────────────────────────────────────────
+//  Login 
 document.getElementById('login-form').addEventListener('submit', async e => {
     e.preventDefault();
     clearMsg('login-msg');
@@ -692,7 +692,7 @@ document.getElementById('login-form').addEventListener('submit', async e => {
     }
 });
 
-// ─── Logout ───────────────────────────────────────────────────────────────────
+//  Logout 
 window.staffLogout = async function () {
     if (attendanceUnsub) attendanceUnsub();
     if (hotelNotifUnsub) hotelNotifUnsub();
@@ -702,7 +702,7 @@ window.staffLogout = async function () {
     showAuthPanel();
 };
 
-// ─── Auth State Observer ──────────────────────────────────────────────────────
+//  Auth State Observer 
 onAuthStateChanged(auth, async user => {
     hideLoader();
     if (user) {

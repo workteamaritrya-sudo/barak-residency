@@ -14,6 +14,7 @@
         pre { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x: auto; }
         .section-divide { border-top: 1px solid rgba(212,175,55,0.2); margin: 1.5rem 0; padding-top: 1.5rem; }
     </style>
+    <link rel="icon" href="br.png" type="image/png">
 </head>
 <body>
     <div class="card">
@@ -41,9 +42,10 @@ Staff:
 - H.Waiter:  BR-HW-001  | waiter@barak.com
 - R.Waiter:  BR-RW-001  | restwaiter@barak.com
 - Rest Desk: BR-RD-001  | restdesk@barak.com
+- Stock:     BR-STK-001 | stock@barak.com
 - Password for all staff: password123
                 </pre>
-                <p><i>✅ The initialization script will now automatically register these emails into the Firebase Authentication system for you.</i></p>
+                <p><i> The initialization script will now automatically register these emails into the Firebase Authentication system for you.</i></p>
                 <a href="index.html" style="color:#D4AF37; font-weight: bold;">&#8594; Go to Login Page</a>
             </div>
         </div>
@@ -64,7 +66,8 @@ Staff:
                     { empId: 'BR-KIT-001', assignedEmail: 'kitchen@barak.com', name: 'Executive Chef', role: 'Kitchen' },
                     { empId: 'BR-HW-001', assignedEmail: 'waiter@barak.com', name: 'Hotel Waiter', role: 'HotelWaiter' },
                     { empId: 'BR-RW-001', assignedEmail: 'restwaiter@barak.com', name: 'Rest Waiter', role: 'RestWaiter' },
-                    { empId: 'BR-RD-001', assignedEmail: 'restdesk@barak.com', name: 'Rest Desk', role: 'RestDesk' }
+                    { empId: 'BR-RD-001', assignedEmail: 'restdesk@barak.com', name: 'Rest Desk', role: 'RestDesk' },
+                    { empId: 'BR-STK-001', assignedEmail: 'stock@barak.com', name: 'Stock Manager', role: 'Stock' }
                 ];
 
                 for (const user of users) {

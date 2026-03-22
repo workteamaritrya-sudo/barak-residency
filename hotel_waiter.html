@@ -63,6 +63,7 @@
         .toast.warning { background: #EAB308; color: #000; }
         .empty-msg { text-align: center; color: #6B7280; padding: 2rem; font-style: italic; }
     </style>
+    <link rel="icon" href="br.png" type="image/png">
 </head>
 <body>
     <div class="page-layout">
@@ -78,7 +79,7 @@
                 <button id="btn-hw-close"
                     onclick="if(window.parent && window.parent.closeHotelWaiter) window.parent.closeHotelWaiter(); else window.history.back();"
                     style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#FCA5A5; padding:0.4rem 0.9rem; border-radius:6px; cursor:pointer; font-weight:700; font-size:0.8rem;">
-                    ✕ Close
+                     Close
                 </button>
             </div>
             <div class="controls">
@@ -97,7 +98,7 @@
             <div class="cart-section">
                 <div style="padding:1.5rem; border-bottom:1px solid var(--glass-border); display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-weight:800; letter-spacing:1px; color:var(--gold-primary);">LIVE CART</span>
-                    <button onclick="window.location.reload()" style="background:transparent; border:none; color:var(--text-gray); cursor:pointer; font-size:0.7rem;">🔄 Refresh</button>
+                    <button onclick="window.location.reload()" style="background:transparent; border:none; color:var(--text-gray); cursor:pointer; font-size:0.7rem;"> Refresh</button>
                 </div>
                 
                 <!-- Room Summary (New) -->
@@ -116,7 +117,7 @@
                         <span>Cart Total:</span>
                         <span style="color:#4ADE80;">₹<span id="waiter-total-amt">0</span></span>
                     </div>
-                    <button id="waiter-place-btn" class="btn-place" onclick="window.placeOrder()" disabled>🚀 PLACE ORDER</button>
+                    <button id="waiter-place-btn" class="btn-place" onclick="window.placeOrder()" disabled> PLACE ORDER</button>
                 </div>
             </div>
             
