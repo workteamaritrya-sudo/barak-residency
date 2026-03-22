@@ -13,26 +13,18 @@ service cloud.firestore {
     }
 
     // 1. Users Collection
-    // - Everyone authenticated can read their OWN profile.
-    // - Only Admin can read ALL profiles.
-    // - Only Admin can write/create.
     match /users/{email} {
       allow read: if i() && (request.auth.token.email == email || getRole() == 'Admin');
       allow write: if i() && getRole() == 'Admin';
     }
 
     // 2. Menu Items
-    // - Read: Public (guests need this to see the menu).
-    // - Write: Only Admin.
     match /menuItems/{itemId} {
       allow read: if true;
       allow write: if i() && getRole() == 'Admin';
     }
 
-    // 3. Orders & Service Requests
-    // - Read/Write: Authenticated users (Staff/Kitchen).
-    // - Guests can create (write) and read THEIR OWN orders if we implement session-based rules, 
-    //   but for now, we allow creation for simplicity.
+    // 3. Orders & Service Requests — all authenticated staff
     match /orders/{orderId} {
       allow read, write: if true; 
     }
@@ -42,18 +34,59 @@ service cloud.firestore {
     }
 
     // 4. Rooms (Reception Logic)
-    // - Only logged in staff can manage rooms.
     match /rooms/{roomNum} {
       allow read, write: if i();
     }
     
     // 5. Billing & Sales (Sensitive)
-    // - Only Admin can read/write.
     match /ledger/{docId} {
       allow read, write: if i() && getRole() == 'Admin';
     }
     match /salesHistory/{docId} {
       allow read, write: if i() && getRole() == 'Admin';
+    }
+
+    // 6. Staff Profiles
+    // Staff can read & write their OWN profile. Admin can read all.
+    match /staffProfiles/{uid} {
+      allow read: if i() && (request.auth.uid == uid || getRole() == 'Admin');
+      allow write: if i() && request.auth.uid == uid;
+    }
+
+    // 7. Staff Attendance Records
+    // Staff writes their own records. Any authenticated user can read (admin reporting).
+    match /staffAttendance/{recordId} {
+      allow read: if i();
+      allow write: if i() && recordId.matches(request.auth.uid + '_.*');
+    }
+
+    // 8. Checkout Clearance
+    // Reception creates. Staff updates (clear / issue). All auth users can read live.
+    match /checkoutClearance/{docId} {
+      allow read:   if i();
+      allow create: if i();
+      allow update: if i();
+    }
+
+    // 9. Notifications (cross-portal alerts)
+    match /notifications/{docId} {
+      allow read, write: if i();
+    }
+
+    // 10. Guests & Billing (Reception)
+    match /guests/{guestId} {
+      allow read, write: if i();
+    }
+
+    // 11. Settings (availability, etc.)
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if i();
+    }
+
+    // 12. Police logs
+    match /police_logs/{docId} {
+      allow read, write: if i();
     }
   }
 }

@@ -132,7 +132,17 @@
                             <div class="cc-actions mt-4" style="border-top: 1px solid var(--glass-border); padding-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                                 <button class="btn btn-outline" style="flex:1" onclick="app.toggleOrderHistory()">History</button>
                                 <button class="btn btn-primary" style="flex:1" onclick="app.generateInvoice()">Print Bill</button>
-                                <button id="cc-finalize-btn" class="btn btn-success" style="flex:1; opacity: 0.5;" onclick="app.finalizePayAndCheckout()">Finalize Checkout</button>
+                                <button class="btn btn-outline" style="flex:1; border-color:#F59E0B; color:#F59E0B;" onclick="app.raiseHousekeepingRequest()">🧹 Housekeeping</button>
+                            </div>
+                            <!-- Checkout Clearance Gate -->
+                            <div id="cc-checkout-gate" style="display:none; margin-top:1rem; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:1rem; font-size:0.82rem;">
+                                <strong style="color:#EF4444; display:block; margin-bottom:0.4rem;">⏳ Awaiting Staff Room Clearance</strong>
+                                <span style="color:rgba(255,255,255,0.5);">Hotel staff has been notified. Checkout will unlock once they mark the room clear.</span>
+                                <div id="cc-gate-status" style="margin-top:0.6rem; font-weight:700; font-size:0.8rem;"></div>
+                            </div>
+                            <div class="cc-actions mt-3" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                <button id="cc-checkout-req-btn" class="btn btn-outline" style="flex:1; border-color:#F59E0B; color:#F59E0B;" onclick="app.requestCheckoutClearance()">Request Checkout Clearance</button>
+                                <button id="cc-finalize-btn" class="btn btn-success" style="flex:1; opacity: 0.5; display:none;" onclick="app.finalizePayAndCheckout()">Finalize Checkout</button>
                             </div>
                         </div>
 
