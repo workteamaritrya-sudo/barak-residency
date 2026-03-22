@@ -463,7 +463,32 @@
     </div>
 
     <button onclick="openStockApp()" style="width:100%; padding:0.9rem; margin-top:1.5rem; margin-bottom:0.5rem; border:1px solid rgba(212,175,55,0.4); border-radius:12px; background:transparent; color:var(--gold); font-family:'Inter',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:0.2s;"> Update Stock / Inventory</button>
+    <button onclick="openUseStockPopup()" style="width:100%; padding:0.9rem; margin-bottom:0.5rem; border:1px solid rgba(239,68,68,0.4); border-radius:12px; background:rgba(239,68,68,0.06); color:#FCA5A5; font-family:'Inter',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:0.2s;"> Remove Stock Item</button>
     <button class="btn-logout" onclick="staffLogout()"> Sign Out</button>
+</div>
+
+<!-- Use Stock Popup Modal -->
+<div id="use-stock-modal" style="display:none; position:fixed; inset:0; z-index:11000; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
+    <div style="background:#0B1427; border:1px solid rgba(239,68,68,0.3); border-radius:20px; padding:2rem; width:90%; max-width:420px; max-height:80vh; overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+            <div>
+                <div style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;color:#FCA5A5;letter-spacing:2px;">Remove Stock Item</div>
+                <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);letter-spacing:1px;margin-top:0.2rem;">Staff use only — items cannot be added here</div>
+            </div>
+            <button onclick="closeUseStockPopup()" style="background:transparent;border:none;color:rgba(255,255,255,0.4);font-size:1.4rem;cursor:pointer;line-height:1;">x</button>
+        </div>
+        <div id="use-stock-list" style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.2rem;">
+            <div style="text-align:center;color:rgba(255,255,255,0.3);padding:2rem;">Loading stock...</div>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:1.2rem;">
+            <label style="font-size:0.65rem;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;display:block;margin-bottom:0.5rem;">Selected Item</label>
+            <div id="use-stock-selected" style="font-weight:700;color:var(--gold);margin-bottom:0.8rem;font-size:0.88rem;">— tap an item above —</div>
+            <label style="font-size:0.65rem;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;display:block;margin-bottom:0.5rem;">Quantity to Remove</label>
+            <input id="use-stock-qty" type="number" min="1" value="1" style="width:100%;background:#050B18;border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;padding:0.7rem 1rem;font-size:0.9rem;font-family:'Inter',sans-serif;margin-bottom:1rem;">
+            <button onclick="confirmUseStock()" style="width:100%;padding:0.9rem;border:none;border-radius:10px;background:linear-gradient(135deg,rgba(239,68,68,0.8),#EF4444);color:#fff;font-weight:700;font-size:0.85rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">Confirm Remove</button>
+            <div id="use-stock-msg" style="text-align:center;font-size:0.78rem;margin-top:0.6rem;display:none;"></div>
+        </div>
+    </div>
 </div>
 
 <!-- Stock Management Overlay -->

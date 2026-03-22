@@ -752,3 +752,87 @@ window.closeStockApp = function() {
     const overlay = document.getElementById('stock-app-overlay');
     if (overlay) overlay.style.display = 'none';
 };
+
+// Use Stock Popup (Staff Remove Only)
+let _useStockSelectedId   = null;
+let _useStockSelectedName = '';
+let _useStockCurrentQty   = 0;
+
+window.openUseStockPopup = async function() {
+    _useStockSelectedId = null;
+    const modal = document.getElementById('use-stock-modal');
+    const list  = document.getElementById('use-stock-list');
+    const msg   = document.getElementById('use-stock-msg');
+    const selEl = document.getElementById('use-stock-selected');
+    if (!modal) return;
+    if (selEl) selEl.textContent = '\u2014 tap an item above \u2014';
+    if (msg)   msg.style.display = 'none';
+    modal.style.display = 'flex';
+    list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:2rem;">Loading stock...</div>';
+    try {
+        const snap  = await getDocs(collection(db, 'stock'));
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        if (!items.length) {
+            list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:2rem;">No stock items.</div>';
+            return;
+        }
+        list.innerHTML = items.map(item => {
+            const qty = Number(item.qty) || 0;
+            const col = qty <= 0 ? '#EF4444' : qty <= 5 ? '#F59E0B' : '#22C55E';
+            const safeName = (item.name || '').replace(/'/g, "\\'");
+            return `<div onclick="selectUseStockItem('${item.id}','${safeName}',${qty})"
+                id="usestk-row-${item.id}"
+                style="display:flex;justify-content:space-between;align-items:center;
+                       background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+                       border-radius:10px;padding:0.7rem 1rem;cursor:pointer;transition:0.15s;">
+                <div>
+                    <div style="font-weight:700;font-size:0.85rem;">${item.name || '\u2014'}</div>
+                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);">${item.category || ''}</div>
+                </div>
+                <div style="font-size:0.9rem;font-weight:800;color:${col};">${qty} <span style="font-size:0.65rem;opacity:0.6;">${item.unit || 'pcs'}</span></div>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        list.innerHTML = '<div style="color:#EF4444;text-align:center;padding:2rem;">Error loading stock</div>';
+    }
+};
+
+window.selectUseStockItem = function(id, name, qty) {
+    _useStockSelectedId   = id;
+    _useStockSelectedName = name;
+    _useStockCurrentQty   = qty;
+    document.querySelectorAll('[id^="usestk-row-"]').forEach(el => {
+        el.style.background  = 'rgba(255,255,255,0.03)';
+        el.style.borderColor = 'rgba(255,255,255,0.07)';
+    });
+    const row = document.getElementById('usestk-row-' + id);
+    if (row) { row.style.background = 'rgba(239,68,68,0.12)'; row.style.borderColor = 'rgba(239,68,68,0.5)'; }
+    const selEl = document.getElementById('use-stock-selected');
+    if (selEl) selEl.textContent = name + '  (current qty: ' + qty + ')';
+    const qtyEl = document.getElementById('use-stock-qty');
+    if (qtyEl) { qtyEl.value = 1; qtyEl.max = qty; }
+};
+
+window.closeUseStockPopup = function() {
+    const modal = document.getElementById('use-stock-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+window.confirmUseStock = async function() {
+    const msg = document.getElementById('use-stock-msg');
+    if (!_useStockSelectedId) {
+        if (msg) { msg.style.display='block'; msg.style.color='#EF4444'; msg.textContent='Select an item first.'; }
+        return;
+    }
+    const qty    = parseInt(document.getElementById('use-stock-qty')?.value) || 1;
+    const newQty = Math.max(0, _useStockCurrentQty - qty);
+    try {
+        await updateDoc(doc(db, 'stock', _useStockSelectedId), { qty: newQty, updatedAt: serverTimestamp() });
+        if (msg) { msg.style.display='block'; msg.style.color='#22C55E'; msg.textContent='Removed ' + qty + ' from "' + _useStockSelectedName + '". New qty: ' + newQty; }
+        _useStockSelectedId = null;
+        setTimeout(() => window.openUseStockPopup(), 1300);
+    } catch(e) {
+        if (msg) { msg.style.display='block'; msg.style.color='#EF4444'; msg.textContent='Failed: ' + e.message; }
+    }
+};

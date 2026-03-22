@@ -84,6 +84,41 @@ async function pushOrderToCloud(orderObj) {
     } catch (e) { console.error('[Order] Push failed', e); }
 }
 
+// Auto-decrement stock for drink items ordered
+async function decrementDrinksFromStock(cartItems) {
+    try {
+        const drinkItems = cartItems.filter(i =>
+            (i.category === 'Drinks') ||
+            (i.portionType === 'Bottle') ||
+            (i.portionType === 'Cup')
+        );
+        if (drinkItems.length === 0) return;
+
+        const stockSnap = await getDocs(collection(db, 'stock'));
+        const stockList = stockSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        for (const ordered of drinkItems) {
+            const name = (ordered.name || '').toLowerCase();
+            const match = stockList.find(s => {
+                const sName = (s.name || '').toLowerCase();
+                return sName === name ||
+                    name.includes(sName) ||
+                    sName.includes(name.split(' ')[0]);
+            });
+            if (match) {
+                const newQty = Math.max(0, (Number(match.qty) || 0) - (Number(ordered.qty) || 1));
+                await updateDoc(doc(db, 'stock', match.id), {
+                    qty: newQty,
+                    updatedAt: serverTimestamp()
+                });
+                match.qty = newQty;
+            }
+        }
+    } catch (e) {
+        console.warn('[Stock] Drink decrement skipped:', e);
+    }
+}
+
 async function pushNotification(type, message, target, data = null) {
     try {
         const nRef = collection(db, 'notifications');
@@ -696,6 +731,9 @@ async function placeOrder() {
 
         // Push to Firestore → KDS sees it instantly
         await pushOrderToCloud(orderObj);
+
+        // Auto-decrement drink stock
+        await decrementDrinksFromStock(itemsList);
 
         // Update table state locally + cloud
         if (!table.orders) table.orders = [];
