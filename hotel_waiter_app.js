@@ -408,12 +408,12 @@ async function getNextGlobalSerial(roomNum) {
 
 window.placeOrder = async function() {
     if (!selectedRoom || waiterCart.length === 0) return;
-    const { doc, updateDoc, setDoc, serverTimestamp, increment, arrayUnion } = hooks;
+    const { doc, updateDoc, setDoc, serverTimestamp, increment, arrayUnion, collection, getDocs } = hooks;
     
     const btn = document.getElementById('waiter-place-btn');
     if (btn) {
         btn.disabled = true;
-        btn.innerText = '⌛ PLACING...';
+        btn.innerText = 'PLACING...';
     }
 
     const roomNum = selectedRoom;
@@ -462,6 +462,9 @@ window.placeOrder = async function() {
             });
         }
 
+        // Auto-decrement drink stock
+        await decrementDrinksFromStock(waiterCart, db, { collection, getDocs, doc, updateDoc, increment, serverTimestamp });
+
         waiterCart = [];
         updateCartUI();
         addonOrderId = null;
@@ -481,10 +484,46 @@ window.placeOrder = async function() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerText = ' PLACE ORDER';
+            btn.innerText = 'PLACE ORDER';
         }
     }
 };
+
+// Auto-decrement stock for drinks ordered
+async function decrementDrinksFromStock(cartItems, dbRef, fns) {
+    try {
+        const { collection, getDocs, doc, updateDoc, increment, serverTimestamp } = fns;
+        const drinkItems = cartItems.filter(i =>
+            (i.category === 'Drinks') ||
+            (i.portionType === 'Bottle') ||
+            (i.portionType === 'Cup')
+        );
+        if (drinkItems.length === 0) return;
+
+        const stockSnap = await getDocs(collection(dbRef, 'stock'));
+        const stockList = stockSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        for (const ordered of drinkItems) {
+            const name = (ordered.name || '').toLowerCase();
+            const match = stockList.find(s => {
+                const sName = (s.name || '').toLowerCase();
+                return sName === name ||
+                    name.includes(sName) ||
+                    sName.includes(name.split(' ')[0]);
+            });
+            if (match) {
+                const newQty = Math.max(0, (Number(match.qty) || 0) - (Number(ordered.qty) || 1));
+                await updateDoc(doc(dbRef, 'stock', match.id), {
+                    qty: newQty,
+                    updatedAt: serverTimestamp()
+                });
+                match.qty = newQty; // update local cache too
+            }
+        }
+    } catch (e) {
+        console.warn('[Stock] Drink decrement failed (non-critical):', e);
+    }
+}
 
 window.handleLogout = async () => {
     if (confirm('Logout from Waiter Portal?')) {
