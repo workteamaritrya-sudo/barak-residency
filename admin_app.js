@@ -6,15 +6,17 @@
 // --- Imports ---
 import {
     getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc,
-    onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc, where
+    onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc, where, addDoc
 } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-storage.js";
 import { firebaseConfig, app } from './firebase-config.js';
 
-let db, auth;
+let db, auth, storage;
 try {
     db = getFirestore(app);
     auth = getAuth(app);
+    storage = getStorage(app);
 } catch (e) {
     console.error("[Firebase] Init failure:", e);
 }
@@ -69,6 +71,8 @@ function startListeners() {
 
     onSnapshot(collection(db, 'menuItems'), snap => {
         menu = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const mv = document.getElementById('menu-view');
+        if (mv && mv.style.display !== 'none') renderMenuView();
     });
 
     // 5. Staff Profiles (for Staff Management tab)
@@ -150,6 +154,7 @@ window.switchAdminTab = function(tabId, el) {
     if (tabId === 'attendance-view') { title.innerText = "STAFF ATTENDANCE REPORTS"; renderAttendanceView(); }
     if (tabId === 'staff-mgmt-view') { title.innerText = "STAFF MANAGEMENT"; renderStaffMgmtView(); }
     if (tabId === 'stock-view')      { title.innerText = "STOCK & INVENTORY"; renderStockAdminView(); }
+    if (tabId === 'menu-view')       { title.innerText = "MENU MANAGER"; renderMenuView(); }
 };
 
 function renderHotelView() {
@@ -414,6 +419,215 @@ window.removeStaff = async function(uid, name) {
     } catch (e) {
         alert('Failed to remove staff: ' + e.message);
     }
+};
+
+//  Menu Manager Admin View 
+function renderMenuView() {
+    const container = document.getElementById('menu-view');
+    if (!container) return;
+
+    const categories = [...new Set(menu.map(i => i.category))].sort();
+
+    container.innerHTML = `
+    <style>
+        .menu-admin-card { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:16px; padding:1.5rem; margin-bottom:2rem; }
+        .menu-item-row { display:flex; align-items:center; gap:1rem; padding:0.8rem 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+        .menu-item-row:last-child { border-bottom:none; }
+        .menu-item-img { width:52px; height:52px; border-radius:10px; object-fit:cover; background:#111; flex-shrink:0; }
+        .menu-item-name { font-weight:700; font-size:0.9rem; }
+        .menu-item-meta { font-size:0.7rem; color:rgba(255,255,255,0.4); margin-top:2px; }
+        .menu-avail-pill { padding:2px 8px; border-radius:10px; font-size:0.6rem; font-weight:700; letter-spacing:1px; }
+        .avail-yes { background:rgba(34,197,94,0.12); color:#22C55E; border:1px solid rgba(34,197,94,0.3); }
+        .avail-no  { background:rgba(239,68,68,0.12);  color:#EF4444; border:1px solid rgba(239,68,68,0.3); }
+        .btn-menu-del { padding:0.35rem 0.8rem; border-radius:8px; font-size:0.68rem; font-weight:700; cursor:pointer; background:rgba(239,68,68,0.1); color:#EF4444; border:1px solid rgba(239,68,68,0.3); transition:0.2s; }
+        .btn-menu-del:hover { background:rgba(239,68,68,0.3); }
+        .btn-menu-toggle { padding:0.35rem 0.8rem; border-radius:8px; font-size:0.68rem; font-weight:700; cursor:pointer; background:rgba(245,158,11,0.1); color:#F59E0B; border:1px solid rgba(245,158,11,0.3); transition:0.2s; }
+        .btn-menu-toggle:hover { background:rgba(245,158,11,0.3); }
+        .menu-add-form { display:grid; gap:0.8rem; }
+        .menu-form-row { display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; }
+        select.mf, input.mf, textarea.mf { background:#050B1A; border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:#fff; padding:0.7rem 1rem; font-family:'Inter',sans-serif; font-size:0.85rem; width:100%; outline:none; transition:border-color 0.2s; }
+        select.mf:focus, input.mf:focus, textarea.mf:focus { border-color:var(--gold); }
+        .btn-add-menu { padding:0.85rem; border:none; border-radius:10px; background:linear-gradient(135deg,#C9A227,#D4AF37); color:#000; font-weight:700; font-size:0.85rem; letter-spacing:2px; text-transform:uppercase; cursor:pointer; width:100%; transition:0.2s; }
+        .btn-add-menu:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(212,175,55,0.3); }
+        .cat-heading { font-family:'Cormorant Garamond',serif; font-size:1.1rem; letter-spacing:2px; color:var(--gold); margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid rgba(212,175,55,0.2); }
+        .portion-toggle { display:flex; gap:0.6rem; margin-top:0.2rem; }
+        .portion-toggle label { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:rgba(255,255,255,0.6); cursor:pointer; }
+        #menu-form-msg { font-size:0.8rem; text-align:center; margin-top:0.5rem; padding:0.5rem; border-radius:8px; display:none; }
+    </style>
+
+    <div class="menu-admin-card">
+        <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;letter-spacing:2px;margin-bottom:1.5rem;">Add New Menu Item</h3>
+        <div class="menu-add-form">
+            <div class="menu-form-row">
+                <div>
+                    <label style="font-size:0.65rem;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;display:block;margin-bottom:0.4rem;">Item Name</label>
+                    <input class="mf" id="mf-name" type="text" placeholder="e.g. Chicken Kosha">
+                </div>
+                <div>
+                    <label style="font-size:0.65rem;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;display:block;margin-bottom:0.4rem;">Category</label>
+                    <select class="mf" id="mf-category">
+                        <option value="">Select category</option>
+                        <option>Starters</option><option>Main Course</option>
+                        <option>Dessert</option><option>Drinks</option><option>Other</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label style="font-size:0.65rem;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;display:block;margin-bottom:0.4rem;">Description</label>
+                <textarea class="mf" id="mf-desc" rows="2" placeholder="Short item description"></textarea>
+            </div>
+            <div class="menu-form-row">
+                <div>
+                    <label style="font-size:0.65rem;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;display:block;margin-bottom:0.4rem;">Full Price (Rs.)</label>
+                    <input class="mf" id="mf-price" type="number" min="0" placeholder="e.g. 280">
+                </div>
+                <div>
+                    <label style="font-size:0.65rem;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;display:block;margin-bottom:0.4rem;">Portion System</label>
+                    <select class="mf" id="mf-portion" onchange="window.adminMenuPortionChange()">
+                        <option value="no">No Half Plate (Single price)</option>
+                        <option value="yes">Has Full & Half Plate</option>
+                    </select>
+                </div>
+            </div>
+            <div id="mf-halfprice-wrap" style="display:none;">
+                <label style="font-size:0.65rem;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;display:block;margin-bottom:0.4rem;">Half Plate Price (Rs.)</label>
+                <input class="mf" id="mf-priceHalf" type="number" min="0" placeholder="e.g. 160">
+            </div>
+            <div>
+                <label style="font-size:0.65rem;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;display:block;margin-bottom:0.4rem;">Food Image (upload from device)</label>
+                <input class="mf" id="mf-image" type="file" accept="image/*" style="padding:0.5rem;">
+                <div style="margin-top:0.4rem;font-size:0.7rem;color:rgba(255,255,255,0.3);">Or paste an image URL below (optional):</div>
+                <input class="mf" id="mf-imageUrl" type="text" placeholder="https://..." style="margin-top:0.4rem;">
+            </div>
+            <button class="btn-add-menu" onclick="window.adminAddMenuItem()">+ Add to Menu</button>
+            <div id="menu-form-msg"></div>
+        </div>
+    </div>
+
+    <div class="menu-admin-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+            <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;letter-spacing:2px;">Current Menu (${menu.length} items)</h3>
+            <button onclick="window.adminDownloadMenuCSV()" style="padding:0.5rem 1rem;border:1px solid rgba(212,175,55,0.3);background:rgba(212,175,55,0.08);color:var(--gold);border-radius:8px;font-size:0.72rem;font-weight:700;letter-spacing:1px;cursor:pointer;">Download Menu CSV</button>
+        </div>
+        ${categories.map(cat => {
+            const catItems = menu.filter(i => i.category === cat);
+            return `<div class="cat-heading">${cat} (${catItems.length})</div>
+            ${
+                catItems.map(item => {
+                    const avail = item.isAvailable !== false;
+                    const halfInfo = item.priceHalf > 0 ? ` / Half: Rs.${item.priceHalf}` : '';
+                    return `
+                    <div class="menu-item-row" id="mrow-${item.id}">
+                        <img class="menu-item-img" src="${item.imageUrl || 'https://placehold.co/52x52/0A1229/D4AF37?text=' + encodeURIComponent(item.name?.charAt(0)||'?')}" onerror="this.src='https://placehold.co/52x52/0A1229/D4AF37?text=?'">
+                        <div style="flex:1;">
+                            <div class="menu-item-name">${item.name || '—'}</div>
+                            <div class="menu-item-meta">Rs.${item.price || 0}${halfInfo} · ${item.category} · ${item.portionType || ''}</div>
+                        </div>
+                        <span class="menu-avail-pill ${avail ? 'avail-yes' : 'avail-no'}">${avail ? 'AVAIL' : 'UNAVAIL'}</span>
+                        <button class="btn-menu-toggle" onclick="window.adminToggleAvailability('${item.id}', ${avail})">${avail ? 'Mark Unavail' : 'Mark Avail'}</button>
+                        <button class="btn-menu-del" onclick="window.adminDeleteMenuItem('${item.id}','${(item.name||'').replace(/'/g,'')}')">Delete</button>
+                    </div>`;
+                }).join('')
+            }`;
+        }).join('<br>')}
+        ${menu.length === 0 ? '<div style="text-align:center;opacity:0.3;padding:3rem;">No menu items yet</div>' : ''}
+    </div>`;
+}
+
+// Toggle menu portion field
+window.adminMenuPortionChange = function() {
+    const v = document.getElementById('mf-portion')?.value;
+    const wrap = document.getElementById('mf-halfprice-wrap');
+    if (wrap) wrap.style.display = v === 'yes' ? 'block' : 'none';
+};
+
+// Add menu item
+window.adminAddMenuItem = async function() {
+    const name      = document.getElementById('mf-name')?.value.trim();
+    const category  = document.getElementById('mf-category')?.value;
+    const desc      = document.getElementById('mf-desc')?.value.trim();
+    const price     = parseFloat(document.getElementById('mf-price')?.value) || 0;
+    const portionV  = document.getElementById('mf-portion')?.value;
+    const priceHalf = portionV === 'yes' ? (parseFloat(document.getElementById('mf-priceHalf')?.value) || 0) : 0;
+    const imageFile = document.getElementById('mf-image')?.files?.[0];
+    const imageUrl  = document.getElementById('mf-imageUrl')?.value.trim();
+    const msgEl     = document.getElementById('menu-form-msg');
+
+    if (!name || !category || price <= 0) {
+        if (msgEl) { msgEl.style.display='block'; msgEl.style.color='#EF4444'; msgEl.textContent='Please fill Name, Category and Price.'; }
+        return;
+    }
+
+    if (msgEl) { msgEl.style.display='block'; msgEl.style.color='#F59E0B'; msgEl.textContent='Saving...'; }
+
+    try {
+        let finalImageUrl = imageUrl;
+
+        // Upload image to Firebase Storage if a file was chosen
+        if (imageFile) {
+            const storageRef = ref(storage, `menuImages/${Date.now()}_${imageFile.name}`);
+            await uploadBytes(storageRef, imageFile);
+            finalImageUrl = await getDownloadURL(storageRef);
+        }
+
+        const portionType = portionV === 'yes' ? 'Plate' : (category === 'Drinks' ? 'Bottle' : 'Quantity');
+        const newId = 'custom_' + Date.now();
+
+        await setDoc(doc(db, 'menuItems', newId), {
+            id: newId, name, category,
+            description: desc,
+            price, priceHalf,
+            portionType,
+            imageUrl: finalImageUrl || '',
+            isAvailable: true,
+            addedAt: serverTimestamp()
+        });
+
+        if (msgEl) { msgEl.style.display='block'; msgEl.style.color='#22C55E'; msgEl.textContent=`"${name}" added to menu!`; }
+        // Reset form
+        ['mf-name','mf-price','mf-priceHalf','mf-imageUrl','mf-desc'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+        const fi = document.getElementById('mf-image'); if(fi) fi.value='';
+        renderMenuView();
+    } catch (e) {
+        if (msgEl) { msgEl.style.display='block'; msgEl.style.color='#EF4444'; msgEl.textContent='Failed: ' + e.message; }
+    }
+};
+
+// Toggle availability
+window.adminToggleAvailability = async function(id, currentlyAvail) {
+    try {
+        await updateDoc(doc(db, 'menuItems', id), { isAvailable: !currentlyAvail });
+        // Reflect in local state & re-render without full page refresh
+        const item = menu.find(i => i.id === id);
+        if (item) item.isAvailable = !currentlyAvail;
+        renderMenuView();
+    } catch(e) { alert('Failed: ' + e.message); }
+};
+
+// Delete menu item
+window.adminDeleteMenuItem = async function(id, name) {
+    if (!confirm(`Remove "${name}" from the menu?`)) return;
+    try {
+        await deleteDoc(doc(db, 'menuItems', id));
+        menu = menu.filter(i => i.id !== id);
+        renderMenuView();
+    } catch(e) { alert('Failed: ' + e.message); }
+};
+
+// Download menu as CSV
+window.adminDownloadMenuCSV = function() {
+    const headers = ['ID','Name','Category','Description','Price (Full)','Price (Half)','Portion Type','Available','Image URL'];
+    const rows = menu.map(i => [
+        i.id, i.name, i.category, i.description||'',
+        i.price, i.priceHalf||0, i.portionType||'',
+        i.isAvailable !== false ? 'Yes' : 'No', i.imageUrl||''
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+    const csv  = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `barak_menu_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
 };
 
 //  Stock Admin View 
