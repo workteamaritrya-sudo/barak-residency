@@ -6,6 +6,8 @@
     <title>Restaurant Waiter | Barak Residency</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="restaurant_portal.css?v=1.6">
+
+    <link rel="icon" href="br.png" type="image/png">
 </head>
 <body>
 
@@ -16,7 +18,7 @@
             <div class="portal-time-luxury" id="clock">--:-- --</div>
             <button class="btn btn-primary" style="background:#A020F0; border:none;" onclick="window.location.href='restaurant_desk.html'">+ NEW PICKUP</button>
             <button id="btn-rw-logout" onclick="window.waiterApp.handleLogout()" style="background:rgba(239,68,68,0.2);border:1px solid #EF4444;color:#FCA5A5;border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.75rem;cursor:pointer;letter-spacing:1px;">&#128682; LOGOUT</button>
-            <button id="btn-rw-close" onclick="if(window.parent&&window.parent.closeRestWaiter)window.parent.closeRestWaiter();else window.history.back();" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#FCA5A5;border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.75rem;cursor:pointer;letter-spacing:1px;">✕ CLOSE</button>
+            <button id="btn-rw-close" onclick="if(window.parent&&window.parent.closeRestWaiter)window.parent.closeRestWaiter();else window.history.back();" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#FCA5A5;border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.75rem;cursor:pointer;letter-spacing:1px;">âœ• CLOSE</button>
         </div>
 
     </div>
@@ -36,7 +38,7 @@
                     <h2 id="rest-waiter-pos-title">Select a table</h2>
                     <button id="btn-link-table" class="btn btn-outline"
                         style="display:none;padding:0.3rem 0.8rem;font-size:0.9rem;border-color:#A020F0;color:#A020F0;"
-                        onclick="showLinkTableModal()">🔗 Link Table</button>
+                        onclick="showLinkTableModal()">ðŸ”— Link Table</button>
                 </div>
                 <span id="rest-waiter-table-info" class="text-gray text-sm"></span>
             </div>
@@ -55,7 +57,7 @@
                     <div class="cart-total" style="padding:1.5rem; background:rgba(0,0,0,0.4); border-top:1px solid var(--glass-border);">
                         <div class="d-flex justify-between" style="font-size:1.3rem; margin-bottom:1rem;">
                             <span>Total</span>
-                            <span class="font-bold" style="color:#4ADE80;">₹<span id="rest-waiter-cart-total">0</span></span>
+                            <span class="font-bold" style="color:#4ADE80;">â‚¹<span id="rest-waiter-cart-total">0</span></span>
                         </div>
                         <button class="btn btn-primary btn-block" style="padding:1.2rem; font-size:1.1rem; background:var(--gold-primary); color:black; font-weight:800;"
                             id="btn-rest-waiter-order" disabled onclick="showOrderConfirm()">PLACE ORDER</button>
@@ -130,7 +132,7 @@
                     onclick="document.getElementById('qp-qty').value=parseInt(document.getElementById('qp-qty').value)+1">+</button>
             </div>
             <div style="display:flex;gap:1rem;">
-                <button class="btn btn-outline" style="flex:1;" onclick="qpBack()">← Back</button>
+                <button class="btn btn-outline" style="flex:1;" onclick="qpBack()">â† Back</button>
                 <button class="btn btn-primary" style="flex:2;font-size:1.1rem;" onclick="addToCartFromModal()">Add to Cart</button>
             </div>
         </div>
@@ -141,11 +143,11 @@
 <div id="link-table-modal" class="modal-overlay" style="display:none;z-index:10005;align-items:stretch;justify-content:stretch;padding:2rem;">
     <div style="width:100%;height:100%;display:grid;grid-template-columns:1fr 1fr;gap:2rem;background:rgba(15,23,42,0.95);border-radius:16px;border:1px solid var(--glass-border);overflow:hidden;">
         <div style="padding:2rem;border-right:1px solid var(--glass-border);display:flex;flex-direction:column;">
-            <h2 style="color:#A020F0;margin-bottom:0.5rem;">🔗 Master Bill Group</h2>
+            <h2 style="color:#A020F0;margin-bottom:0.5rem;">ðŸ”— Master Bill Group</h2>
             <p class="text-gray" id="link-table-subtitle" style="margin-bottom:2rem;"></p>
             <h3 style="margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px dashed var(--glass-border);">Previously Linked</h3>
             <div id="link-existing-list" style="flex:1;overflow-y:auto;"></div>
-            <button class="btn btn-outline" style="margin-top:1rem;padding:1rem;" onclick="document.getElementById('link-table-modal').style.display='none'">← Return to POS</button>
+            <button class="btn btn-outline" style="margin-top:1rem;padding:1rem;" onclick="document.getElementById('link-table-modal').style.display='none'">â† Return to POS</button>
         </div>
         <div style="padding:2rem;display:flex;flex-direction:column;background:rgba(0,0,0,0.2);">
             <h2 style="margin-bottom:1rem;">Link A New Table</h2>
