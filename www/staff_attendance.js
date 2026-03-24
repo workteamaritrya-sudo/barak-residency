@@ -926,8 +926,9 @@ window.openPickupOverlay = function() {
     const overlay = document.getElementById('pickup-overlay');
     const iframe  = document.getElementById('pickup-iframe');
     if (overlay && iframe) {
-        if (!iframe.src || iframe.src.includes('blank')) {
-            iframe.src = 'restaurant_pickup.html'; // Load only once
+        const currentSrc = iframe.getAttribute('src');
+        if (!currentSrc || currentSrc === 'about:blank' || currentSrc === '') {
+            iframe.setAttribute('src', 'restaurant_pickup.html'); // Load precisely once
         }
         overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
@@ -938,16 +939,16 @@ window.openPickupOverlay = function() {
 window.closePickupOverlay = function() {
     const overlay = document.getElementById('pickup-overlay');
     if (overlay) overlay.style.display = 'none';
-    document.body.style.overflow = 'auto'; // Leave iframe content loaded for instant reopen
+    document.body.style.overflow = 'auto'; 
 };
 
-// Expose openRestWaiter / openHotelWaiter globally
 window.openRestWaiter = function() {
     const overlay = document.getElementById('rest-waiter-overlay');
     const iframe = document.getElementById('rest-waiter-iframe');
     if (overlay && iframe) {
-        if (!iframe.src || iframe.src.includes('blank')) {
-            iframe.src = 'restaurant_waiter.html'; // Load only once
+        const currentSrc = iframe.getAttribute('src');
+        if (!currentSrc || currentSrc === 'about:blank' || currentSrc === '') {
+            iframe.setAttribute('src', 'restaurant_waiter.html');
         }
         overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
@@ -958,15 +959,16 @@ window.openRestWaiter = function() {
 window.closeRestWaiter = function() {
     const overlay = document.getElementById('rest-waiter-overlay');
     if (overlay) overlay.style.display = 'none';
-    document.body.style.overflow = 'auto'; // Leave iframe content loaded for instant reopen
+    document.body.style.overflow = 'auto'; 
 };
 
 window.openHotelWaiter = function() {
     const overlay = document.getElementById('waiter-overlay');
     const iframe  = document.getElementById('waiter-iframe');
     if (overlay && iframe) {
-        if (!iframe.src || iframe.src.includes('blank')) {
-            iframe.src = 'hotel_waiter.html'; // Load only once
+        const currentSrc = iframe.getAttribute('src');
+        if (!currentSrc || currentSrc === 'about:blank' || currentSrc === '') {
+            iframe.setAttribute('src', 'hotel_waiter.html');
         }
         overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';

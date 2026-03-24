@@ -981,3 +981,11 @@ init().catch(e => {
     console.error('[Boot] Failed:', e);
     showToast('App Boot Failure', 'warning');
 });
+
+window.backToHome = () => {
+    if (window.parent && window.parent.closeRestWaiter) {
+        window.parent.closeRestWaiter();
+    } else {
+        window.history.back();
+    }
+};
