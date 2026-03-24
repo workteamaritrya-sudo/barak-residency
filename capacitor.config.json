@@ -1,0 +1,11 @@
+{
+  "appId": "com.barakresidency.staff",
+  "appName": "Barak Staff Portal",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://workteamaritrya-sudo.github.io/barak-residency/index.html",
+    "cleartext": true,
+    "allowNavigation": ["workteamaritrya-sudo.github.io"]
+  }
+}
