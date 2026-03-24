@@ -332,62 +332,90 @@ function showToast(msg, type = 'info') {
 //  Table Sidebar 
 
 function renderTableSidebar() {
-    const list = document.getElementById('rest-waiter-table-list');
-    if (!list) return;
-    list.innerHTML = '';
+    const mobileList  = document.getElementById('rest-waiter-table-list');
+    const desktopList = document.getElementById('rw-desk-table-list');
+    if (!mobileList && !desktopList) return;
+    if (mobileList)  mobileList.innerHTML  = '';
+    if (desktopList) desktopList.innerHTML = '';
+
     const orderColors = {1:'#FF3131',2:'#39FF14',3:'#1F51FF',4:'#FFF01F',5:'#A020F0'};
 
-    Object.values(tables).sort((a,b) => String(a.id).localeCompare(String(b.id))).forEach(table => {
-        const btn = document.createElement('div');
-        btn.className = `w-room-btn ${activeTableId === table.id ? 'active' : ''}`;
+    Object.values(tables)
+        .sort((a,b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true }))
+        .forEach(table => {
+            const isOccupied   = table.status === 'occupied';
+            const activeBills  = table.activeBills || [];
+            const paxTotal     = activeBills.reduce((s, b) => s + (b.pax || 1), 0);
+            const isActive     = activeTableId === table.id;
 
-        const chars = table.chairs || [];
-        const cHtml = chars.map((c, i) => {
-            if (c.status === 'occupied') {
-                let glowColor = '#D4AF37';
-                const ab = table.activeBills || [];
-                if (ab.length > 0) {
-                    let acc = 0, sel = null;
-                    for (let b of ab) { acc += (b.pax || 1); if (i < acc) { sel = b; break; } }
-                    if (sel) glowColor = orderColors[sel.colorIndex] || '#D4AF37';
+            // ── Build neon bill dots ──
+            const dotsHtml = activeBills.map(b => {
+                const c = orderColors[b.colorIndex] || '#D4AF37';
+                return `<span class="bill-dot" style="background:${c};box-shadow:0 0 5px ${c};"></span>`;
+            }).join('');
+
+            // ── MOBILE CHIP ──
+            if (mobileList) {
+                const chip = document.createElement('div');
+                chip.className = 'rw-chip' + (isActive ? ' active' : '') + (isOccupied ? ' occupied' : '');
+                if (isOccupied && activeBills.length > 0) {
+                    const primaryColor = orderColors[activeBills[0].colorIndex] || '#4ADE80';
+                    chip.style.borderColor = primaryColor;
+                    chip.style.boxShadow   = `0 0 10px ${primaryColor}55`;
                 }
-                return `<div class="chair-circle occupied"><svg viewBox="0 0 24 24" class="person-icon" style="filter:drop-shadow(0 0 10px ${glowColor});"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" style="fill:${glowColor};"/></svg></div>`;
+                chip.innerHTML = `
+                    <span class="chip-id">T${table.id}</span>
+                    ${isOccupied ? `<span class="chip-pax">${paxTotal}p</span>` : `<span class="chip-pax" style="color:rgba(255,255,255,0.2);">free</span>`}
+                    ${dotsHtml ? `<div class="chip-dots">${dotsHtml}</div>` : ''}
+                `;
+                chip.onclick = () => handleTableClick(table);
+                mobileList.appendChild(chip);
             }
-            return `<div class="chair-circle"><svg viewBox="0 0 24 24" class="person-icon"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>`;
+
+            // ── DESKTOP SIDEBAR CARD ──
+            if (desktopList) {
+                const card = document.createElement('div');
+                card.className = 'rw-desk-table-btn' + (isActive ? ' active' : '') + (isOccupied ? ' occupied' : '');
+                if (isOccupied && activeBills.length > 0) {
+                    const primaryColor = orderColors[activeBills[0].colorIndex] || '#4ADE80';
+                    card.style.borderColor = primaryColor;
+                }
+
+                // Build chair row with neon glows
+                const chars = table.chairs || [];
+                const chairHtml = (idx) => {
+                    const c = chars[idx];
+                    if (!c) return '';
+                    if (c.status === 'occupied') {
+                        let glowColor = '#D4AF37';
+                        if (activeBills.length > 0) {
+                            let acc = 0, sel = null;
+                            for (let b of activeBills) { acc += (b.pax || 1); if (idx < acc) { sel = b; break; } }
+                            if (sel) glowColor = orderColors[sel.colorIndex] || '#D4AF37';
+                        }
+                        return `<div class="rw-chair" style="background:${glowColor}22;"><svg viewBox="0 0 24 24" style="filter:drop-shadow(0 0 5px ${glowColor});"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="${glowColor}"/></svg></div>`;
+                    }
+                    return `<div class="rw-chair" style="background:rgba(255,255,255,0.05);"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="rgba(255,255,255,0.2)"/></svg></div>`;
+                };
+
+                card.innerHTML = `
+                    <div class="rw-furn">
+                        <div class="rw-furn-row">${chairHtml(0)}${chairHtml(1)}</div>
+                        <div class="rw-table-box">${table.id}</div>
+                        <div class="rw-furn-row">${chairHtml(2)}${chairHtml(3)}</div>
+                    </div>
+                    <div style="text-align:center;font-size:0.7rem;font-weight:700;margin-top:4px;color:${isOccupied?'#4ADE80':'rgba(255,255,255,0.3)'};">
+                        ${isOccupied ? `${paxTotal} Pax` : 'Free'}
+                    </div>
+                    ${dotsHtml ? `<div style="display:flex;gap:4px;justify-content:center;margin-top:5px;">${dotsHtml}</div>` : ''}
+                `;
+                card.onclick = () => handleTableClick(table);
+                desktopList.appendChild(card);
+            }
         });
-
-        // --- Build mobile chip HTML with all bill info ---
-        const activeBills = table.activeBills || [];
-        const billDots = activeBills.map(b => {
-            const c = orderColors[b.colorIndex] || '#D4AF37';
-            return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c};box-shadow:0 0 6px ${c};flex-shrink:0;"></span>`;
-        }).join('');
-        const paxTotal = activeBills.reduce((s, b) => s + (b.pax || 1), 0);
-        const isOccupied = table.status === 'occupied';
-        const chipBorderColor = isOccupied
-            ? (activeBills.length > 0 ? orderColors[activeBills[0].colorIndex] || '#4ADE80' : '#4ADE80')
-            : 'rgba(255,255,255,0.12)';
-
-        btn.innerHTML = `
-            <div class="restaurant-table-view"><div class="table-layout-wrapper">
-                <div class="chair-row">${cHtml[0]||''}${cHtml[1]||''}</div>
-                <div class="table-engine-box" style="border-color:${isOccupied?'var(--color-indigo-500)':'var(--color-slate-700)'};">${table.id}</div>
-                <div class="chair-row">${cHtml[2]||''}${cHtml[3]||''}</div>
-            </div></div>
-            <div style="text-align:center;margin-top:0.5rem;" class="text-sm ${isOccupied?'color-success':'text-gray'}">
-                ${isOccupied ? `Occupied (${table.pax} Pax)` : 'Available'}
-            </div>
-            <span class="mob-chip-label" style="border-color:${chipBorderColor};box-shadow:${isOccupied?`0 0 8px ${chipBorderColor}33`:none};">
-                <span style="font-weight:900;font-size:0.85rem;color:${isOccupied?'white':'#94A3B8'};">T${table.id}</span>
-                ${isOccupied ? `<span style="font-size:0.65rem;color:#94A3B8;margin-left:2px;">${paxTotal}p</span>` : ''}
-                ${billDots ? `<span style="display:flex;gap:3px;align-items:center;margin-top:3px;">${billDots}</span>` : ''}
-            </span>`;
-
-        if (isOccupied) btn.style.borderColor = 'var(--color-green-400)';
-        btn.onclick = () => handleTableClick(table);
-        list.appendChild(btn);
-    });
 }
+
+
 
 //  Table Selection 
 
