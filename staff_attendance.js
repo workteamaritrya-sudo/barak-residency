@@ -965,6 +965,24 @@ window.openHotelWaiter = function() {
 };
 window.closeHotelWaiter = function() {
     const overlay = document.getElementById('waiter-overlay');
+    const iframe  = document.getElementById('waiter-iframe');
     if (overlay) overlay.style.display = 'none';
+    if (iframe) iframe.src = 'about:blank'; // Destroy iframe content to stop observers
+    document.body.style.overflow = 'auto';
+};
+
+window.closeRestWaiter = function() {
+    const overlay = document.getElementById('rest-waiter-overlay');
+    const iframe  = document.getElementById('rest-waiter-iframe');
+    if (overlay) overlay.style.display = 'none';
+    if (iframe) iframe.src = 'about:blank'; // Destroy iframe content to stop observers
+    document.body.style.overflow = 'auto';
+};
+
+window.closePickupOverlay = function() {
+    const overlay = document.getElementById('pickup-overlay');
+    const iframe  = document.getElementById('pickup-iframe');
+    if (overlay) overlay.style.display = 'none';
+    if (iframe) iframe.src = 'about:blank'; // Destroy iframe content to stop observers
     document.body.style.overflow = 'auto';
 };
