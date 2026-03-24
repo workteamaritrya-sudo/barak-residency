@@ -44,10 +44,11 @@
         
         @media (max-width: 900px) {
             .pos-cart { display: none !important; }
-            .waiter-sidebar { display: none !important; }
+            .waiter-sidebar { display: flex !important; width: 100% !important; flex: none !important; flex-direction: column !important; padding: 1rem !important; margin-bottom: 0.5rem; }
+            #room-summary, #waiter-live-orders, .waiter-sidebar h3 { display: none !important; } /* Simplify on mobile */
             .luxury-portal-header { justify-content: space-between !important; padding: 1rem !important; }
             .luxury-portal-header .luxury-identity { font-size: 0.9rem !important; }
-            .waiter-layout { padding: 0.5rem !important; }
+            .waiter-layout { padding: 0.5rem !important; flex-direction: column !important; }
         }
     </style>
     <link rel="icon" href="br.png" type="image/png">

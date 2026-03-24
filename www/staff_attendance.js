@@ -928,6 +928,7 @@ window.openPickupOverlay = function() {
         iframe.src = 'restaurant_pickup.html'; // Standalone Professional Pickup POS
         overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        if (window.pushOverlayState) window.pushOverlayState('pickup');
     }
 };
 
@@ -947,6 +948,7 @@ window.openRestWaiter = function() {
         iframe.src = 'restaurant_waiter.html';
         overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        if (window.pushOverlayState) window.pushOverlayState('rest-waiter');
     }
 };
 window.closeRestWaiter = function() {
@@ -961,10 +963,29 @@ window.openHotelWaiter = function() {
         iframe.src = 'hotel_waiter.html';
         overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        if (window.pushOverlayState) window.pushOverlayState('hotel-waiter');
     }
 };
 window.closeHotelWaiter = function() {
     const overlay = document.getElementById('waiter-overlay');
+    const iframe  = document.getElementById('waiter-iframe');
     if (overlay) overlay.style.display = 'none';
+    if (iframe) iframe.src = 'about:blank'; // Destroy iframe content to stop observers
+    document.body.style.overflow = 'auto';
+};
+
+window.closeRestWaiter = function() {
+    const overlay = document.getElementById('rest-waiter-overlay');
+    const iframe  = document.getElementById('rest-waiter-iframe');
+    if (overlay) overlay.style.display = 'none';
+    if (iframe) iframe.src = 'about:blank'; // Destroy iframe content to stop observers
+    document.body.style.overflow = 'auto';
+};
+
+window.closePickupOverlay = function() {
+    const overlay = document.getElementById('pickup-overlay');
+    const iframe  = document.getElementById('pickup-iframe');
+    if (overlay) overlay.style.display = 'none';
+    if (iframe) iframe.src = 'about:blank'; // Destroy iframe content to stop observers
     document.body.style.overflow = 'auto';
 };

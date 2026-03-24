@@ -1220,16 +1220,25 @@
             return false;
         }
 
-        // --- CAPACITOR NATIVE BACK BUTTON ---
-        if (window.Capacitor && window.Capacitor.isPluginAvailable('App')) {
-            const App = window.Capacitor.Plugins.App;
-            App.addListener('backButton', () => {
-                if (!handleBackButton()) {
-                    // If no overlays are open, the app can perform default exit or stay at home
-                    App.exitApp();
-                }
-            });
-        }
+        // --- NATIVE ANDROID BACK BUTTON (WEBVIEW HISTORY) ---
+        window.pushOverlayState = function(overlayId) {
+            window.history.pushState({ overlay: overlayId }, '', `#${overlayId}`);
+        };
+
+        window.addEventListener('popstate', (e) => {
+            // Android Back Button hit. If there are popups open, close them!
+            if (handleBackButton()) {
+                // Return true means a popup was successfully closed by the user pressing back.
+            }
+        });
+
+        // Override original close methods to clear history state dynamically if closed via UI X button
+        const hbk = handleBackButton;
+        window.handleBackButton = () => {
+            const closed = hbk();
+            if (closed && window.location.hash) window.history.back(); // Clear the hash natively
+            return closed;
+        };
     </script>
 
     <script type="module" src="staff_attendance.js?v=2.0"></script>
