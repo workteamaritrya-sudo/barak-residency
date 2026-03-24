@@ -591,17 +591,18 @@ function renderMenu(search = '') {
         h.className = 'menu-category-header'; h.innerText = cat.toUpperCase(); grid.appendChild(h);
         cats[cat].forEach(item => {
             const el = document.createElement('div'); el.className = 'menu-item';
+            el.style.cssText = 'background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:12px; overflow:hidden; display:flex; cursor:pointer; align-items:center;';
             const img = item.imageUrl || item.ImageURL || item.image || 'br.png';
             const name = item.name || item.Name || item.itemName || 'Unnamed Item';
             const price = item.price || item.PriceFull || item.Price || item.priceFull || 0;
             const desc = item.description || item.Description || 'Special';
 
             el.innerHTML = `
-                <img src="${img}" onerror="this.src='br.png'">
-                <div class="menu-info">
-                    <div class="menu-name">${name}</div>
-                    <div class="menu-desc">${desc}</div>
-                    <div class="menu-price">₹${price}</div>
+                <img src="${img}" onerror="this.src='br.png'" style="width:90px; height:90px; object-fit:cover; border-right:1px solid rgba(255,255,255,0.05); flex-shrink:0;">
+                <div style="padding:0.75rem; flex:1; display:flex; flex-direction:column; justify-content:center;">
+                    <div class="name" style="font-weight:700; font-size:0.95rem; line-height:1.2; color:#fff; margin-bottom:0.25rem;">${name}</div>
+                    <div class="price" style="font-weight:900; color:#D4AF37; font-size:1.1rem; margin-bottom:0.25rem;">₹${price}</div>
+                    <div class="desc" style="font-size:0.75rem; color:rgba(255,255,255,0.4); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${desc}</div>
                 </div>
                 <button class="menu-add-btn" 
                     onclick="window.waiterApp.promptVariant({id:'${item.id}',name:'${name.replace(/'/g,"\\'")}',price:${price}})">
@@ -703,10 +704,12 @@ function addToCartFromModal() {
 
 function renderCart() {
     const ctnDesktop = document.getElementById('rest-waiter-cart-items');
-    const footerCommon = document.getElementById('cart-footer-common');
-    const placeholderMob = document.getElementById('cart-placeholder-mob');
+    const mobCartList = document.getElementById('cart-placeholder-mob');
     const badge = document.getElementById('cart-badge-val');
     const totalEl = document.getElementById('rest-waiter-cart-total');
+    const mobTotalEl = document.getElementById('mob-cart-total');
+    const btnRestOrder = document.getElementById('btn-rest-waiter-order');
+    const btnMobOrder = document.getElementById('btn-mob-order');
     
     // Total Items for Badge
     const totalQty = cart.reduce((s, i) => s + i.qty, 0);
@@ -717,10 +720,12 @@ function renderCart() {
 
     if (cart.length === 0) {
         const emptyHtml = '<div style="color:gray;text-align:center;padding:2rem;">Cart is empty</div>';
-        ctnDesktop.innerHTML = emptyHtml;
-        if (placeholderMob) placeholderMob.innerHTML = emptyHtml;
-        totalEl.innerText = '0';
-        document.getElementById('btn-rest-waiter-order').disabled = true;
+        if (ctnDesktop) ctnDesktop.innerHTML = emptyHtml;
+        if (mobCartList) mobCartList.innerHTML = emptyHtml;
+        if (totalEl) totalEl.innerText = '0';
+        if (mobTotalEl) mobTotalEl.innerText = '0';
+        if (btnRestOrder) btnRestOrder.disabled = true;
+        if (btnMobOrder) btnMobOrder.disabled = true;
         return;
     }
 
@@ -738,21 +743,15 @@ function renderCart() {
         </div>
     `).join('');
 
-    ctnDesktop.innerHTML = itemsHtml;
-    if (placeholderMob) {
-        placeholderMob.innerHTML = '<div style="flex:1; overflow-y:auto; padding-right:0.5rem;" id="mob-cart-list"></div>';
-        if (footerCommon) placeholderMob.innerHTML += footerCommon.innerHTML;
-        const mobCartList = placeholderMob.querySelector('#mob-cart-list');
-        if (mobCartList) mobCartList.innerHTML = itemsHtml;
-    }
+    if (ctnDesktop) ctnDesktop.innerHTML = itemsHtml;
+    if (mobCartList) mobCartList.innerHTML = `<div style="flex:1; overflow-y:auto; padding-right:0.5rem;" id="mob-cart-list-inner">${itemsHtml}</div>`;
 
     const total = cart.reduce((s, i) => s + (i.item.price * i.qty), 0);
-    totalEl.innerText = total.toLocaleString();
-    if (placeholderMob) {
-        const mobTotalEl = placeholderMob.querySelector('#rest-waiter-cart-total');
-        if (mobTotalEl) mobTotalEl.innerText = total.toLocaleString();
-    }
-    document.getElementById('btn-rest-waiter-order').disabled = false;
+    if (totalEl) totalEl.innerText = total.toLocaleString();
+    if (mobTotalEl) mobTotalEl.innerText = total.toLocaleString();
+
+    if (btnRestOrder) btnRestOrder.disabled = false;
+    if (btnMobOrder) btnMobOrder.disabled = false;
 
     const info = document.getElementById('rest-waiter-table-info');
     if (info && info.innerText) {
