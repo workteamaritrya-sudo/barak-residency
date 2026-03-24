@@ -584,7 +584,16 @@ async function boot() {
 }
 boot();
 
+function resetState() {
+    const ss = document.getElementById('success-screen');
+    if (ss) ss.style.display = 'none';
+    const co = document.getElementById('cart-overlay-mob');
+    if (co) co.classList.remove('active');
+}
+window.addEventListener('message', (e) => { if (e.data?.action === 'reset') resetState(); });
+
 window.backToHome = () => {
+    resetState();
     if (window.parent && window.parent !== window && window.parent.closeHotelWaiter) {
         window.parent.closeHotelWaiter();
     } else if (window.parent && window.parent !== window) {

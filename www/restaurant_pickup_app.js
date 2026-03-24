@@ -29,7 +29,27 @@ onAuthStateChanged(auth, u => {
     if (!u && window.self === window.top) window.location.href = 'index.html';
 });
 
+// ─── Reset UI state — called on reopen or after successful order ───
+function resetState() {
+    const ss = document.getElementById('success-screen');
+    if (ss) ss.style.display = 'none';
+    cart = [];
+    orderType = 'Pickup';
+    renderCart();
+    window.setOrderType && window.setOrderType('Pickup');
+    const btn = document.getElementById('place-btn') || document.getElementById('btn-mob-order');
+    if (btn) { btn.disabled = true; btn.textContent = 'PLACE ORDER'; }
+    const cartOverlay = document.getElementById('cart-overlay-mob');
+    if (cartOverlay) cartOverlay.classList.remove('active');
+}
+
+// Listen for parent 'reset' message (called when overlay is reopened from cache)
+window.addEventListener('message', (e) => {
+    if (e.data?.action === 'reset') resetState();
+});
+
 window.backToHome = () => {
+    resetState(); // Always clean up before closing
     if (window.parent && window.parent !== window && window.parent.closePickupOverlay) {
         window.parent.closePickupOverlay();
     } else if (window.parent && window.parent !== window && window.parent.closeRestWaiter) {
@@ -37,7 +57,6 @@ window.backToHome = () => {
     } else if (window.parent && window.parent !== window) {
         window.parent.postMessage({ action: 'closeOverlay', overlay: 'pickup' }, '*');
     }
-    // Never call history.back() to avoid login-page flash
 };
 
 // Real-time Listeners

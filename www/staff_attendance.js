@@ -920,64 +920,72 @@ window.confirmUseStock = async function() {
     }
 };
 
-//  Pickup Overlay Logic 
-//  Pickup Overlay Logic 
+// ─── Overlay helpers ───────────────────────────────────────────────────────
+
+function _sendReset(iframe) {
+    try { if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage({ action: 'reset' }, '*'); } catch(e) {}
+}
+
 window.openPickupOverlay = function() {
     const overlay = document.getElementById('pickup-overlay');
     const iframe  = document.getElementById('pickup-iframe');
-    if (overlay && iframe) {
-        const currentSrc = iframe.getAttribute('src');
-        if (!currentSrc || currentSrc === 'about:blank' || currentSrc === '') {
-            iframe.setAttribute('src', 'restaurant_pickup.html'); // Load precisely once
-        }
-        overlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        if (window.pushOverlayState) window.pushOverlayState('pickup');
+    if (!overlay || !iframe) return;
+    const src = iframe.getAttribute('src');
+    if (!src || src === 'about:blank') {
+        iframe.setAttribute('src', 'restaurant_pickup.html');
+    } else {
+        _sendReset(iframe); // cached — reset UI before showing
     }
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    if (window.pushOverlayState) window.pushOverlayState('pickup');
 };
 
 window.closePickupOverlay = function() {
     const overlay = document.getElementById('pickup-overlay');
     if (overlay) overlay.style.display = 'none';
-    document.body.style.overflow = 'auto'; 
+    document.body.style.overflow = 'auto';
 };
 
 window.openRestWaiter = function() {
     const overlay = document.getElementById('rest-waiter-overlay');
-    const iframe = document.getElementById('rest-waiter-iframe');
-    if (overlay && iframe) {
-        const currentSrc = iframe.getAttribute('src');
-        if (!currentSrc || currentSrc === 'about:blank' || currentSrc === '') {
-            iframe.setAttribute('src', 'restaurant_waiter.html');
-        }
-        overlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        if (window.pushOverlayState) window.pushOverlayState('rest-waiter');
+    const iframe  = document.getElementById('rest-waiter-iframe');
+    if (!overlay || !iframe) return;
+    const src = iframe.getAttribute('src');
+    if (!src || src === 'about:blank') {
+        iframe.setAttribute('src', 'restaurant_waiter.html');
+    } else {
+        _sendReset(iframe); // cached — reset UI before showing
     }
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    if (window.pushOverlayState) window.pushOverlayState('rest-waiter');
 };
 
 window.closeRestWaiter = function() {
     const overlay = document.getElementById('rest-waiter-overlay');
     if (overlay) overlay.style.display = 'none';
-    document.body.style.overflow = 'auto'; 
+    document.body.style.overflow = 'auto';
 };
 
 window.openHotelWaiter = function() {
     const overlay = document.getElementById('waiter-overlay');
     const iframe  = document.getElementById('waiter-iframe');
-    if (overlay && iframe) {
-        const currentSrc = iframe.getAttribute('src');
-        if (!currentSrc || currentSrc === 'about:blank' || currentSrc === '') {
-            iframe.setAttribute('src', 'hotel_waiter.html');
-        }
-        overlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        if (window.pushOverlayState) window.pushOverlayState('hotel-waiter');
+    if (!overlay || !iframe) return;
+    const src = iframe.getAttribute('src');
+    if (!src || src === 'about:blank') {
+        iframe.setAttribute('src', 'hotel_waiter.html');
+    } else {
+        _sendReset(iframe); // cached — reset UI before showing
     }
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    if (window.pushOverlayState) window.pushOverlayState('hotel-waiter');
 };
 
 window.closeHotelWaiter = function() {
     const overlay = document.getElementById('waiter-overlay');
     if (overlay) overlay.style.display = 'none';
-    document.body.style.overflow = 'auto'; // Leave iframe content loaded for instant reopen
+    document.body.style.overflow = 'auto';
 };
+
