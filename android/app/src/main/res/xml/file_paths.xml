@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Internal app files (context.getFilesDir()) -->
+    <files-path name="internal_files" path="." />
+
+    <!-- External app files (context.getExternalFilesDir()) -->
+    <external-path name="external_files" path="." />
+
+    <!-- Cache files (context.getCacheDir()) -->
+    <cache-path name="cache_files" path="." />
+</paths>
