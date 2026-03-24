@@ -57,6 +57,7 @@ window.backToHome = () => {
     } else if (window.parent && window.parent !== window) {
         window.parent.postMessage({ action: 'closeOverlay', overlay: 'pickup' }, '*');
     }
+    // Removed unconditional fallback redirect to index.html
 };
 
 // Real-time Listeners
@@ -71,7 +72,7 @@ onSnapshot(doc(db, 'settings', 'availability'), snap => {
 });
 
 onSnapshot(collection(db, 'tables'), snap => {
-    tables = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => t.status === 'Occupied');
+    tables = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => (t.status || '').toLowerCase() === 'occupied');
     renderTables();
 });
 
