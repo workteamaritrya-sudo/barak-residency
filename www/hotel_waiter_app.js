@@ -206,7 +206,7 @@ function renderMenu(categoryFilter = 'All') {
     const cats = ['All', ...new Set(filteredMenu.map(i => i.category || 'General'))];
     
     if (pills) {
-        pills.innerHTML = cats.map(c => `<button class="cat-pill ${categoryFilter === c ? 'active' : ''}" onclick="window.renderMenu('${c}')">${c}</button>`).join('');
+        pills.innerHTML = cats.map(c => `<button class="cat-pill ${categoryFilter === c ? 'active' : ''}" onclick="window.renderMenu('${c}')" style="min-width:110px;">${c}</button>`).join('');
     }
 
     const items = categoryFilter === 'All' ? filteredMenu : filteredMenu.filter(i => (i.category || 'General') === categoryFilter);
@@ -557,7 +557,7 @@ async function boot() {
             }
         } else {
             startListeners();
-            renderMenu(); 
+            renderMenu();
         }
     });
 }
