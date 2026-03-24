@@ -107,8 +107,9 @@
 
         /* ── MENU GRID ── */
         #rw-menu-scroll { flex: 1; overflow-y: auto; padding: 0.5rem 0.75rem 5rem; }
-        #rest-waiter-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 0.75rem; }
-        @media (max-width: 600px) { #rest-waiter-menu-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; } }
+        #rest-waiter-menu-grid { display: grid; gap: 0.75rem; }
+        @media (min-width: 601px) { #rest-waiter-menu-grid { grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); } }
+        @media (max-width: 600px) { #rest-waiter-menu-grid { grid-template-columns: 1fr; gap: 0.6rem; } }
 
         /* ── DESKTOP CART ── */
         #rw-desktop-cart {

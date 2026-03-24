@@ -91,5 +91,22 @@ service cloud.firestore {
     match /stock/{itemId} {
       allow read, write: if true; 
     }
+
+    // 14. Restaurant POS Data
+    match /tables/{tableId} {
+      allow read, write: if i();
+    }
+    match /cart/{docId} {
+      allow read, write: if i();
+    }
+    match /activeBills/{docId} {
+      allow read, write: if i();
+    }
+    match /tax/{docId} {
+      allow read, write: if i();
+    }
+    match /categories/{docId} {
+      allow read, write: if i();
+    }
   }
 }
