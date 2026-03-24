@@ -108,25 +108,19 @@ function startListeners() {
     // Listen to Menu (Ground Truth Sync with Fallback)
     onSnapshot(collection(db, 'menuItems'), async (snap) => {
         if (!snap.empty) {
-            const raw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const cloudItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             
-            // Merge cloud menu items with BARAK_MENU fallback strategy
-            const updatedMenu = BARAK_MENU.map(baseItem => {
-                const cloudItem = raw.find(d => d.id === baseItem.id) || {};
-                const name = cloudItem.name || cloudItem.Name || cloudItem.itemName || baseItem.name;
-                const price = cloudItem.price || cloudItem.PriceFull || cloudItem.Price || baseItem.price;
-                const priceHalf = cloudItem.priceHalf || cloudItem.PriceHalf || baseItem.priceHalf;
-                
+            // source of truth is cloudItems. Merge base items only for missing fields.
+            const updatedMenu = cloudItems.map(cloudItem => {
+                const baseItem = BARAK_MENU.find(b => b.id === cloudItem.id) || {};
                 return {
                     ...baseItem,
                     ...cloudItem,
-                    name: name,
-                    price: Number(price),
-                    priceHalf: Number(priceHalf),
-                    imageUrl: cloudItem.imageUrl || cloudItem.ImageURL || cloudItem.image || baseItem.imageUrl,
-                    isAvailable: cloudItem.isAvailable !== false
+                    name: cloudItem.name || cloudItem.Name || cloudItem.itemName || baseItem.name,
+                    price: Number(cloudItem.price || cloudItem.PriceFull || cloudItem.Price || baseItem.price || 0),
+                    priceHalf: Number(cloudItem.priceHalf || cloudItem.PriceHalf || baseItem.priceHalf || 0)
                 };
-            });
+            }).filter(i => (i.name || i.Name) && i.price > 0);
 
             menu = updatedMenu;
             renderMenu();

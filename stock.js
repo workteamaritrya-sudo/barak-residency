@@ -280,3 +280,21 @@ window.deleteItem = async function (id, name) {
         showToast('Delete failed: ' + e.message, 'error');
     }
 };
+//  Menu Overlay 
+window.openMenuOverlay = function() {
+    const overlay = document.getElementById('menu-overlay');
+    const iframe  = document.getElementById('menu-iframe');
+    if (overlay && iframe) {
+        iframe.src = 'admin.html?embedded=1';
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+};
+
+window.closeMenuOverlay = function() {
+    const overlay = document.getElementById('menu-overlay');
+    const iframe  = document.getElementById('menu-iframe');
+    if (overlay) overlay.style.display = 'none';
+    if (iframe) iframe.src = '';
+    document.body.style.overflow = 'auto';
+};

@@ -126,13 +126,24 @@ function startClock() {
         const tEl  = document.getElementById('live-time');
         const dEl  = document.getElementById('live-date');
         const bEl  = document.getElementById('shift-badge');
-        if (tEl) tEl.textContent = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        const s = detectShift(now);
+
+        const timeStr = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        if (tEl) tEl.textContent = timeStr;
         if (dEl) dEl.textContent = now.toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
         if (bEl) {
-            const s = detectShift(now);
             bEl.textContent = `${s.emoji}  ${s.label}`;
             bEl.setAttribute('style', `${s.badgeStyle} padding:0.3rem 1rem; border-radius:30px; font-size:0.68rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; display:inline-block; margin-top:0.8rem;`);
         }
+
+        // Sticky Header Update
+        const stbClock = document.getElementById('stb-clock');
+        const stbShift = document.getElementById('stb-shift');
+        if (stbClock) stbClock.textContent = timeStr;
+        if (stbShift) stbShift.textContent = s.label;
+
+        const sticky = document.getElementById('sticky-header');
+        if (sticky) sticky.style.display = 'flex';
     };
     tick();
     clockInterval = setInterval(tick, 1000);
@@ -182,11 +193,22 @@ function populateDashboard(profile) {
 
     // Show/hide portal switcher
     const team = profile.team || 'hotel';
+    const dept = (profile.department || '').toLowerCase();
     const switcher = el('portal-switcher');
     if (team === 'both' && switcher) {
         switcher.style.display = 'flex';
     } else if (switcher) {
         switcher.style.display = 'none';
+    }
+
+    // Manager vs Staff tools
+    const inventoryBtn = el('btn-adm-inventory');
+    if (inventoryBtn) {
+        if (dept.includes('admin') || dept.includes('manager') || dept.includes('owner')) {
+            inventoryBtn.style.display = 'block';
+        } else {
+            inventoryBtn.style.display = 'none';
+        }
     }
 
     // Default to the right portal
@@ -767,9 +789,10 @@ window.openUseStockPopup = async function() {
     try {
         const snap  = await getDocs(collection(db, 'stock'));
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            .filter(i => (i.category || '').toLowerCase().includes('drink')) // Drink filter requested
             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         if (!items.length) {
-            list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:2rem;">No stock items.</div>';
+            list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:2rem;">No drink items in stock.</div>';
             return;
         }
         list.innerHTML = items.map(item => {
@@ -831,4 +854,53 @@ window.confirmUseStock = async function() {
     } catch(e) {
         if (msg) { msg.style.display='block'; msg.style.color='#EF4444'; msg.textContent='Failed: ' + e.message; }
     }
+};
+
+//  Pickup Overlay Logic 
+window.openPickupOverlay = function() {
+    const overlay = document.getElementById('pickup-overlay');
+    const iframe  = document.getElementById('pickup-iframe');
+    if (overlay && iframe) {
+        iframe.src = 'restaurant_desk.html?mode=pickup';
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+};
+
+window.closePickupOverlay = function() {
+    const overlay = document.getElementById('pickup-overlay');
+    const iframe  = document.getElementById('pickup-iframe');
+    if (overlay) overlay.style.display = 'none';
+    if (iframe) iframe.src = '';
+    document.body.style.overflow = 'auto';
+};
+
+// Expose openRestWaiter / openHotelWaiter globally
+window.openRestWaiter = function() {
+    const overlay = document.getElementById('rest-waiter-overlay');
+    const iframe = document.getElementById('rest-waiter-iframe');
+    if (overlay && iframe) {
+        iframe.src = 'restaurant_waiter.html';
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+};
+window.closeRestWaiter = function() {
+    const overlay = document.getElementById('rest-waiter-overlay');
+    if (overlay) overlay.style.display = 'none';
+    document.body.style.overflow = 'auto';
+};
+window.openHotelWaiter = function() {
+    const overlay = document.getElementById('waiter-overlay');
+    const iframe  = document.getElementById('waiter-iframe');
+    if (overlay && iframe) {
+        iframe.src = 'hotel_waiter.html';
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+};
+window.closeHotelWaiter = function() {
+    const overlay = document.getElementById('waiter-overlay');
+    if (overlay) overlay.style.display = 'none';
+    document.body.style.overflow = 'auto';
 };
