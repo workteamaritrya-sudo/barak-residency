@@ -10,11 +10,12 @@
     <style>
         /* Mobile POS Refactor */
         @media (max-width: 900px) {
-            .waiter-sidebar { display: none !important; }
+            .waiter-sidebar { display: flex !important; width: 100% !important; flex: none !important; flex-direction: column !important; padding: 0.8rem !important; margin-bottom: 0.5rem; }
+            .waiter-room-list { display: flex !important; flex-direction: row !important; gap: 0.8rem !important; overflow-x: auto !important; padding-bottom: 0.5rem !important; }
             .pos-cart { display: none !important; }
             .luxury-portal-header { justify-content: space-between !important; padding: 1rem !important; }
             .luxury-portal-header .luxury-identity { font-size: 0.9rem !important; }
-            .waiter-layout { padding: 0.5rem !important; }
+            .waiter-layout { padding: 0.5rem !important; flex-direction: column !important; }
             .pos-menu { grid-template-columns: 1fr 1fr !important; }
         }
 

@@ -198,17 +198,48 @@ window.submitOrder = async () => {
     btn.disabled = true;
     btn.innerText = 'PLACING...';
 
-    const orderId = `P${Date.now().toString().slice(-4)}`;
-    const orderObj = {
-        orderId, id: orderId, items: cart, 
-        total, total_price: total,
-        timestamp: Date.now(), status: 'Kitchen',
-        orderType: (orderType === 'Pickup' ? 'Pickup' : 'Table-Addon'),
-        tableId: (orderType === 'Table' ? document.getElementById('table-select').value : null)
-    };
+    let orderIdStr = `P${Date.now().toString().slice(-4)}`;
+    let orderObj = null;
+
+    if (orderType === 'Table') {
+        const tId = document.getElementById('table-select').value;
+        const targetTable = tables.find(t => String(t.id) === String(tId));
+        
+        if (targetTable && targetTable.activeBills && targetTable.activeBills.length > 0) {
+            orderIdStr = targetTable.activeBills[0].billID;
+        } else {
+            orderIdStr = targetTable ? `${targetTable.id}-1` : `T-${Date.now().toString().slice(-4)}`;
+        }
+
+        const existingItemArray = targetTable?.orders?.find(o => o.id === orderIdStr)?.items || [];
+        const existingTotal = targetTable?.orders?.find(o => o.id === orderIdStr)?.total || 0;
+
+        orderObj = {
+            id: orderIdStr,
+            order_id: orderIdStr,
+            tableId: String(tId),
+            roomNumber: null,
+            items: [...existingItemArray, ...cart],
+            total: existingTotal + total,
+            total_price: existingTotal + total,
+            status: 'Pending',
+            orderType: 'table',
+            guestName: targetTable?.activeBills?.[0]?.guestName || 'Add-on Guest',
+            pax: targetTable?.activeBills?.[0]?.pax || 1,
+            timestamp: Date.now()
+        };
+    } else {
+        orderObj = {
+            orderId: orderIdStr, id: orderIdStr, items: cart, 
+            total, total_price: total,
+            timestamp: Date.now(), status: 'Kitchen',
+            orderType: 'Pickup',
+            tableId: null
+        };
+    }
 
     try {
-        await setDoc(doc(db, 'orders', orderId), orderObj);
+        await setDoc(doc(db, 'orders', orderIdStr), orderObj);
         
         if (orderType === 'Table') {
             const tId = document.getElementById('table-select').value;
