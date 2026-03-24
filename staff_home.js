@@ -728,18 +728,22 @@ onAuthStateChanged(auth, async user => {
             await requestPushPermission();
             
             // --- NATIVE PUSH REGISTRATION (Capacitor) ---
-            if (window.Capacitor && window.Capacitor.isPluginAvailable('PushNotifications')) {
-                const PushNotifications = window.Capacitor.Plugins.PushNotifications;
-                const perm = await PushNotifications.requestPermissions();
-                if (perm.receive === 'granted') {
-                    await PushNotifications.register();
-                    console.log("[NativePush] Registered successfully.");
-                    
-                    // Handle notification arrival while app is background/lockscreen
-                    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-                        console.log('[NativePush] Received:', notification);
-                    });
+            try {
+                if (window.Capacitor && window.Capacitor.isPluginAvailable('PushNotifications')) {
+                    const PushNotifications = window.Capacitor.Plugins.PushNotifications;
+                    const perm = await PushNotifications.requestPermissions();
+                    if (perm.receive === 'granted') {
+                        await PushNotifications.register();
+                        console.log("[NativePush] Registered successfully.");
+                        
+                        // Handle notification arrival while app is background/lockscreen
+                        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+                            console.log('[NativePush] Received:', notification);
+                        });
+                    }
                 }
+            } catch(pushErr) {
+                console.warn("[NativePush] Push registration failed natively (often emulator). Continuing without push:", pushErr);
             }
 
             // Start the right notification listeners
