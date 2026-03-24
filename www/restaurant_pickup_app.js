@@ -28,6 +28,16 @@ onAuthStateChanged(auth, u => {
     if (!u && window.self === window.top) window.location.href = 'index.html';
 });
 
+window.backToHome = () => {
+    if (window.parent && window.parent.closePickupOverlay) {
+        window.parent.closePickupOverlay();
+    } else if (window.parent && window.parent.closeRestWaiter) {
+        window.parent.closeRestWaiter(); // Fix: Support both overlay names
+    } else {
+        window.history.back(); // Fallback
+    }
+};
+
 // Real-time Listeners
 onSnapshot(collection(db, 'menuItems'), snap => {
     menu = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -186,6 +196,9 @@ window.submitOrder = async () => {
         cart = [];
         renderCart();
         btn.innerText = 'PLACE ORDER';
+        
+        // Auto-Home on Success
+        setTimeout(() => window.backToHome(), 100);
     } catch (e) {
         alert('Order Failed: ' + e.message);
         btn.disabled = false;
