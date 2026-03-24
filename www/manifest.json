@@ -1,0 +1,24 @@
+{
+  "name": "Staff Portal",
+  "short_name": "Staff Portal",
+  "description": "Staff Portal for Barak Residency hotel and restaurant teams",
+  "start_url": "staff_attendance.html",
+  "display": "standalone",
+  "background_color": "#050B18",
+  "theme_color": "#D4AF37",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "br.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "br.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

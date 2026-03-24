@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Portal</title>
     <meta name="description" content="Unified Staff Portal for Barak Residency hotel and restaurant teams.">
-    <link rel="manifest" href="staff_manifest.json">
+    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -721,35 +721,15 @@
         document.body.style.overflow = '';
     }
 
-    // Close with ESC key or Android Back Button
+    // Close with ESC key
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') handleBackButton();
+        if (e.key === 'Escape') {
+            const hw = document.getElementById('waiter-overlay');
+            if (hw && hw.style.display === 'flex') closeHotelWaiter();
+            const rw = document.getElementById('rest-waiter-overlay');
+            if (rw && rw.style.display === 'flex') closeRestWaiter();
+        }
     });
-
-    function handleBackButton() {
-        const hw = document.getElementById('waiter-overlay');
-        if (hw && hw.style.display === 'flex') { closeHotelWaiter(); return true; }
-        const rw = document.getElementById('rest-waiter-overlay');
-        if (rw && rw.style.display === 'flex') { closeRestWaiter(); return true; }
-        const po = document.getElementById('pickup-overlay');
-        if (po && po.style.display === 'flex') { closePickupOverlay(); return true; }
-        const stk = document.getElementById('stock-app-overlay');
-        if (stk && stk.style.display === 'flex') { closeStockApp(); return true; }
-        const use = document.getElementById('use-stock-modal');
-        if (use && use.style.display === 'flex') { closeUseStockPopup(); return true; }
-        return false;
-    }
-
-    // --- CAPACITOR NATIVE BACK BUTTON ---
-    if (window.Capacitor && window.Capacitor.isPluginAvailable('App')) {
-        const App = window.Capacitor.Plugins.App;
-        App.addListener('backButton', () => {
-            if (!handleBackButton()) {
-                // If no overlays are open, the app can perform default exit or stay at home
-                App.exitApp(); 
-            }
-        });
-    }
 </script>
 
 <script type="module" src="staff_attendance.js?v=2.0"></script>
