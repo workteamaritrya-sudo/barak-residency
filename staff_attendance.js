@@ -246,6 +246,10 @@ function listenToday(uid) {
 
 //  Punch In / Out 
 window.punchIn = async function () {
+    const elIn = document.getElementById('display-in');
+    const elOut = document.getElementById('display-out');
+    if (elIn) elIn.textContent = 'Punched IN...';
+    if (elOut) { elOut.textContent = '--:--'; elOut.className = 'ps-empty'; } // Reset Out Time visually
     const user = auth.currentUser;
     if (!user || !currentProfile) return;
     const now = new Date();
