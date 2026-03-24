@@ -187,7 +187,7 @@
     <!-- ── MOBILE: TABLE CHIP STRIP ── -->
     <div id="rw-table-strip">
         <span id="rw-strip-label">Tables</span>
-        <div id="rest-waiter-table-list" style="display:flex;gap:0.5rem;"></div>
+        <div id="rw-mob-table-list" style="display:flex;gap:0.5rem;"></div>
     </div>
 
     <!-- ── MAIN CONTENT ── -->
@@ -196,7 +196,8 @@
         <!-- DESKTOP ONLY: Sidebar with full table cards -->
         <div id="rw-sidebar-desktop">
             <h3>Select Table</h3>
-            <div id="rw-desk-table-list"></div>
+            <!-- id="rest-waiter-table-list" is the canonical ID used by renderTableSidebar() -->
+            <div id="rest-waiter-table-list" id2="rw-desk-table-list"></div>
         </div>
 
         <!-- POS Panel -->

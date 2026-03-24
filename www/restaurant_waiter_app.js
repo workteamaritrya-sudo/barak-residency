@@ -332,71 +332,51 @@ function showToast(msg, type = 'info') {
 //  Table Sidebar 
 
 function renderTableSidebar() {
-    const mobileList  = document.getElementById('rest-waiter-table-list');
-    const desktopList = document.getElementById('rw-desk-table-list');
-    if (!mobileList && !desktopList) return;
-    if (mobileList)  mobileList.innerHTML  = '';
+    const desktopList = document.getElementById('rest-waiter-table-list'); // Sidebar
+    const mobileList  = document.getElementById('rw-mob-table-list');       // Chip strip
+    if (!desktopList && !mobileList) return;
     if (desktopList) desktopList.innerHTML = '';
+    if (mobileList)  mobileList.innerHTML  = '';
 
     const orderColors = {1:'#FF3131',2:'#39FF14',3:'#1F51FF',4:'#FFF01F',5:'#A020F0'};
 
     Object.values(tables)
         .sort((a,b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true }))
         .forEach(table => {
-            const isOccupied   = table.status === 'occupied';
-            const activeBills  = table.activeBills || [];
-            const paxTotal     = activeBills.reduce((s, b) => s + (b.pax || 1), 0);
-            const isActive     = activeTableId === table.id;
+            const isOccupied  = table.status === 'occupied';
+            const activeBills = table.activeBills || [];
+            const paxTotal    = activeBills.reduce((s, b) => s + (b.pax || 1), 0);
+            const isActive    = activeTableId === table.id;
 
-            // ── Build neon bill dots ──
+            // ── Neon bill dots HTML (shared) ──
             const dotsHtml = activeBills.map(b => {
                 const c = orderColors[b.colorIndex] || '#D4AF37';
                 return `<span class="bill-dot" style="background:${c};box-shadow:0 0 5px ${c};"></span>`;
             }).join('');
+            const primaryColor = isOccupied
+                ? (activeBills.length > 0 ? orderColors[activeBills[0].colorIndex] : '#4ADE80')
+                : 'rgba(255,255,255,0.08)';
 
-            // ── MOBILE CHIP ──
-            if (mobileList) {
-                const chip = document.createElement('div');
-                chip.className = 'rw-chip' + (isActive ? ' active' : '') + (isOccupied ? ' occupied' : '');
-                if (isOccupied && activeBills.length > 0) {
-                    const primaryColor = orderColors[activeBills[0].colorIndex] || '#4ADE80';
-                    chip.style.borderColor = primaryColor;
-                    chip.style.boxShadow   = `0 0 10px ${primaryColor}55`;
-                }
-                chip.innerHTML = `
-                    <span class="chip-id">T${table.id}</span>
-                    ${isOccupied ? `<span class="chip-pax">${paxTotal}p</span>` : `<span class="chip-pax" style="color:rgba(255,255,255,0.2);">free</span>`}
-                    ${dotsHtml ? `<div class="chip-dots">${dotsHtml}</div>` : ''}
-                `;
-                chip.onclick = () => handleTableClick(table);
-                mobileList.appendChild(chip);
-            }
-
-            // ── DESKTOP SIDEBAR CARD ──
+            // ── DESKTOP SIDEBAR CARD (full furniture view) ──
             if (desktopList) {
-                const card = document.createElement('div');
-                card.className = 'rw-desk-table-btn' + (isActive ? ' active' : '') + (isOccupied ? ' occupied' : '');
-                if (isOccupied && activeBills.length > 0) {
-                    const primaryColor = orderColors[activeBills[0].colorIndex] || '#4ADE80';
-                    card.style.borderColor = primaryColor;
-                }
-
-                // Build chair row with neon glows
                 const chars = table.chairs || [];
                 const chairHtml = (idx) => {
-                    const c = chars[idx];
-                    if (!c) return '';
+                    const c = chars[idx]; if (!c) return '';
                     if (c.status === 'occupied') {
-                        let glowColor = '#D4AF37';
+                        let glow = '#D4AF37';
                         if (activeBills.length > 0) {
-                            let acc = 0, sel = null;
-                            for (let b of activeBills) { acc += (b.pax || 1); if (idx < acc) { sel = b; break; } }
-                            if (sel) glowColor = orderColors[sel.colorIndex] || '#D4AF37';
+                            let acc = 0;
+                            for (let b of activeBills) { acc += (b.pax || 1); if (idx < acc) { glow = orderColors[b.colorIndex] || '#D4AF37'; break; } }
                         }
-                        return `<div class="rw-chair" style="background:${glowColor}22;"><svg viewBox="0 0 24 24" style="filter:drop-shadow(0 0 5px ${glowColor});"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="${glowColor}"/></svg></div>`;
+                        return `<div class="rw-chair" style="background:${glow}22;"><svg viewBox="0 0 24 24" style="filter:drop-shadow(0 0 5px ${glow});"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="${glow}"/></svg></div>`;
                     }
                     return `<div class="rw-chair" style="background:rgba(255,255,255,0.05);"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="rgba(255,255,255,0.2)"/></svg></div>`;
                 };
+
+                const card = document.createElement('div');
+                card.className = 'rw-desk-table-btn' + (isActive ? ' active' : '') + (isOccupied ? ' occupied' : '');
+                card.style.borderColor = primaryColor;
+                if (isOccupied && activeBills.length > 0) card.style.boxShadow = `0 0 10px ${primaryColor}44`;
 
                 card.innerHTML = `
                     <div class="rw-furn">
@@ -412,12 +392,29 @@ function renderTableSidebar() {
                 card.onclick = () => handleTableClick(table);
                 desktopList.appendChild(card);
             }
+
+            // ── MOBILE CHIP ──
+            if (mobileList) {
+                const chip = document.createElement('div');
+                chip.className = 'rw-chip' + (isActive ? ' active' : '') + (isOccupied ? ' occupied' : '');
+                chip.style.borderColor = primaryColor;
+                if (isOccupied) chip.style.boxShadow = `0 0 10px ${primaryColor}55`;
+
+                chip.innerHTML = `
+                    <span class="chip-id">T${table.id}</span>
+                    ${isOccupied ? `<span class="chip-pax">${paxTotal}p</span>` : `<span class="chip-pax" style="color:rgba(255,255,255,0.2);">free</span>`}
+                    ${dotsHtml ? `<div class="chip-dots">${dotsHtml}</div>` : ''}
+                `;
+                chip.onclick = () => handleTableClick(table);
+                mobileList.appendChild(chip);
+            }
         });
 }
 
 
 
 //  Table Selection 
+
 
 function handleTableClick(table) {
     document.getElementById('tci-tableid').value = table.id;
