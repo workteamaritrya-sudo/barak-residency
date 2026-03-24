@@ -286,6 +286,11 @@ window.punchOut = async function () {
             outTime: Timestamp.fromDate(now), status: 'Out',
             durationMins, updatedAt: serverTimestamp()
         }, { merge: true });
+
+        // User requested immediate reset to -- so it's ready for next punch-in
+        const elOut = document.getElementById('display-out');
+        if (elOut) { elOut.textContent = '--:--'; elOut.className = 'ps-empty'; }
+
         setStatus('punch-status', ' Punched out. See you next shift!', 'success');
         loadHistory(user.uid);
     } catch (e) {
@@ -879,7 +884,7 @@ window.openPickupOverlay = function() {
     const overlay = document.getElementById('pickup-overlay');
     const iframe  = document.getElementById('pickup-iframe');
     if (overlay && iframe) {
-        iframe.src = 'restaurant_desk.html?mode=pickup';
+        iframe.src = 'restaurant_pickup.html'; // Standalone Professional Pickup POS
         overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
     }
