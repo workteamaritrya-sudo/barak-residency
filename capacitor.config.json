@@ -4,8 +4,7 @@
   "webDir": "www",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://workteamaritrya-sudo.github.io/barak-residency/index.html",
-    "cleartext": true,
+    "url": "https://workteamaritrya-sudo.github.io/barak-residency/staff_attendance.html",
     "allowNavigation": ["workteamaritrya-sudo.github.io"]
   }
 }
