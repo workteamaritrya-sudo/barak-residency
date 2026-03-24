@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Restaurant Pickup | Barak Residency</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="restaurant_portal.css">
+    <style>
+        .pickup-layout { display: flex; height: calc(100vh - 80px); gap: 1.5rem; padding: 1.5rem; overflow: hidden; }
+        .pickup-pos { flex: 2; display: flex; flex-direction: column; min-width: 0; }
+        .pickup-sidebar { flex: 1; min-width: 320px; display: flex; flex-direction: column; background: rgba(0,0,0,0.3); border-radius: 24px; padding: 1.5rem; }
+        
+        .cat-pill { white-space: nowrap; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.6rem 1.25rem; border-radius: 25px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; font-weight: 800; color: #94A3B8; }
+        .cat-pill.active { background: var(--gold-primary); color: #000; border-color: var(--gold-primary); box-shadow: 0 4px 12px rgba(212,175,55,0.3); }
+
+        .waiter-menu-card { 
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 16px; padding: 1rem; text-align: center; cursor: pointer; transition: 0.3s;
+        }
+        .waiter-menu-card:hover { transform: translateY(-4px); border-color: var(--gold-primary); }
+        
+        .type-toggle { display: flex; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.4rem; border-radius: 14px; margin-bottom: 1.5rem; }
+        .type-toggle button { flex: 1; padding: 0.75rem; border-radius: 10px; border: 1px solid transparent; background: transparent; color: #fff; cursor: pointer; font-weight: 700; transition: 0.2s; font-size: 0.8rem; }
+        .type-toggle button.active { background: rgba(212,175,55,0.15); border-color: var(--gold-primary); color: var(--gold-primary); }
+
+        @media (max-width: 768px) {
+            .pickup-layout { flex-direction: column; overflow-y: auto; height: auto; padding: 1rem; }
+            .pickup-sidebar { min-width: 100%; margin-top: 1.5rem; }
+            .menu-grid { grid-template-columns: 1fr 1fr !important; }
+        }
+    </style>
+</head>
+<body style="background:var(--color-bg);">
+    <div id="app" style="display:flex; flex-direction:column; height:100vh;">
+        <header class="luxury-portal-header" style="justify-content:center; padding:1.2rem;">
+            <div class="luxury-identity">NEW PICKUP & TABLE ADD-ON</div>
+        </header>
+
+        <div class="pickup-layout">
+            <section class="pickup-pos glass-panel">
+                <div style="padding:1.25rem; border-bottom:1px solid var(--glass-border); display:flex; gap:1rem; background:rgba(0,0,0,0.2);">
+                    <input type="text" id="menu-search" class="form-control" placeholder="Search menu..." style="flex:1;">
+                    <button class="btn btn-outline" onclick="window.renderMenu()">&#10227;</button>
+                </div>
+                
+                <div style="flex:1; display:flex; flex-direction:column; overflow:hidden; padding:1.5rem;">
+                    <nav id="menu-categories" style="display:flex; gap:0.6rem; overflow-x:auto; padding-bottom:1.25rem; margin-bottom:0.5rem; scrollbar-width:none;"></nav>
+                    <div id="menu-grid" class="menu-grid" style="flex:1; overflow-y:auto; display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:1rem;">
+                        <div style="color:gray; text-align:center; padding:3rem; grid-column:1/-1;">Loading menu...</div>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="pickup-sidebar glass-panel">
+                <h3 style="color:var(--gold-primary); font-size:0.9rem; letter-spacing:1px; margin-bottom:1.25rem; text-transform:uppercase;">Order Summary</h3>
+                
+                <div class="type-toggle">
+                    <button id="toggle-pickup" class="active" onclick="window.setOrderType('Pickup')">WALK-IN PICKUP</button>
+                    <button id="toggle-table" onclick="window.setOrderType('Table')">ADD TO TABLE</button>
+                </div>
+
+                <div id="table-selector-wrap" style="display:none; margin-bottom:1.5rem;">
+                    <label style="font-size:0.65rem; color:var(--gold-primary); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:0.5rem;">Select Table</label>
+                    <select id="table-select" class="form-control" style="font-size:1rem; padding:0.8rem; border-color:var(--gold-primary);"></select>
+                </div>
+
+                <div id="cart-items" style="flex:1; overflow-y:auto; margin-bottom:1.5rem;">
+                    <div style="color:rgba(255,255,255,0.2); text-align:center; padding:2rem; font-size:0.85rem;">Cart is empty</div>
+                </div>
+
+                <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:1.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                        <span style="opacity:0.6; font-size:0.9rem;">Total Amount</span>
+                        <span style="color:#4ADE80; font-size:1.6rem; font-weight:900;">₹<span id="total-amt">0</span></span>
+                    </div>
+                    <button id="place-btn" class="btn btn-primary btn-block" style="padding:1.25rem; font-size:1.15rem; font-weight:900; background:var(--gold-primary); color:#000;" onclick="window.submitOrder()" disabled>PLACE ORDER</button>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Portion Modal -->
+    <div id="portion-modal" class="modal-overlay" style="display:none; align-items:center; justify-content:center;">
+        <div class="security-box" style="width:400px; max-width:92vw; padding:2.5rem 2rem;">
+            <h3 id="pm-item-name" style="text-align:center; color:var(--gold-primary); font-size:1.4rem; margin-bottom:1.5rem;"></h3>
+            <div id="pm-options" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
+            <button onclick="document.getElementById('portion-modal').style.display='none'" style="width:100%; background:transparent; border:none; color:gray; margin-top:1.5rem; cursor:pointer; text-decoration:underline;">Cancel</button>
+        </div>
+    </div>
+
+    <script type="module" src="restaurant_pickup_app.js?v=1.1"></script>
+</body>
+</html>
