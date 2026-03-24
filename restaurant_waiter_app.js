@@ -1033,10 +1033,44 @@ init().catch(e => {
     showToast('App Boot Failure', 'warning');
 });
 
+// ─── Reset function — clears success screen + cart so reopening the POS is clean ───
+function resetState() {
+    const ss = document.getElementById('success-screen');
+    if (ss) ss.style.display = 'none';
+    cart = [];
+    activeTableId = null;
+    currentGuestName = '';
+    editingOrderId = null;
+    _isPlacingOrder = false;
+    preserveCart = false;
+    renderCart();
+    const title = document.getElementById('rest-waiter-pos-title');
+    if (title) title.textContent = 'Select a table';
+    const info = document.getElementById('rest-waiter-table-info');
+    if (info) info.textContent = '';
+    const btn = document.getElementById('btn-rest-waiter-order') || document.getElementById('btn-mob-order');
+    if (btn) btn.disabled = true;
+    const cartOverlay = document.getElementById('cart-overlay-mob');
+    if (cartOverlay) cartOverlay.classList.remove('active');
+    renderTableSidebar();
+}
+
+// Listen for parent messages (reset on overlay reopen)
+window.addEventListener('message', (e) => {
+    if (e.data?.action === 'reset') resetState();
+});
+
 window.backToHome = () => {
+    resetState(); // Always reset before closing
     if (window.parent && window.parent !== window && window.parent.closeRestWaiter) {
         window.parent.closeRestWaiter();
     } else if (window.parent && window.parent !== window) {
         window.parent.postMessage({ action: 'closeOverlay', overlay: 'rest-waiter' }, '*');
     }
 };
+
+window.toggleCart = () => {
+    const el = document.getElementById('cart-overlay-mob');
+    if (el) el.classList.toggle('active');
+};
+
