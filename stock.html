@@ -149,6 +149,8 @@
     // Embedded Mode logic
     if (window.location.search.includes('embedded=1')) {
         document.getElementById('btn-logout').style.display = 'none';
+        const mgr = document.getElementById('btn-menu-mgr');
+        if (mgr) mgr.style.display = 'none';
         document.getElementById('btn-close-stk').style.display = 'inline-block';
     }
 </script>
@@ -196,7 +198,11 @@
             <input type="text"   id="add-unit" placeholder="Unit (kg/litre/pcs)">
             <input type="number" id="add-low-thresh" placeholder="Low Stock Alert at">
         </div>
-        <button class="btn-add" onclick="addStockItem()">+ Add to Inventory</button>
+        <div class="form-row triple">
+            <input type="number" id="add-price" placeholder="Sale Price ₹ (for Drinks auto-menu)" min="0">
+            <input type="file" id="add-image" accept="image/*" style="padding:0.6rem;background:var(--bg);color:var(--text-mute);border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;">
+            <button class="btn-add" onclick="addStockItem()">+ Add to Inventory</button>
+        </div>
     </div>
 
     <!-- Filter / Search -->

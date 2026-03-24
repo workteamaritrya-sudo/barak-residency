@@ -250,10 +250,12 @@ window.promptPortion = function(itemId) {
     const price = item.price || 0;
     const type = item.portionType || 'Plate';
 
-    if (type === 'Plate' || type === 'Portion') {
+    if ((type === 'Plate' || type === 'Portion') && item.priceHalf > 0) {
         const halfPrice = item.priceHalf || 0;
-        const opts = [{ label: 'Full', val: 'Full', price: price }];
-        if (halfPrice > 0) opts.push({ label: 'Half', val: 'Half', price: halfPrice });
+        const opts = [
+            { label: 'Full', val: 'Full', price: price },
+            { label: 'Half', val: 'Half', price: halfPrice }
+        ];
         opts.forEach(opt => {
             const btn = document.createElement('button');
             btn.className = 'wpm-opt-btn';
@@ -262,7 +264,9 @@ window.promptPortion = function(itemId) {
             ctn.appendChild(btn);
         });
     } else {
-        promptQuantity(item, 'Regular', 'Standard', price);
+        const val = type === 'Bottle' ? 'Bottle' : 'Full';
+        const label = type === 'Bottle' ? '1 Item' : 'Full Plate';
+        promptQuantity(item, val, label, price);
     }
     modal.style.display = 'flex';
 };
@@ -512,11 +516,13 @@ async function decrementDrinksFromStock(cartItems, dbRef, fns) {
                     sName.includes(name.split(' ')[0]);
             });
             if (match) {
+                const Math = window.Math;
                 const newQty = Math.max(0, (Number(match.qty) || 0) - (Number(ordered.qty) || 1));
                 await updateDoc(doc(dbRef, 'stock', match.id), {
                     qty: newQty,
                     updatedAt: serverTimestamp()
                 });
+                updateDoc(doc(dbRef, 'menuItems', match.id), { isAvailable: newQty > 0 }).catch(e=>{});
                 match.qty = newQty; // update local cache too
             }
         }
