@@ -38,28 +38,24 @@
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
-                min-width: 60px !important;
-                max-width: 76px !important;
-                height: 40px !important;
-                padding: 0 0.8rem !important;
-                border-radius: 20px !important;
+                min-width: 62px !important;
+                max-width: 80px !important;
+                height: 72px !important;
+                padding: 0 !important;
+                border-radius: 18px !important;
                 font-size: 0.8rem !important;
                 font-weight: 800 !important;
                 white-space: nowrap !important;
                 flex-shrink: 0 !important;
-                background: rgba(30,41,59,0.9) !important;
-                border: 1.5px solid rgba(255,255,255,0.12) !important;
+                background: rgba(15,23,42,0.95) !important;
+                border: 1.5px solid rgba(255,255,255,0.1) !important;
                 color: #94A3B8 !important;
-                transition: all 0.18s !important;
+                transition: all 0.2s !important;
+                cursor: pointer !important;
             }
             .w-room-btn.active {
-                background: rgba(212,175,55,0.18) !important;
+                background: rgba(212,175,55,0.12) !important;
                 border-color: #D4AF37 !important;
-                color: #D4AF37 !important;
-            }
-            .w-room-btn[style*='green'] {
-                border-color: #4ADE80 !important;
-                color: #4ADE80 !important;
             }
             /* Menu fills remaining height */
             .pos-cart { display: none !important; }
@@ -73,9 +69,22 @@
             #rest-waiter-menu-search { border-radius: 8px !important; }
         }
 
-        /* Chip label — only visible on mobile (now handled via .w-room-btn text directly) */
-        .mob-chip-label { display: none; font-size: 0.8rem; font-weight: 800; color: inherit; }
-        @media (max-width: 900px) { .mob-chip-label { display: block !important; } }
+        /* Chip label card — only visible on mobile */
+        .mob-chip-label {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            width: 100%;
+            height: 100%;
+            padding: 8px 6px;
+            border-radius: 16px;
+            border: 1.5px solid rgba(255,255,255,0.1);
+            text-align: center;
+            box-sizing: border-box;
+        }
+        @media (max-width: 900px) { .mob-chip-label { display: flex !important; } }
 
         /* Floating Cart (Mobile Friendly) */
         .cart-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(5, 11, 26, 0.98); backdrop-filter: blur(20px); flex-direction: column; padding: 2rem; }
