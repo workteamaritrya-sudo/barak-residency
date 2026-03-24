@@ -98,6 +98,31 @@ function calculateRevenue() {
     }, 0);
 }
 
+// --- Legal Records Export (CSV/Excel) ---
+window.exportAttendanceToExcel = () => {
+    if (!staffAttendanceRecords || staffAttendanceRecords.length === 0) {
+        alert("No attendance records to export.");
+        return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,Staff Name,Date,In Time,Out Time,Status,Lat,Lng\n";
+    staffAttendanceRecords.forEach(r => {
+        const inT = r.inTime ? (r.inTime.toDate ? r.inTime.toDate() : new Date(r.inTime)).toLocaleTimeString() : '--:--';
+        const outT = r.outTime ? (r.outTime.toDate ? r.outTime.toDate() : new Date(r.outTime)).toLocaleTimeString() : '--:--';
+        const lat = r.latIn || r.lat || '--';
+        const lng = r.lngIn || r.lng || '--';
+        csvContent += `"${r.name}","${r.date}","${inT}","${outT}","${r.status}","${lat}","${lng}"\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Barak_Attendance_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
 function updateDashboard() {
     // Stat: Rooms
     const occupied = rooms.filter(r => r.status === 'occupied').length;
