@@ -175,17 +175,23 @@ function startListeners() {
 
 async function init() {
     startClock();
+
+    let dataLoaded = false;
+
     onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-            onAuthStateChanged(auth, u => {
-                if (!u && window.self === window.top) {
-                    window.location.href = 'index.html';
-                }
-            });
+        if (user) {
+            if (!dataLoaded) {
+                dataLoaded = true;
+                await loadInitialData();
+                startListeners();
+                showToast('Connected to Cloud', 'success');
+            }
         } else {
-            await loadInitialData();
-            startListeners();
-            showToast('Connected to Cloud', 'success');
+            // Only redirect if we are the top-level page (not inside an iframe)
+            if (window.self === window.top) {
+                window.location.href = 'index.html';
+            }
+            // Inside an iframe: wait — Firebase will resolve the auth session momentarily
         }
     });
 }
@@ -359,7 +365,7 @@ function renderTableSidebar() {
             <div style="text-align:center;margin-top:0.5rem;" class="text-sm ${table.status==='occupied'?'color-success':'text-gray'}">
                 ${table.status === 'occupied' ? `Occupied (${table.pax} Pax)` : 'Available'}
             </div>
-            <span class="mob-chip-label" style="color:${table.status==='occupied'?'#4ADE80':'#94A3B8'};">T${table.id} ${table.status==='occupied'?'●':'○'}</span>`;
+            <span class="mob-chip-label">T${table.id}</span>`;
 
         if (table.status === 'occupied') btn.style.borderColor = 'var(--color-green-400)';
         btn.onclick = () => handleTableClick(table);
