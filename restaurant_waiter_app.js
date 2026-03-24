@@ -178,22 +178,52 @@ async function init() {
 
     let dataLoaded = false;
 
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            if (!dataLoaded) {
-                dataLoaded = true;
-                await loadInitialData();
-                startListeners();
-                showToast('Connected to Cloud', 'success');
+    async function doLoad() {
+        if (dataLoaded) return;
+        dataLoaded = true;
+        try {
+            await loadInitialData();
+            startListeners();
+            showToast('Connected to Cloud', 'success');
+        } catch (e) {
+            console.error('[Init] Load failed:', e);
+            showToast('Connection error — retrying...', 'error');
+            dataLoaded = false;
+            setTimeout(doLoad, 3000); // retry
+        }
+    }
+
+    const isIframe = window.self !== window.top;
+
+    if (isIframe) {
+        // Inside parent portal — the parent already authenticated.
+        // Don't wait for Firebase Auth (it may be slow in iframe context).
+        // Just load data immediately and also set up auth listener in background.
+        await doLoad();
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                // Auth lost — do nothing (parent will close the overlay if needed)
+                console.warn('[Auth] Session lost inside iframe');
             }
-        } else {
-            // Only redirect if we are the top-level page (not inside an iframe)
-            if (window.self === window.top) {
+        });
+    } else {
+        // Standalone browser mode — wait for auth properly
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                await doLoad();
+            } else {
                 window.location.href = 'index.html';
             }
-            // Inside an iframe: wait — Firebase will resolve the auth session momentarily
-        }
-    });
+        });
+
+        // Failsafe: if auth takes more than 5s, try loading anyway
+        setTimeout(async () => {
+            if (!dataLoaded) {
+                console.warn('[Auth] Timeout — loading data without auth confirmation');
+                await doLoad();
+            }
+        }, 5000);
+    }
 }
 
 async function loadInitialData() {
