@@ -509,7 +509,7 @@ function renderRestDesk() {
     const orderColors = { 1: '#FF3131', 2: '#39FF14', 3: '#1F51FF', 4: '#FFF01F', 5: '#A020F0' };
 
     Object.values(tables).sort((a, b) => String(a.id).localeCompare(String(b.id))).forEach(table => {
-        if (table.status === 'occupied') {
+        if ((table.status || '').toLowerCase() === 'occupied') {
             activeTables++; totalPax += table.pax || 0;
             const chars = table.chairs || [];
             const ab = table.activeBills || [];
@@ -530,7 +530,7 @@ function renderRestDesk() {
             }
             const cHtml = chars.map((c, i) => {
                 let fs = '', ft = '';
-                if (c.status === 'occupied') {
+                if ((c.status || '').toLowerCase() === 'occupied') {
                     let gc = '#D4AF37';
                     if (ab.length > 0) {
                         let acc = 0, sel = null;

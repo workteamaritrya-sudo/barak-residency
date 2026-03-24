@@ -158,8 +158,8 @@ function populateRoomSelect() {
     sortedRooms.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r.number;
-        opt.innerText = `Room ${r.number} ${r.status === 'occupied' ? `— ${r.guestName || 'Occupied'}` : '(Vacant)'}`;
-        if (r.status !== 'occupied') opt.style.color = '#9CA3AF';
+        opt.innerText = `Room ${r.number} ${(r.status || '').toLowerCase() === 'occupied' ? `— ${r.guestName || 'Occupied'}` : '(Vacant)'}`;
+        if ((r.status || '').toLowerCase() !== 'occupied') opt.style.color = '#9CA3AF';
         select.appendChild(opt);
     });
     if (currentVal) select.value = currentVal;
@@ -177,7 +177,7 @@ window.selectRoom = function(roomNum) {
     if (badge) badge.style.display = 'none';
     
     const summary = document.getElementById('room-summary');
-    if (roomNum && room.status === 'occupied') {
+    if (roomNum && (room.status || '').toLowerCase() === 'occupied') {
         if (summary) summary.style.display = 'block';
         const gName = document.getElementById('summary-guest-name');
         if (gName) gName.innerText = room.guestName || 'Active Guest';
