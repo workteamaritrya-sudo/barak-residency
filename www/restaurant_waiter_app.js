@@ -358,7 +358,8 @@ function renderTableSidebar() {
             </div></div>
             <div style="text-align:center;margin-top:0.5rem;" class="text-sm ${table.status==='occupied'?'color-success':'text-gray'}">
                 ${table.status === 'occupied' ? `Occupied (${table.pax} Pax)` : 'Available'}
-            </div>`;
+            </div>
+            <span class="mob-chip-label" style="color:${table.status==='occupied'?'#4ADE80':'#94A3B8'};">T${table.id} ${table.status==='occupied'?'●':'○'}</span>`;
 
         if (table.status === 'occupied') btn.style.borderColor = 'var(--color-green-400)';
         btn.onclick = () => handleTableClick(table);
@@ -983,9 +984,9 @@ init().catch(e => {
 });
 
 window.backToHome = () => {
-    if (window.parent && window.parent.closeRestWaiter) {
+    if (window.parent && window.parent !== window && window.parent.closeRestWaiter) {
         window.parent.closeRestWaiter();
-    } else {
-        window.history.back();
+    } else if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ action: 'closeOverlay', overlay: 'rest-waiter' }, '*');
     }
 };

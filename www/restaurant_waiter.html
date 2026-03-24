@@ -8,16 +8,55 @@
     <link rel="stylesheet" href="restaurant_portal.css?v=1.6">
     <link rel="icon" href="br.png" type="image/png">
     <style>
-        /* Mobile POS Refactor */
+        /* ── Mobile POS Refactor ── */
         @media (max-width: 900px) {
-            .waiter-sidebar { display: flex !important; width: 100% !important; flex: none !important; flex-direction: column !important; padding: 0.8rem !important; margin-bottom: 0.5rem; }
-            .waiter-room-list { display: flex !important; flex-direction: row !important; gap: 0.8rem !important; overflow-x: auto !important; padding-bottom: 0.5rem !important; }
+            /* Sidebar becomes a horizontal scrolling chip bar */
+            .waiter-sidebar {
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100% !important;
+                flex: none !important;
+                padding: 0.6rem 0.8rem !important;
+                min-height: unset !important;
+            }
+            .waiter-sidebar h2 { display: none !important; }
+            .waiter-room-list {
+                display: flex !important;
+                flex-direction: row !important;
+                gap: 0.5rem !important;
+                overflow-x: auto !important;
+                padding-bottom: 2px !important;
+                scrollbar-width: none !important;
+            }
+            /* Table chips — hide complex furniture, show pill */
+            .w-room-btn .restaurant-table-view { display: none !important; }
+            .w-room-btn {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                flex-direction: column !important;
+                min-width: 64px !important;
+                max-width: 80px !important;
+                padding: 0.5rem 0.6rem !important;
+                border-radius: 14px !important;
+                font-size: 0.75rem !important;
+                white-space: nowrap !important;
+                flex-shrink: 0 !important;
+                text-align: center !important;
+            }
+            .w-room-btn .mob-chip-label { display: block !important; }
+            /* Menu fills remaining height */
             .pos-cart { display: none !important; }
-            .luxury-portal-header { justify-content: space-between !important; padding: 1rem !important; }
-            .luxury-portal-header .luxury-identity { font-size: 0.9rem !important; }
-            .waiter-layout { padding: 0.5rem !important; flex-direction: column !important; }
+            .luxury-portal-header { justify-content: space-between !important; padding: 0.8rem 1rem !important; }
+            .luxury-portal-header .luxury-identity { font-size: 0.85rem !important; }
+            .waiter-layout { padding: 0.4rem !important; flex-direction: column !important; overflow: visible !important; }
+            .waiter-pos { overflow: visible !important; height: auto !important; }
+            .pos-body { flex-direction: column !important; height: auto !important; overflow: visible !important; }
             .pos-menu { grid-template-columns: 1fr 1fr !important; }
         }
+
+        /* Chip label — only visible on mobile */
+        .mob-chip-label { display: none; font-size: 0.7rem; font-weight: 700; margin-top: 2px; color: inherit; }
 
         /* Floating Cart (Mobile Friendly) */
         .cart-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(5, 11, 26, 0.98); backdrop-filter: blur(20px); flex-direction: column; padding: 2rem; }
