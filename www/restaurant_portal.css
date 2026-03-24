@@ -599,6 +599,50 @@ input:checked + .slider::before { transform: translateX(22px); }
     border-bottom: 1px solid var(--gold-dim);
 }
 
+/* Global Form Luxury Overrides */
+.form-control, select, input, .room-select {
+    background: #0B1427 !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: #fff !important;
+    border-radius: 10px !important;
+}
+select option { background: #0B1427; color: #fff; }
+
+/* Modal & Quantity Selector (Swiggy Style) */
+.modal-overlay { z-index: 20000 !important; }
+.security-box, .modal-box {
+    background: #0F172A !important;
+    border: 2px solid var(--gold-dim) !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8) !important;
+    color: #fff !important;
+}
+
+.wpm-opt-btn {
+    width: 100%; padding: 1.1rem; margin-bottom: 1rem;
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: #fff !important; border-radius: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: 600; cursor: pointer; transition: 0.2s;
+}
+.wpm-opt-btn:active { background: var(--gold-dim) !important; border-color: var(--gold-primary) !important; }
+
+.wpm-counter { display: flex; align-items: center; justify-content: center; gap: 2.5rem; margin: 2rem 0; }
+.wpm-counter button {
+    width: 55px; height: 55px; border-radius: 18px;
+    background: rgba(212,175,55,0.1) !important;
+    border: 1px solid var(--gold-dim) !important;
+    color: var(--gold-primary) !important; font-size: 1.8rem; cursor: pointer;
+}
+#wpm-qty-val { font-size: 2.8rem; font-weight: 900; color: #fff; }
+
+.wpm-add-btn, .btn-place-order {
+    width: 100%; border: none; border-radius: 16px; font-weight: 800;
+    background: linear-gradient(135deg, #FFD700, #D4AF37) !important;
+    color: #000 !important; padding: 1.25rem; font-size: 1.1rem; cursor: pointer;
+}
+
+
 /*  ULTRA MOBILE OPTIMIZATIONS (Swiggy Style)  */
 @media (max-width: 768px) {
     body { 
@@ -627,8 +671,10 @@ input:checked + .slider::before { transform: translateX(22px); }
     .waiter-pos { height: auto; overflow: visible; opacity: 1 !important; }
     .pos-body { flex-direction: column; height: auto; overflow: visible; }
     .pos-menu { 
-        grid-template-columns: 1fr; gap: 0.6rem; padding: 1rem 0; 
-        overflow: visible; display: flex; flex-direction: column;
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* 2 Columns for better Density */
+        gap: 0.8rem; padding: 1rem 0; 
+        overflow: visible;
     }
     .pos-header { padding: 1rem 0; }
     .pos-cart { 
