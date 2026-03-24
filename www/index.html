@@ -1210,6 +1210,24 @@
             if (closed && window.location.hash) window.history.back(); // Clear the hash natively
             return closed;
         };
+
+        // --- postMessage from child iframes (safe fallback close) ---
+        window.addEventListener('message', (e) => {
+            if (!e.data || e.data.action !== 'closeOverlay') return;
+            const overlay = e.data.overlay;
+            if (overlay === 'hotel-waiter' && window.closeHotelWaiter) window.closeHotelWaiter();
+            else if (overlay === 'rest-waiter' && window.closeRestWaiter) window.closeRestWaiter();
+            else if (overlay === 'pickup' && window.closePickupOverlay) window.closePickupOverlay();
+        });
+
+        // --- Prevent accidental app exit on back-button when no overlay is open ---
+        window.history.pushState({ home: true }, '', window.location.href.split('#')[0]);
+        window.addEventListener('popstate', (e) => {
+            if (!e.state || !e.state.overlay) {
+                // Re-push the home state so back button never exits the app
+                window.history.pushState({ home: true }, '', window.location.href.split('#')[0]);
+            }
+        });
     </script>
 
     <script type="module" src="staff_attendance.js?v=2.0"></script>

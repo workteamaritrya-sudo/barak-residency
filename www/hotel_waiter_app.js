@@ -585,10 +585,10 @@ async function boot() {
 boot();
 
 window.backToHome = () => {
-    if (window.parent && window.parent.closeHotelWaiter) {
+    if (window.parent && window.parent !== window && window.parent.closeHotelWaiter) {
         window.parent.closeHotelWaiter();
-    } else {
-        window.history.back();
+    } else if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ action: 'closeOverlay', overlay: 'hotel-waiter' }, '*');
     }
 };
 

@@ -30,13 +30,14 @@ onAuthStateChanged(auth, u => {
 });
 
 window.backToHome = () => {
-    if (window.parent && window.parent.closePickupOverlay) {
+    if (window.parent && window.parent !== window && window.parent.closePickupOverlay) {
         window.parent.closePickupOverlay();
-    } else if (window.parent && window.parent.closeRestWaiter) {
-        window.parent.closeRestWaiter(); // Fix: Support both overlay names
-    } else {
-        window.history.back(); // Fallback
+    } else if (window.parent && window.parent !== window && window.parent.closeRestWaiter) {
+        window.parent.closeRestWaiter();
+    } else if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ action: 'closeOverlay', overlay: 'pickup' }, '*');
     }
+    // Never call history.back() to avoid login-page flash
 };
 
 // Real-time Listeners
