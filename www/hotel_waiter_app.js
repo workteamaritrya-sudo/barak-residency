@@ -312,39 +312,63 @@ function promptQuantity(item, variant, label, price) {
     };
 }
 
-function updateCartUI() {
-    const container = document.getElementById('waiter-cart-items');
-    const totalAmt = document.getElementById('waiter-total-amt');
-    const placeBtn = document.getElementById('waiter-place-btn');
+function renderCart() {
+    const ctnDesktop = document.getElementById('waiter-cart-items');
+    const footerCommon = document.getElementById('cart-footer-common');
+    const placeholderMob = document.getElementById('cart-placeholder-mob');
+    const badge = document.getElementById('cart-badge-val');
+    const totalEl = document.getElementById('waiter-total-amt');
     
-    let total = 0;
-    if (waiterCart.length === 0) {
-        container.innerHTML = '<div class="empty-msg">Cart is empty</div>';
-    } else {
-        container.innerHTML = waiterCart.map((item, idx) => {
-            total += item.price * item.qty;
-            return `
-                <div class="cart-row">
-                    <div class="cart-info">
-                        <div class="cart-name">${item.name}</div>
-                        <div class="cart-sub">₹${item.price} × ${item.qty}</div>
-                    </div>
-                    <div class="cart-controls">
-                        <button onclick="window.changeCartQty(${idx}, -1)">-</button>
-                        <span>${item.qty}</span>
-                        <button onclick="window.changeCartQty(${idx}, 1)">+</button>
-                    </div>
-                </div>`;
-        }).join('');
+    // Total Items for Badge
+    const totalQty = waiterCart.reduce((s, i) => s + i.qty, 0);
+    if (badge) {
+        badge.innerText = totalQty;
+        badge.style.display = totalQty > 0 ? 'flex' : 'none';
     }
-    if (totalAmt) totalAmt.innerText = total;
-    if (placeBtn) placeBtn.disabled = !(selectedRoom && waiterCart.length > 0);
+
+    if (waiterCart.length === 0) {
+        const emptyHtml = '<div style="color:gray;text-align:center;padding:2rem;">No items in cart</div>';
+        ctnDesktop.innerHTML = emptyHtml;
+        if (placeholderMob) placeholderMob.innerHTML = emptyHtml;
+        totalEl.innerText = '0';
+        document.getElementById('waiter-place-btn').disabled = true;
+        return;
+    }
+
+    const itemsHtml = waiterCart.map((c, idx) => `
+        <div class="cart-row">
+            <div>
+                <div class="item-name" style="margin:0; font-size:0.9rem;">${c.name}</div>
+                <div class="item-price" style="font-size:0.8rem;">₹${c.price}</div>
+            </div>
+            <div class="qty-ctrl">
+                <button onclick="window.changeCartQty(${idx}, -1)">-</button>
+                <div style="font-weight:900; min-width:20px; text-align:center;">${c.qty}</div>
+                <button onclick="window.changeCartQty(${idx}, 1)">+</button>
+            </div>
+        </div>
+    `).join('');
+
+    ctnDesktop.innerHTML = itemsHtml;
+    if (placeholderMob) {
+        placeholderMob.innerHTML = '<div style="flex:1; overflow-y:auto; padding-right:0.5rem;" id="mob-cart-list"></div>';
+        placeholderMob.innerHTML += footerCommon.innerHTML;
+        document.getElementById('mob-cart-list').innerHTML = itemsHtml;
+    }
+
+    const total = waiterCart.reduce((s, i) => s + (i.price * i.qty), 0);
+    totalEl.innerText = total.toLocaleString();
+    if (placeholderMob) {
+        placeholderMob.querySelector('#waiter-total-amt').innerText = total.toLocaleString();
+        placeholderMob.querySelector('#waiter-place-btn').disabled = false;
+    }
+    document.getElementById('waiter-place-btn').disabled = false;
 }
 
 window.changeCartQty = (idx, delta) => {
     waiterCart[idx].qty += delta;
     if (waiterCart[idx].qty <= 0) waiterCart.splice(idx, 1);
-    updateCartUI();
+    renderCart();
 };
 
 function renderLiveOrders() {
@@ -443,17 +467,14 @@ window.placeOrder = async function() {
                 orderType: 'room'
             };
             await setDoc(doc(db, 'orders', orderId), orderObj);
-            showToast(`Order ${orderId} placed!`, 'success');
         }
         
+        // --- SUCCESS SEQUENCE ---
+        new Audio('orderconfirm.mp3').play().catch(e => console.log("Audio play failed"));
+        document.getElementById('success-screen').style.display = 'flex';
+
         if (room.currentGuestId) {
             const guestRef = doc(db, 'guests', room.currentGuestId);
-            const itemsToAppend = waiterCart.map(i => ({
-                name: i.name,
-                qty: i.qty,
-                price: i.price,
-                timestamp: Date.now()
-            }));
             await updateDoc(guestRef, {
                 foodTotal: increment(total),
                 billItems: arrayUnion(...itemsToAppend)
@@ -562,3 +583,15 @@ async function boot() {
     });
 }
 boot();
+
+window.backToHome = () => {
+    if (window.parent && window.parent.closeHotelWaiter) {
+        window.parent.closeHotelWaiter();
+    } else {
+        window.history.back();
+    }
+};
+
+window.toggleCart = () => {
+    document.getElementById('cart-overlay-mob').classList.toggle('active');
+};
