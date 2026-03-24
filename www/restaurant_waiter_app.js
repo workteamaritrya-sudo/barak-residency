@@ -347,7 +347,7 @@ function renderTableSidebar() {
     Object.values(tables)
         .sort((a,b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true }))
         .forEach(table => {
-            const isOccupied  = table.status === 'occupied';
+            const isOccupied  = (table.status || '').toLowerCase() === 'occupied';
             const activeBills = table.activeBills || [];
             const paxTotal    = activeBills.reduce((s, b) => s + (b.pax || 1), 0);
             const isActive    = activeTableId === table.id;
@@ -423,7 +423,7 @@ function renderTableSidebar() {
 function handleTableClick(table) {
     document.getElementById('tci-tableid').value = table.id;
 
-    if (table.status === 'available') {
+    if ((table.status || '').toLowerCase() === 'available') {
         document.getElementById('tci-title').innerText = `Table ${table.id} Check-in`;
         document.getElementById('tci-name').value = '';
         document.getElementById('tci-pax').value = '2';

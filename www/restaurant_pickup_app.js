@@ -23,6 +23,7 @@ let tables = [];
 let cart = [];
 let orderType = 'Pickup'; // 'Pickup' or 'Table'
 let unavailableItems = [];
+let activeCategory = 'All';
 
 // Listen for Auth
 onAuthStateChanged(auth, u => {
@@ -99,14 +100,20 @@ window.renderMenu = () => {
 
     const filtered = menu.filter(i => {
         const name = (i.name || i.Name || i.itemName || '').toLowerCase();
-        const cat = (i.category || i.Category || '').toLowerCase();
+        const cat = (i.category || i.Category || 'General');
         const available = i.isAvailable !== false && !unavailableItems.includes(i.id);
-        return available && (name.includes(search) || cat.includes(search));
+        const matchSearch = (name.includes(search) || cat.toLowerCase().includes(search));
+        const matchCat = (activeCategory === 'All' || cat === activeCategory);
+        return available && matchSearch && matchCat;
     });
 
-    const cats = ['All', ...new Set(filtered.map(i => i.category || 'General'))];
+    const cats = ['All', ...new Set(menu.filter(i => i.isAvailable !== false).map(i => i.category || 'General'))];
     if (pills) {
-        pills.innerHTML = cats.map(c => `<button class="cat-pill" style="min-width:110px;">${c}</button>`).join('');
+        pills.innerHTML = cats.map(c => `
+            <button class="cat-pill ${c === activeCategory ? 'active' : ''}" 
+                    style="min-width:110px;" 
+                    onclick="window.setCategory('${c}')">${c}</button>
+        `).join('');
     }
 
     grid.innerHTML = filtered.map(i => `
@@ -116,6 +123,11 @@ window.renderMenu = () => {
             <div style="font-weight:900; color:var(--gold-primary);">₹${i.price}</div>
         </div>
     `).join('');
+};
+
+window.setCategory = (c) => {
+    activeCategory = c;
+    window.renderMenu();
 };
 
 window.promptPortion = (id) => {
