@@ -356,18 +356,34 @@ function renderTableSidebar() {
             return `<div class="chair-circle"><svg viewBox="0 0 24 24" class="person-icon"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>`;
         });
 
+        // --- Build mobile chip HTML with all bill info ---
+        const activeBills = table.activeBills || [];
+        const billDots = activeBills.map(b => {
+            const c = orderColors[b.colorIndex] || '#D4AF37';
+            return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c};box-shadow:0 0 6px ${c};flex-shrink:0;"></span>`;
+        }).join('');
+        const paxTotal = activeBills.reduce((s, b) => s + (b.pax || 1), 0);
+        const isOccupied = table.status === 'occupied';
+        const chipBorderColor = isOccupied
+            ? (activeBills.length > 0 ? orderColors[activeBills[0].colorIndex] || '#4ADE80' : '#4ADE80')
+            : 'rgba(255,255,255,0.12)';
+
         btn.innerHTML = `
             <div class="restaurant-table-view"><div class="table-layout-wrapper">
                 <div class="chair-row">${cHtml[0]||''}${cHtml[1]||''}</div>
-                <div class="table-engine-box" style="border-color:${table.status==='occupied'?'var(--color-indigo-500)':'var(--color-slate-700)'};">${table.id}</div>
+                <div class="table-engine-box" style="border-color:${isOccupied?'var(--color-indigo-500)':'var(--color-slate-700)'};">${table.id}</div>
                 <div class="chair-row">${cHtml[2]||''}${cHtml[3]||''}</div>
             </div></div>
-            <div style="text-align:center;margin-top:0.5rem;" class="text-sm ${table.status==='occupied'?'color-success':'text-gray'}">
-                ${table.status === 'occupied' ? `Occupied (${table.pax} Pax)` : 'Available'}
+            <div style="text-align:center;margin-top:0.5rem;" class="text-sm ${isOccupied?'color-success':'text-gray'}">
+                ${isOccupied ? `Occupied (${table.pax} Pax)` : 'Available'}
             </div>
-            <span class="mob-chip-label">T${table.id}</span>`;
+            <span class="mob-chip-label" style="border-color:${chipBorderColor};box-shadow:${isOccupied?`0 0 8px ${chipBorderColor}33`:none};">
+                <span style="font-weight:900;font-size:0.85rem;color:${isOccupied?'white':'#94A3B8'};">T${table.id}</span>
+                ${isOccupied ? `<span style="font-size:0.65rem;color:#94A3B8;margin-left:2px;">${paxTotal}p</span>` : ''}
+                ${billDots ? `<span style="display:flex;gap:3px;align-items:center;margin-top:3px;">${billDots}</span>` : ''}
+            </span>`;
 
-        if (table.status === 'occupied') btn.style.borderColor = 'var(--color-green-400)';
+        if (isOccupied) btn.style.borderColor = 'var(--color-green-400)';
         btn.onclick = () => handleTableClick(table);
         list.appendChild(btn);
     });
