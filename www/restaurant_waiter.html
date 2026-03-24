@@ -16,8 +16,11 @@
                 flex-direction: column !important;
                 width: 100% !important;
                 flex: none !important;
-                padding: 0.6rem 0.8rem !important;
+                padding: 0.5rem 0.8rem 0.2rem !important;
                 min-height: unset !important;
+                background: rgba(212,175,55,0.06) !important;
+                border-radius: 0 !important;
+                border-bottom: 1px solid rgba(212,175,55,0.18) !important;
             }
             .waiter-sidebar h2 { display: none !important; }
             .waiter-room-list {
@@ -25,38 +28,54 @@
                 flex-direction: row !important;
                 gap: 0.5rem !important;
                 overflow-x: auto !important;
-                padding-bottom: 2px !important;
+                padding: 0.4rem 0 0.4rem !important;
                 scrollbar-width: none !important;
             }
-            /* Table chips — hide complex furniture, show pill */
+            /* Table chips: hide complex furniture, show pill only */
             .w-room-btn .restaurant-table-view { display: none !important; }
+            .w-room-btn > div:last-of-type { display: none !important; } /* hide status text */
             .w-room-btn {
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
-                flex-direction: column !important;
-                min-width: 64px !important;
-                max-width: 80px !important;
-                padding: 0.5rem 0.6rem !important;
-                border-radius: 14px !important;
-                font-size: 0.75rem !important;
+                min-width: 60px !important;
+                max-width: 76px !important;
+                height: 40px !important;
+                padding: 0 0.8rem !important;
+                border-radius: 20px !important;
+                font-size: 0.8rem !important;
+                font-weight: 800 !important;
                 white-space: nowrap !important;
                 flex-shrink: 0 !important;
-                text-align: center !important;
+                background: rgba(30,41,59,0.9) !important;
+                border: 1.5px solid rgba(255,255,255,0.12) !important;
+                color: #94A3B8 !important;
+                transition: all 0.18s !important;
             }
-            .w-room-btn .mob-chip-label { display: block !important; }
+            .w-room-btn.active {
+                background: rgba(212,175,55,0.18) !important;
+                border-color: #D4AF37 !important;
+                color: #D4AF37 !important;
+            }
+            .w-room-btn[style*='green'] {
+                border-color: #4ADE80 !important;
+                color: #4ADE80 !important;
+            }
             /* Menu fills remaining height */
             .pos-cart { display: none !important; }
-            .luxury-portal-header { justify-content: space-between !important; padding: 0.8rem 1rem !important; }
+            .luxury-portal-header { justify-content: space-between !important; padding: 0.7rem 1rem !important; }
             .luxury-portal-header .luxury-identity { font-size: 0.85rem !important; }
-            .waiter-layout { padding: 0.4rem !important; flex-direction: column !important; overflow: visible !important; }
-            .waiter-pos { overflow: visible !important; height: auto !important; }
+            .waiter-layout { padding: 0 !important; flex-direction: column !important; overflow: visible !important; gap: 0 !important; }
+            .waiter-pos { overflow: visible !important; height: auto !important; border-radius: 0 !important; }
+            .pos-header { padding: 0.6rem 1rem !important; }
             .pos-body { flex-direction: column !important; height: auto !important; overflow: visible !important; }
-            .pos-menu { grid-template-columns: 1fr 1fr !important; }
+            .pos-menu { grid-template-columns: 1fr 1fr !important; gap: 0.6rem !important; padding: 0.6rem !important; }
+            #rest-waiter-menu-search { border-radius: 8px !important; }
         }
 
-        /* Chip label — only visible on mobile */
-        .mob-chip-label { display: none; font-size: 0.7rem; font-weight: 700; margin-top: 2px; color: inherit; }
+        /* Chip label — only visible on mobile (now handled via .w-room-btn text directly) */
+        .mob-chip-label { display: none; font-size: 0.8rem; font-weight: 800; color: inherit; }
+        @media (max-width: 900px) { .mob-chip-label { display: block !important; } }
 
         /* Floating Cart (Mobile Friendly) */
         .cart-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(5, 11, 26, 0.98); backdrop-filter: blur(20px); flex-direction: column; padding: 2rem; }
