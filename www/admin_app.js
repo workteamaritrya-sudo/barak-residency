@@ -406,7 +406,7 @@ function renderStaffMgmtView() {
     <div class="analytics-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
             <h3>Staff Roster (${sortedProfiles.length} staff)</h3>
-            <a href="staff_attendance.html" target="_blank" style="font-size:0.75rem;color:var(--gold);opacity:0.7;text-decoration:none;"> Register New Staff →</a>
+            <a href="index.html" target="_blank" style="font-size:0.75rem;color:var(--gold);opacity:0.7;text-decoration:none;"> Register New Staff →</a>
         </div>
         ${sortedProfiles.length === 0 ? '<div style="text-align:center;opacity:0.3;padding:3rem;">No staff registered yet</div>' :
         sortedProfiles.map(s => {
