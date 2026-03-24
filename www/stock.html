@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Management | Barak Residency</title>
+    <meta name="description" content="Inventory and stock management for Barak Residency kitchen and housekeeping.">
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050B18; --surface: #0B1427; --surface-2: #101C35;
+            --gold: #D4AF37; --gold-dim: rgba(212,175,55,0.12);
+            --gold-border: rgba(212,175,55,0.3);
+            --green: #22C55E; --red: #EF4444; --amber: #F59E0B;
+            --border: rgba(255,255,255,0.07);
+            --text-mute: rgba(255,255,255,0.4);
+            --text-soft: rgba(255,255,255,0.7);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:#fff; min-height:100vh; }
+
+        /*  Top Bar  */
+        .topbar {
+            background:var(--surface); border-bottom:1px solid var(--border);
+            padding:1rem 1.5rem; display:flex; align-items:center;
+            justify-content:space-between; position:sticky; top:0; z-index:100;
+        }
+        .topbar-brand { font-family:'Cormorant Garamond',serif; color:var(--gold); font-size:1.3rem; letter-spacing:3px; }
+        .topbar-sub { font-size:0.6rem; letter-spacing:3px; color:var(--text-mute); text-transform:uppercase; }
+
+        /*  Container  */
+        .container { max-width:960px; margin:0 auto; padding:1.5rem 1rem 6rem; }
+
+        /*  Stats Row  */
+        .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.5rem; }
+        .stat-card {
+            background:var(--surface); border:1px solid var(--border); border-radius:16px;
+            padding:1.2rem 1.5rem; text-align:center;
+        }
+        .stat-card h4 { font-size:0.6rem; letter-spacing:2px; color:var(--text-mute); text-transform:uppercase; margin-bottom:0.6rem; }
+        .stat-card .sv { font-size:1.8rem; font-weight:100; }
+
+        /*  Add Item Form (Admin Only)  */
+        .add-section {
+            background:var(--surface); border:1px solid var(--gold-border);
+            border-radius:20px; padding:1.5rem; margin-bottom:1.5rem;
+        }
+        .add-section h3 {
+            font-family:'Cormorant Garamond',serif; font-size:1.1rem;
+            color:var(--gold); letter-spacing:2px; margin-bottom:1.2rem;
+        }
+        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; margin-bottom:0.8rem; }
+        .form-row.triple { grid-template-columns:1fr 1fr 1fr; }
+        input, select {
+            background:var(--bg); border:1px solid var(--border); border-radius:12px;
+            color:#fff; padding:0.8rem 1rem; font-family:'Inter',sans-serif; font-size:0.85rem;
+            width:100%; outline:none; transition:border-color 0.2s;
+        }
+        input:focus, select:focus { border-color:var(--gold); }
+        select option { background:#0B1427; }
+        .btn-add {
+            width:100%; padding:0.9rem; border:none; border-radius:12px;
+            background:linear-gradient(135deg,#C9A227,var(--gold)); color:#000;
+            font-family:'Inter',sans-serif; font-size:0.85rem; font-weight:700;
+            letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:0.2s;
+        }
+        .btn-add:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(212,175,55,0.3); }
+
+        /*  Search / Filter  */
+        .filter-row {
+            display:flex; gap:0.8rem; margin-bottom:1.2rem; flex-wrap:wrap;
+        }
+        .search-input {
+            flex:1; min-width:200px; background:var(--surface); border:1px solid var(--border);
+            border-radius:12px; color:#fff; padding:0.7rem 1rem;
+            font-family:'Inter',sans-serif; font-size:0.85rem;
+        }
+        .filter-select {
+            background:var(--surface); border:1px solid var(--border); border-radius:12px;
+            color:#fff; padding:0.7rem 1rem; font-family:'Inter',sans-serif; font-size:0.85rem;
+        }
+
+        /*  Stock Table  */
+        .stock-table-wrap { overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+        thead th {
+            padding:0.8rem 1rem; text-align:left; font-size:0.62rem; letter-spacing:2px;
+            text-transform:uppercase; color:var(--text-mute); border-bottom:1px solid var(--border);
+        }
+        tbody td { padding:0.9rem 1rem; border-bottom:1px solid rgba(255,255,255,0.03); }
+        tbody tr:hover td { background:rgba(255,255,255,0.02); }
+
+        /* status pills */
+        .pill {
+            display:inline-block; padding:2px 10px; border-radius:20px;
+            font-size:0.62rem; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+        }
+        .pill-ok      { background:rgba(34,197,94,0.12); color:var(--green); border:1px solid rgba(34,197,94,0.3); }
+        .pill-low     { background:rgba(245,158,11,0.12); color:var(--amber); border:1px solid rgba(245,158,11,0.3); }
+        .pill-critical{ background:rgba(239,68,68,0.12); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
+
+        /*  Action buttons  */
+        .btn-use {
+            padding:0.35rem 0.9rem; border-radius:8px; font-size:0.68rem; font-weight:700;
+            letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:0.2s;
+            background:rgba(245,158,11,0.1); color:var(--amber); border:1px solid rgba(245,158,11,0.3);
+        }
+        .btn-use:hover { background:rgba(245,158,11,0.25); }
+        .btn-del {
+            padding:0.35rem 0.9rem; border-radius:8px; font-size:0.68rem; font-weight:700;
+            letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:0.2s;
+            background:rgba(239,68,68,0.1); color:var(--red); border:1px solid rgba(239,68,68,0.3);
+        }
+        .btn-del:hover { background:rgba(239,68,68,0.25); }
+
+        /*  Toast  */
+        .toast-container { position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999; display:flex; flex-direction:column; gap:0.5rem; }
+        .toast {
+            padding:0.75rem 1.2rem; border-radius:10px; font-weight:600; font-size:0.82rem;
+            animation:fadeUp 0.3s ease; pointer-events:none;
+        }
+        .toast.success { background:#22C55E; color:#000; }
+        .toast.error   { background:#EF4444; color:#fff; }
+        .toast.info    { background:#D4AF37; color:#000; }
+
+        @keyframes fadeUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+    </style>
+    <link rel="icon" href="br.png" type="image/png">
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+    <div>
+        <div class="topbar-brand">BARAK RESIDENCY</div>
+        <div class="topbar-sub">Stock &amp; Inventory Management</div>
+    </div>
+    <div style="display:flex;gap:0.8rem;align-items:center;">
+        <span id="user-badge" style="font-size:0.7rem;color:var(--text-mute);"></span>
+        <button id="btn-menu-mgr" onclick="openMenuOverlay()" style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.35);color:var(--gold);border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.72rem;cursor:pointer;letter-spacing:1px;text-decoration:none;">Menu Manager</button>
+        <button id="btn-close-stk" onclick="if(window.parent&&window.parent.closeStockApp)window.parent.closeStockApp();else window.history.back();" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#FCA5A5;border-radius:8px;padding:0.4rem 0.9rem;font-weight:700;font-size:0.75rem;cursor:pointer;letter-spacing:1px;"> CLOSE</button>
+        <button id="btn-logout" onclick="doLogout()" style="background:transparent;border:1px solid var(--border);color:var(--text-mute);border-radius:8px;padding:0.4rem 0.8rem;font-size:0.72rem;cursor:pointer;">Sign Out</button>
+    </div>
+</div>
+
+<script>
+    // Embedded Mode logic
+    if (window.location.search.includes('embedded=1')) {
+        document.getElementById('btn-logout').style.display = 'none';
+        const mgr = document.getElementById('btn-menu-mgr');
+        if (mgr) mgr.style.display = 'none';
+        document.getElementById('btn-close-stk').style.display = 'inline-block';
+    }
+</script>
+
+<div class="container">
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <h4>Total Items</h4>
+            <div class="sv" id="stat-total" style="color:var(--gold);">0</div>
+        </div>
+        <div class="stat-card">
+            <h4>Low Stock</h4>
+            <div class="sv" id="stat-low" style="color:var(--amber);">0</div>
+        </div>
+        <div class="stat-card">
+            <h4>Critical</h4>
+            <div class="sv" id="stat-critical" style="color:var(--red);">0</div>
+        </div>
+    </div>
+
+    <!-- Add Item (Admin Only) -->
+    <div class="add-section" id="add-section" style="display:none;">
+        <h3> Add Stock Item</h3>
+        <div class="form-row">
+            <input type="text" id="add-name" placeholder="Item Name (e.g. Rice)">
+            <select id="add-category">
+                <option value="" disabled selected>Category</option>
+                <option value="Grains & Rice">Grains &amp; Rice</option>
+                <option value="Vegetables">Vegetables</option>
+                <option value="Meat & Fish">Meat &amp; Fish</option>
+                <option value="Dairy">Dairy</option>
+                <option value="Spices">Spices</option>
+                <option value="Beverages">Beverages</option>
+                <option value="Cleaning">Cleaning</option>
+                <option value="Linen">Linen</option>
+                <option value="Toiletries">Toiletries</option>
+                <option value="Stationery">Stationery</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div class="form-row triple">
+            <input type="number" id="add-qty" placeholder="Quantity" min="0">
+            <input type="text"   id="add-unit" placeholder="Unit (kg/litre/pcs)">
+            <input type="number" id="add-low-thresh" placeholder="Low Stock Alert at">
+        </div>
+        <div class="form-row triple">
+            <input type="number" id="add-price" placeholder="Sale Price ₹ (for Drinks auto-menu)" min="0">
+            <input type="file" id="add-image" accept="image/*" style="padding:0.6rem;background:var(--bg);color:var(--text-mute);border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;">
+            <button class="btn-add" onclick="addStockItem()">+ Add to Inventory</button>
+        </div>
+    </div>
+
+    <!-- Filter / Search -->
+    <div class="filter-row">
+        <input class="search-input" type="text" id="stock-search" placeholder="  Search items…" oninput="renderStock()">
+        <select class="filter-select" id="stock-cat-filter" onchange="renderStock()">
+            <option value="">All Categories</option>
+            <option value="Grains & Rice">Grains &amp; Rice</option>
+            <option value="Vegetables">Vegetables</option>
+            <option value="Meat & Fish">Meat &amp; Fish</option>
+            <option value="Dairy">Dairy</option>
+            <option value="Spices">Spices</option>
+            <option value="Beverages">Beverages</option>
+            <option value="Cleaning">Cleaning</option>
+            <option value="Linen">Linen</option>
+            <option value="Toiletries">Toiletries</option>
+            <option value="Stationery">Stationery</option>
+            <option value="Other">Other</option>
+        </select>
+        <select class="filter-select" id="stock-status-filter" onchange="renderStock()">
+            <option value="">All Status</option>
+            <option value="ok">OK</option>
+            <option value="low">Low</option>
+            <option value="critical">Critical</option>
+        </select>
+    </div>
+
+    <!-- Stock Table -->
+    <div class="stock-table-wrap">
+        <table id="stock-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Quantity</th>
+                    <th>Unit</th>
+                    <th>Status</th>
+                    <th>Last Updated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="stock-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-mute);">Loading inventory…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    </div>
+</div>
+
+<!--  Menu Manager Full-Screen Overlay  -->
+<div id="menu-overlay" style="
+    display:none;
+    position:fixed; inset:0; z-index:10000;
+    background:#050B18;
+    flex-direction:column;
+">
+    <!-- Top bar -->
+    <div style="
+        display:flex; align-items:center; justify-content:space-between;
+        padding:0.9rem 1.5rem;
+        background:rgba(212,175,55,0.07);
+        border-bottom:1px solid rgba(212,175,55,0.2);
+        flex-shrink:0;
+    ">
+        <span style="font-family:'Cormorant Garamond',serif; font-size:1.2rem; color:#D4AF37; letter-spacing:3px; font-weight:600;">MENU MANAGEMENT</span>
+        <button
+            onclick="closeMenuOverlay()"
+            style="
+                background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4);
+                color:#FCA5A5; border-radius:10px; padding:0.5rem 1.1rem;
+                font-family:'Inter',sans-serif; font-size:0.8rem; font-weight:700;
+                letter-spacing:1px; cursor:pointer; transition:0.2s;
+            "
+        > CLOSE</button>
+    </div>
+    <iframe
+        id="menu-iframe"
+        src=""
+        style="flex:1; border:none; width:100%; height:100%;"
+    ></iframe>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module" src="stock.js"></script>
+</body>
+</html>
