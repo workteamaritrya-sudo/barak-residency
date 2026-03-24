@@ -59,6 +59,44 @@ function todayStr() {
 }
 function todayDocId(uid) { return `${uid}_${todayStr()}`; }
 
+// --- GPS Geofencing Configuration ---
+const HOTEL_LOCATION = { lat: 24.8152692, lng: 92.799027 }; 
+const MAX_DISTANCE_METERS = 200; 
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; // Earth's radius in meters
+    const rad = Math.PI/180;
+    const φ1 = lat1 * rad;
+    const φ2 = lat2 * rad;
+    const Δφ = (lat2-lat1) * rad;
+    const Δλ = (lon2-lon1) * rad;
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; 
+}
+
+function verifyLocationAndPunch(type) {
+    if (!navigator.geolocation) { alert("GPS not supported on this device."); return; }
+    
+    setStatus('punch-status', 'Verifying your location…', 'warning');
+    
+    navigator.geolocation.getCurrentPosition((pos) => {
+        const dist = calculateDistance(pos.coords.latitude, pos.coords.longitude, HOTEL_LOCATION.lat, HOTEL_LOCATION.lng);
+        if (dist > MAX_DISTANCE_METERS) {
+            alert(`ACCESS DENIED: You are ${Math.round(dist)}m away from the hotel. You must be on-site to mark attendance.`);
+            setStatus('punch-status', `Out of range (${Math.round(dist)}m)`, 'error');
+        } else {
+            if (type === 'in') doProcessPunchIn(pos.coords.latitude, pos.coords.longitude);
+            else doProcessPunchOut(pos.coords.latitude, pos.coords.longitude);
+        }
+    }, (err) => {
+        alert("Location Access Required: Please enable GPS and allow browser location access.");
+        setStatus('punch-status', 'Location Error', 'error');
+    }, { enableHighAccuracy: true });
+}
+
 //  Audio Notification (works even with screen off via AudioContext) 
 let audioCtx = null;
 function playAlertSound() {
@@ -245,36 +283,38 @@ function listenToday(uid) {
 }
 
 //  Punch In / Out 
-window.punchIn = async function () {
+window.punchIn = () => verifyLocationAndPunch('in');
+window.punchOut = () => verifyLocationAndPunch('out');
+
+async function doProcessPunchIn(lat, lng) {
     const elIn = document.getElementById('display-in');
     const elOut = document.getElementById('display-out');
-    if (elIn) elIn.textContent = 'Punched IN...';
-    if (elOut) { elOut.textContent = '--:--'; elOut.className = 'ps-empty'; } // Reset Out Time visually
+    if (elIn) elIn.textContent = 'Recording…';
+    if (elOut) { elOut.textContent = '--:--'; elOut.className = 'ps-empty'; }
     const user = auth.currentUser;
     if (!user || !currentProfile) return;
     const now = new Date();
     const shift = detectShift(now);
-    setStatus('punch-status', 'Recording punch-in…');
     try {
         await setDoc(doc(db, 'staffAttendance', todayDocId(user.uid)), {
             uid: user.uid, email: currentProfile.email, name: currentProfile.name,
             department: currentProfile.department, team: currentProfile.team || 'hotel',
             date: todayStr(), inTime: Timestamp.fromDate(now),
-            shift: shift.label, shiftLabel: shift.label.split(' ')[0],
-            shiftEmoji: shift.emoji, status: 'In', updatedAt: serverTimestamp()
+            shift: shift.label, status: 'In', 
+            latIn: lat, lngIn: lng,
+            updatedAt: serverTimestamp()
         }, { merge: true });
         setStatus('punch-status', ' Punched in!', 'success');
         loadHistory(user.uid);
     } catch (e) {
         setStatus('punch-status', ' ' + e.message, 'error');
     }
-};
+}
 
-window.punchOut = async function () {
+async function doProcessPunchOut(lat, lng) {
     const user = auth.currentUser;
     if (!user) return;
     const now = new Date();
-    setStatus('punch-status', 'Recording punch-out…');
     try {
         const existing = await getDoc(doc(db, 'staffAttendance', todayDocId(user.uid)));
         let durationMins = null;
@@ -284,19 +324,19 @@ window.punchOut = async function () {
         }
         await setDoc(doc(db, 'staffAttendance', todayDocId(user.uid)), {
             outTime: Timestamp.fromDate(now), status: 'Out',
-            durationMins, updatedAt: serverTimestamp()
+            durationMins, latOut: lat, lngOut: lng,
+            updatedAt: serverTimestamp()
         }, { merge: true });
 
-        // User requested immediate reset to -- so it's ready for next punch-in
         const elOut = document.getElementById('display-out');
         if (elOut) { elOut.textContent = '--:--'; elOut.className = 'ps-empty'; }
 
-        setStatus('punch-status', ' Punched out. See you next shift!', 'success');
+        setStatus('punch-status', ' Punched out!', 'success');
         loadHistory(user.uid);
     } catch (e) {
         setStatus('punch-status', ' ' + e.message, 'error');
     }
-};
+}
 
 //  7-Day History 
 async function loadHistory(uid) {
