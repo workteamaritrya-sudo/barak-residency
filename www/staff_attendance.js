@@ -50,11 +50,7 @@ function detectShift(d = new Date()) {
 
 function greeting(name) {
     const f = (name || 'Friend').split(' ')[0];
-    const h = new Date().getHours();
-    if (h < 12) return `Good Morning, ${f}! `;
-    if (h < 17) return `Good Afternoon, ${f}! ️`;
-    if (h < 21) return `Good Evening, ${f}! `;
-    return `Good Night, ${f}! `;
+    return `${f}! `;
 }
 
 function todayStr() {
