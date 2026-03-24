@@ -736,6 +736,21 @@ onAuthStateChanged(auth, async user => {
 
             // Request notification permission for screen-off alerts
             await requestPushPermission();
+            
+            // --- NATIVE PUSH REGISTRATION (Capacitor) ---
+            if (window.Capacitor && window.Capacitor.isPluginAvailable('PushNotifications')) {
+                const PushNotifications = window.Capacitor.Plugins.PushNotifications;
+                const perm = await PushNotifications.requestPermissions();
+                if (perm.receive === 'granted') {
+                    await PushNotifications.register();
+                    console.log("[NativePush] Registered successfully.");
+                    
+                    // Handle notification arrival while app is background/lockscreen
+                    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+                        console.log('[NativePush] Received:', notification);
+                    });
+                }
+            }
 
             // Start the right notification listeners
             if (profile) {
@@ -749,7 +764,10 @@ onAuthStateChanged(auth, async user => {
             showAuthPanel();
         }
     } else {
-        showAuthPanel();
+        // Only show auth if we're at the top window (not inside an iframe)
+        if (window.self === window.top) {
+            showAuthPanel();
+        }
     }
 
     const btnL = document.getElementById('btn-login');

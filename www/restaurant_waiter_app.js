@@ -177,7 +177,9 @@ async function init() {
     startClock();
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
-            window.location.href = 'index.html';
+            if (window.self === window.top) {
+                window.location.href = 'index.html';
+            }
         } else {
             await loadInitialData();
             startListeners();

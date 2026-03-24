@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Guest Portal | Barak Residency</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script type="module" src="firebase-sync.js"></script>
+    <style>
+        :root {
+            --bg-deep: #050B1A;
+            --bg-accent: #0A1229;
+            --gold-primary: #D4AF37;
+            --gold-light: #F2D27E;
+            --gold-dim: rgba(212, 175, 55, 0.3);
+            --gold-glow: rgba(212, 175, 55, 0.2);
+            --text-white: #FFFFFF;
+            --text-gray: #94A3B8;
+            --tint-glass: rgba(255, 255, 255, 0.03);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --shadow-lux: 0 10px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-white);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tint-blur {
+            background: rgba(10, 18, 41, 0.7);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--border-glass);
+        }
+
+        /* Luxury Header */
+        header {
+            padding: 1rem 1.5rem;
+            z-index: 100;
+        }
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 16px;
+        }
+        .greeting { font-size: 1.2rem; font-weight: 700; color: var(--gold-primary); letter-spacing: 1px; }
+        .room-tag { font-size: 0.7rem; color: var(--text-gray); font-weight: 500; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+        .branding-logo img { height: 32px; filter: drop-shadow(0 0 5px var(--gold-glow)); }
+
+        /* Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 30px;
+            left: 20px;
+            right: 20px;
+            height: 75px;
+            border-radius: 25px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: var(--shadow-lux);
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-gray);
+            transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+            padding: 10px;
+            border-radius: 15px;
+        }
+        .nav-item.active { color: var(--gold-primary); transform: translateY(-5px); }
+        .nav-item.active .nav-icon { transform: scale(1.2); filter: drop-shadow(0 0 10px var(--gold-glow)); }
+        .nav-icon { font-size: 1.5rem; }
+        .nav-text { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Layout */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            padding-bottom: 150px;
+            scrollbar-width: none;
+        }
+        main::-webkit-scrollbar { display: none; }
+
+        /* Hero */
+        .hero-card {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(0,0,0,0));
+            border: 1px solid var(--gold-dim);
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            animation: fadeIn 0.8s ease-out;
+        }
+        .hero-card h2 { font-size: 2rem; color: var(--gold-primary); margin-bottom: 0.5rem; }
+        .hero-card p { font-size: 0.9rem; color: var(--text-gray); line-height: 1.6; }
+
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+        }
+        .f-card {
+            background: var(--bg-accent);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: 2rem 1rem;
+            text-align: center;
+            transition: 0.3s;
+        }
+        .f-card:active { transform: scale(0.95); background: rgba(212, 175, 55, 0.05); }
+        .f-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+        .f-label { font-weight: 700; color: #FFF; font-size: 0.9rem; letter-spacing: 1px; }
+
+        /* Menu View */
+        .sticky-cat-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--bg-deep);
+            padding: 0.5rem 0 1rem 0;
+        }
+        .menu-search-bar input {
+            width: 100%;
+            background: var(--bg-accent);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            color: white;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .hungry-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            background: linear-gradient(90deg, rgba(212,175,55,0.1), transparent);
+        }
+        .banner-text h3 { color: var(--gold-primary); font-size: 1.3rem; margin-bottom: 4px; }
+        .banner-text p { font-size: 0.8rem; color: var(--text-gray); }
+        .banner-img { font-size: 3rem; }
+
+        /* Food Cards */
+        .food-grid { display: flex; flex-direction: column; gap: 1rem; }
+        .food-card {
+            background: var(--bg-accent);
+            border-radius: 20px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border: 1px solid var(--border-glass);
+        }
+        .food-icon {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 15px;
+            background: #000;
+        }
+        .food-info { flex: 1; min-width: 0; }
+        .food-name { font-weight: 700; font-size: 1.1rem; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .food-desc { font-size: 0.75rem; color: var(--text-gray); line-height: 1.3; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .food-price { color: var(--gold-primary); font-weight: 800; font-size: 1.1rem; }
+
+        .add-btn {
+            background: var(--gold-primary);
+            color: #000;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        /* Order Preview Dot */
+        .order-preview-card {
+            margin-top: 1.5rem;
+            background: var(--bg-accent);
+            border-radius: 15px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid var(--gold-dim);
+            cursor: pointer;
+        }
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            background: #22C55E;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #22C55E;
+            animation: pulseOrder 2s infinite;
+        }
+        @keyframes pulseOrder { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+        .preview-text { flex: 1; font-weight: 700; font-size: 0.9rem; color: var(--gold-primary); }
+        
+        /* Timeline styling */
+        .timeline-step .dot { background: #333; transition: 0.3s; }
+        .timeline-step.active .dot { background: var(--gold-primary); box-shadow: 0 0 10px var(--gold-primary); }
+        .timeline-step.done .dot { background: var(--gold-primary); }
+        .timeline-step { color: var(--text-gray); transition: 0.3s; }
+        .timeline-step.active { color: white; }
+        .timeline-step.done { opacity: 0.8; }
+
+
+        /* Utility */
+        .glass-section { background: var(--bg-accent); border: 1px solid var(--border-glass); border-radius: 20px; padding: 1.5rem; }
+        .glass-input { width: 100%; height: 120px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-glass); border-radius: 15px; padding: 1.25rem; color: white; font-family: inherit; font-size: 1rem; outline: none; }
+        .gold-text { color: var(--gold-primary); letter-spacing: 2px; font-weight: 800; font-size: 0.8rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .mt-4 { margin-top: 1rem; }
+
+        .service-quick-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .service-btn { background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 12px; padding: 1rem; color: #FFF; font-weight: 600; text-align: left; }
+
+        /* Modals Overlays Override */
+        .overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(5, 11, 26, 0.98) !important; 
+            backdrop-filter: blur(20px); 
+            z-index: 10000; 
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            animation: fadeIn 0.4s ease-out;
+        }
+        .reorder-btn { background: transparent; border: 1px solid var(--gold-primary); color: var(--gold-primary); padding: 1rem; border-radius: 15px; font-weight: 700; width: 100%; transition: 0.2s; }
+
+        .menu-title { color: var(--gold-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; margin-bottom: 1rem; }
+
+        /* Cart Mini bar */
+        .cart-bar {
+            position: fixed;
+            bottom: 120px;
+            left: 30px;
+            right: 30px;
+            background: var(--gold-primary);
+            color: #000;
+            padding: 1.25rem 2rem;
+            border-radius: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 900;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            z-index: 500;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        /* Sliding Cart Panel (Swiggy-style) */
+        .cart-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            max-width: 95vw;
+            height: 100vh;
+            background: linear-gradient(180deg, #0A1229, #050B1A);
+            border-left: 1px solid var(--gold-dim);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            box-shadow: -20px 0 60px rgba(0,0,0,0.8);
+        }
+        .cart-panel.open { right: 0; }
+        .cart-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1999;
+            display: none;
+            backdrop-filter: blur(4px);
+        }
+        .cart-panel-overlay.show { display: block; }
+        .cart-panel-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-glass);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cart-panel-header h3 { color: var(--gold-primary); font-size: 1rem; letter-spacing: 2px; text-transform: uppercase; }
+        .cart-panel-close {
+            background: none; border: none; color: rgba(255,255,255,0.5);
+            font-size: 1.5rem; cursor: pointer; padding: 0.3rem;
+            transition: color 0.2s;
+        }
+        .cart-panel-close:hover { color: white; }
+        .cart-panel-items { flex: 1; overflow-y: auto; padding: 1rem 1.5rem; scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent; }
+        .cart-panel-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border-glass);
+            animation: fadeIn 0.3s ease-out;
+        }
+        .cart-panel-item-info { flex: 1; }
+        .cart-panel-item-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 3px; }
+        .cart-panel-item-price { color: var(--gold-primary); font-size: 0.85rem; font-weight: 700; }
+        .cart-qty-ctrl {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(212,175,55,0.1);
+            border: 1px solid var(--gold-dim);
+            border-radius: 30px;
+            padding: 0.3rem 0.6rem;
+        }
+        .cart-qty-ctrl button {
+            background: none; border: none; color: var(--gold-primary);
+            font-size: 1.1rem; font-weight: 900; cursor: pointer;
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; transition: background 0.2s;
+        }
+        .cart-qty-ctrl button:hover { background: rgba(212,175,55,0.2); }
+        .cart-qty-val { width: 24px; text-align: center; font-weight: 800; font-size: 0.95rem; }
+        .cart-panel-footer {
+            padding: 1.5rem 1.5rem 100px 1.5rem; /* Enhanced bottom clearance for mobile navigation bars */
+            border-top: 1px solid var(--border-glass);
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+        }
+        .cart-panel-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+        .cart-panel-total span:last-child { color: #4ade80; }
+        .cart-confirm-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--gold-primary), #B8941E);
+            color: #000;
+            border: none;
+            padding: 1.1rem;
+            border-radius: 14px;
+            font-weight: 900;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 25px rgba(212,175,55,0.3);
+        }
+        .cart-confirm-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(212,175,55,0.4); }
+        .cart-empty-msg { text-align: center; color: var(--text-gray); padding: 3rem 1rem; font-style: italic; }
+
+        .food-add-area { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .added-indicator {
+            font-size: 0.65rem;
+            color: #4ade80;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .added-indicator.show { opacity: 1; }
+
+        .glass-panel {
+            background: rgba(10, 18, 41, 0.9);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .btn-block { width: 100%; border-radius: 12px; }
+        .mt-3 { margin-top: 0.75rem; }
+        .color-success { color: #4ade80; }
+    </style>
+    <link rel="icon" href="br.png" type="image/png">
+</head>
+<body>
+    <header id="app-header">
+        <div class="header-content tint-blur">
+            <div class="branding">
+                <div class="greeting" id="greeting">Welcome</div>
+                <div class="room-tag" id="room-display">Room --</div>
+            </div>
+            <div class="branding-logo">
+                <img src="br.png" alt="Barak Residency" onerror="this.style.display='none'">
+            </div>
+        </div>
+    </header>
+
+    <main id="portal-main">
+        <!-- Dashboard / Housekeeping View -->
+        <div id="view-dashboard" class="portal-view">
+            <div class="hero-card">
+                <h2 style="font-size: 1.6rem; color: var(--gold-primary); margin-bottom: 0.5rem;" id="hero-greeting">Welcome to Barak Residency</h2>
+                <p>Welcome to your personal guest concierge. Enjoy the premium hospitality of Barak Residency. How can we assist you today?</p>
+            </div>
+            
+            <div class="feature-grid">
+                <div class="f-card" id="f-card-service" onclick="portal.switchView('service')">
+                    <div class="f-icon">️</div>
+                    <div class="f-label">Service</div>
+                </div>
+                <div class="f-card" onclick="portal.switchSubTab('wifi')">
+                    <div class="f-icon"></div>
+                    <div class="f-label">WiFi</div>
+                </div>
+                <div class="f-card" onclick="portal.switchSubTab('laundry')">
+                    <div class="f-icon"></div>
+                    <div class="f-label">Laundry</div>
+                </div>
+                <div class="f-card" id="f-card-order" onclick="portal.switchView('menu')">
+                    <div class="f-icon"></div>
+                    <div class="f-label">Order Food</div>
+                </div>
+            </div>
+
+            <div class="d-flex" style="display:flex; gap: 10px; margin-top: 1.5rem;">
+                <div class="order-preview-card" id="active-order-preview" style="display: none; flex: 2; margin-top: 0;" onclick="portal.showTracker()">
+                    <div class="pulse-dot"></div>
+                    <div class="preview-text">Tracking Active Order...</div>
+                    <div class="preview-arrow">→</div>
+                </div>
+                
+                <div class="order-preview-card" style="flex: 1; margin-top: 0; justify-content: center;" onclick="portal.showTracker()">
+                    <div class="preview-text" style="text-align:center;">Order History</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WiFi Modal -->
+        <div id="view-wifi" class="overlay" style="display: none;">
+            <div class="glass-panel" style="width: 85%; max-width: 400px; padding: 2rem; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;"></div>
+                <h2 style="color: var(--gold-primary); margin-bottom: 1.5rem;">Complimentary WiFi</h2>
+                <div class="glass-section" style="text-align: left; margin-bottom: 1.5rem;">
+                    <div class="mb-2"><span style="color: var(--text-gray); font-size: 0.8rem;">NETWORK</span><br><strong>Barak_Guest_5G</strong></div>
+                    <div><span style="color: var(--text-gray); font-size: 0.8rem;">PASSWORD</span><br><strong>Barak@Silchar</strong></div>
+                </div>
+                <button class="add-btn btn-block" onclick="document.getElementById('view-wifi').style.display='none'">CLOSE</button>
+            </div>
+        </div>
+
+        <!-- Laundry Modal -->
+        <div id="view-laundry" class="overlay" style="display: none;">
+            <div class="glass-panel" style="width: 85%; max-width: 400px; padding: 2rem; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;"></div>
+                <h2 style="color: var(--gold-primary); margin-bottom: 1rem;">Laundry Service</h2>
+                <p style="color: var(--text-gray); font-size: 0.9rem; margin-bottom: 2rem;">Tap below to notify house keeping. Our staff will collect your laundry shortly.</p>
+                <button class="add-btn btn-block" onclick="portal.sendQuickRequest('Laundry Pickup')">REQUEST PICKUP</button>
+                <button class="reorder-btn mt-3" onclick="document.getElementById('view-laundry').style.display='none'">CANCEL</button>
+            </div>
+        </div>
+
+        <!-- Menu / Order Food View -->
+        <div id="view-menu" class="portal-view" style="display: none;">
+            <div class="sticky-cat-header">
+                <div class="menu-search-bar">
+                    <input type="text" placeholder="Search for delicacies..." id="menu-search" oninput="portal.filterMenu()">
+                </div>
+            </div>
+            
+            <div class="hungry-banner tint-blur">
+                <div class="banner-text">
+                    <h3>Feeling Hungry?</h3>
+                    <p>Chef's specials are ready to be served.</p>
+                </div>
+                <div class="banner-img"></div>
+            </div>
+
+            <div class="food-grid" id="menu-grid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Service / Request View -->
+        <div id="view-service" class="portal-view" style="display: none;">
+            <div class="glass-section mb-6">
+                <h3 class="gold-text mb-2">QUICK REQUESTS</h3>
+                <div class="service-quick-grid">
+                    <button class="service-btn" onclick="portal.sendQuickRequest('Water')"> Water</button>
+                    <button class="service-btn" onclick="portal.sendQuickRequest('Cleaning')"> Cleaning</button>
+                    <button class="service-btn" onclick="portal.sendQuickRequest('Towel')"> Towels</button>
+                    <button class="service-btn" onclick="portal.sendQuickRequest('Blanket')"> Blanket</button>
+                </div>
+            </div>
+            
+            <div class="glass-section">
+                <h3 class="gold-text mb-2">CUSTOM MESSAGE</h3>
+                <textarea id="service-message" placeholder="Need anything else? Just type it here..." class="glass-input"></textarea>
+                <button class="reorder-btn tint-blur mt-4" style="background: var(--gold-primary); color: #000; border: none; padding: 1.25rem;" onclick="portal.sendCustomRequest()">SEND REQUEST</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav tint-blur">
+        <div class="nav-item active" onclick="portal.switchView('dashboard')" id="nav-dashboard">
+            <div class="nav-icon"></div>
+            <div class="nav-text">Home</div>
+        </div>
+        <div class="nav-item" onclick="portal.switchView('menu')" id="nav-menu">
+            <div class="nav-icon"></div>
+            <div class="nav-text">Order</div>
+        </div>
+        <div class="nav-item" onclick="portal.switchView('service')" id="nav-service">
+            <div class="nav-icon">️</div>
+            <div class="nav-text">Service</div>
+        </div>
+        <div class="nav-item" onclick="showTracker()" id="nav-tracker">
+            <div class="nav-icon"></div>
+            <div class="nav-text">Status</div>
+        </div>
+    </nav>
+
+    <!-- Cart Panel Overlay -->
+    <div class="cart-panel-overlay" id="cart-panel-overlay" onclick="portal.closeCart()"></div>
+
+    <!-- Sliding Cart Panel -->
+    <div class="cart-panel" id="cart-panel">
+        <div class="cart-panel-header">
+            <h3> Your Order</h3>
+            <button class="cart-panel-close" onclick="portal.closeCart()"></button>
+        </div>
+        <div class="cart-panel-items" id="cart-panel-items">
+            <div class="cart-empty-msg">Your cart is empty.<br>Start adding delicacies!</div>
+        </div>
+        <div class="cart-panel-footer">
+            <div class="cart-panel-total">
+                <span>Total</span>
+                <span id="cart-panel-total-val">₹0</span>
+            </div>
+            <button class="cart-confirm-btn" onclick="portal.placeOrder()">CONFIRM ORDER →</button>
+        </div>
+    </div>
+
+    <!-- Cart Bar -->
+    <div class="cart-bar" id="cart-bar" onclick="portal.openCart()" style="cursor:pointer; display:none;">
+
+        <div id="cart-info" style="font-size:1rem; font-weight:800; letter-spacing:0.5px;">0 Items</div>
+        <div style="background:#050B1A; color:var(--gold-primary); border-radius:12px; padding:0.6rem 1.4rem; font-size:1rem; font-weight:900; letter-spacing:1.5px; box-shadow:0 0 15px rgba(212,175,55,0.4);">ORDER NOW →</div>
+    </div>
+
+        <!-- Cart Modal -->
+    <div id="cart-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:rgba(0,0,0,0.8); align-items:center; justify-content:center;">
+        <div style="background:#050B1A; border:1px solid var(--gold-primary); border-radius:16px; width:90%; max-width:400px; padding:2rem; position:relative;">
+            <h3 style="color:var(--gold-primary); margin-bottom:1.5rem; text-align:center;">Your Cart</h3>
+            <div id="cart-modal-items" style="max-height:250px; overflow-y:auto; margin-bottom:1.5rem;"></div>
+            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem; color:var(--color-green-400); margin-bottom:1.5rem;">
+                <span>Total</span>
+                <span id="cart-modal-total">₹0</span>
+            </div>
+            <button class="btn btn-primary btn-block mb-3" style="padding:1rem; font-size:1.1rem; background:var(--gold-primary); color:black; font-weight:bold;" onclick="portal.placeOrder()">CONFIRM ORDER</button>
+            <button class="btn btn-outline btn-block" style="padding:0.8rem; color:var(--text-gray); border-color:var(--text-gray);" onclick="document.getElementById('cart-modal').style.display='none'">← Continue Browsing</button>
+        </div>
+    </div>
+
+    <!-- Swiggy Tracker -->
+    <div class="overlay" id="tracker" style="display: none; align-items: flex-end;">
+        <div class="glass-panel" style="width: 100%; border-radius: 30px 30px 0 0; padding: 2rem; animation: slideUp 0.5s ease-out;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="color: var(--gold-primary);">Track Order</h2>
+                <button style="background:none; border:none; color: white; font-size: 2rem;" onclick="document.getElementById('tracker').style.display='none'">&times;</button>
+            </div>
+
+            <div class="tracker-box" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 20px; padding: 1.5rem; margin-bottom: 2rem;">
+                <div class="tracker-header" style="display:flex; justify-content: space-between; margin-bottom: 1.5rem;">
+                    <div>
+                        <div id="order-id-display" style="font-weight: 700; font-size: 1.1rem;">ID: #1011</div>
+                        <div style="color: var(--text-gray); font-size: 0.8rem;">Estimated Arrival: 25 mins</div>
+                    </div>
+                    <div id="status-label" style="color: var(--gold-primary); font-weight: 800;">PREPARING</div>
+                </div>
+
+                <div class="timeline" style="position: relative; padding-left: 30px;">
+                    <div class="timeline-line" style="position: absolute; left: 10px; top: 5px; bottom: 5px; width: 2px; background: rgba(255,255,255,0.1);"></div>
+                    <div id="timeline-progress" style="position: absolute; left: 10px; top: 5px; width: 2px; background: var(--gold-primary); height: 33%;"></div>
+                    
+                    <div class="timeline-step active" id="step-1" style="margin-bottom: 2rem; position: relative;">
+                        <div class="dot" style="position: absolute; left:-25px; top: 5px; width: 12px; height: 12px; border-radius:50%;"></div>
+                        <div style="font-weight: 700;">Order Placed</div>
+                        <div style="color: var(--text-gray); font-size: 0.8rem;">Received by Barak Kitchen</div>
+                    </div>
+                    <div class="timeline-step" id="step-2" style="margin-bottom: 2rem; position: relative;">
+                        <div class="dot" style="position: absolute; left:-25px; top: 5px; width: 12px; height: 12px; border-radius:50%;"></div>
+                        <div style="font-weight: 700;">Kitchen Prep</div>
+                        <div style="color: var(--text-gray); font-size: 0.8rem;">Chef is cooking your meal</div>
+                    </div>
+                    <div class="timeline-step" id="step-3" style="margin-bottom: 2rem; position: relative;">
+                        <div class="dot" style="position: absolute; left:-25px; top: 5px; width: 12px; height: 12px; border-radius:50%;"></div>
+                        <div style="font-weight: 700;" id="step-3-title">Out for Delivery</div>
+                        <div style="color: var(--text-gray); font-size: 0.8rem;" id="step-3-msg">Waiting for dispatcher</div>
+                    </div>
+                    <div class="timeline-step" id="step-4" style="position: relative;">
+                        <div class="dot" style="position: absolute; left:-25px; top: 5px; width: 12px; height: 12px; border-radius:50%;"></div>
+                        <div style="font-weight: 700;">Enjoy your Meal</div>
+                        <div style="color: var(--text-gray); font-size: 0.8rem;">Delivered and ready to eat</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="session-summary" style="margin-bottom: 2rem;">
+                <h3 style="font-size: 0.8rem; color: var(--gold-primary); text-transform: uppercase; margin-bottom: 1rem;">Session History</h3>
+                <div id="session-items-list" style="max-height: 150px; overflow-y: auto;">
+                    <div style="opacity: 0.5; font-size: 0.9rem;">No orders in this session yet.</div>
+                </div>
+            </div>
+
+            <button class="add-btn btn-block" style="padding: 1.25rem;" onclick="portal.switchView('menu'); document.getElementById('tracker').style.display='none'">+ ADD MORE ITEMS</button>
+        </div>
+    </div>
+
+    <!-- Success Screen -->
+    <div class="overlay" id="success-screen">
+        <div class="success-tick"></div>
+        <h1 style="color: var(--gold-primary); margin-bottom: 1rem;">ORDER PLACED</h1>
+        <p class="text-gray">Our chef has started the magic.<br>Track your meal live.</p>
+        <button class="btn add-btn" style="margin-top: 2rem;" onclick="showTracker()">VIEW TRACKER</button>
+    </div>
+
+    <!-- Service Confirmation Modal -->
+    <div id="service-confirm-modal" class="overlay" style="background: rgba(5, 11, 26, 0.98); display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+        <div class="success-tick" style="font-size: 6rem; margin-bottom: 2rem;">️</div>
+        <h2 style="color: var(--gold-primary); font-size: 2.2rem; margin-bottom: 1rem; letter-spacing: 1px;">REQUEST RECEIVED</h2>
+        <p id="service-marketing-txt" style="color: var(--text-gray); font-size: 1.1rem; max-width: 80%; line-height: 1.6; margin-bottom: 2.5rem;">
+            Your comfort is our priority. Our staff has been notified and will be at your service shortly. 
+            Enjoy the premium hospitality of Barak Residency.
+        </p>
+        <button class="add-btn" style="padding: 1.25rem 3rem; font-size: 1rem; border-radius: 50px;" onclick="document.getElementById('service-confirm-modal').style.display='none'">BACK TO HOME</button>
+    </div>
+
+    <!-- Portion Prompt Modal -->
+    <div id="portion-modal" class="overlay" style="background: rgba(5, 11, 26, 0.95); padding: 1.5rem; display: none; align-items: center; justify-content: center;">
+        <div style="width: 100%; max-width: 400px; text-align: left; background: var(--bg-accent); padding: 2.5rem; border-radius: 20px; border: 1px solid var(--gold-dim); position: relative;">
+            <h2 id="pm-item-name" style="color: var(--gold-primary); font-size: 2rem; margin-bottom: 0.5rem; padding-top: 10px;">Veg Thali</h2>
+            <p id="pm-item-desc" style="color: var(--text-gray); font-size: 0.9rem; margin-bottom: 2rem; opacity: 0.8;">Select your preferred portion size below.</p>
+            
+            <div id="pm-options-container" style="display: flex; flex-direction: column; gap: 1rem;">
+                <!-- JS generated buttons -->
+            </div>
+
+            <button class="reorder-btn" style="margin-top: 2rem; border-color: var(--text-gray); color: var(--text-gray);" onclick="document.getElementById('portion-modal').style.display='none'">CANCEL</button>
+        </div>
+    </div>
+
+    <script type="module" src="order.js"></script>
+</body>
+</html>
+

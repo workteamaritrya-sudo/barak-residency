@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Database Initialization | Barak Residency</title>
+    <script type="module" src="firebase-sync.js?v=3.0"></script>
+    <style>
+        body { font-family: sans-serif; background: #050B1A; color: white; padding: 2rem; }
+        .card { background: #0A1229; border: 1px solid #D4AF37; padding: 2rem; border-radius: 12px; max-width: 650px; margin: 0 auto; }
+        h1 { color: #D4AF37; }
+        .btn { background: #D4AF37; color: black; border: none; padding: 1rem 2rem; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 1rem; margin-right: 1rem; }
+        .btn-outline { background: transparent; border: 2px solid #D4AF37; color: #D4AF37; }
+        #status { margin-top: 1rem; color: #94A3B8; line-height: 1.8; }
+        pre { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        .section-divide { border-top: 1px solid rgba(212,175,55,0.2); margin: 1.5rem 0; padding-top: 1.5rem; }
+    </style>
+    <link rel="icon" href="br.png" type="image/png">
+</head>
+<body>
+    <div class="card">
+        <h1>System Initialization</h1>
+        <p>Use this tool to set up <b>users</b> and <b>menu</b> in Firestore.</p>
+        
+        <div id="setup-controls">
+            <button class="btn" id="init-db">1. INITIALIZE STAFF USERS</button>
+            <button class="btn btn-outline" id="init-menu">2. SYNC MENU FROM CSV</button>
+        </div>
+
+        <div id="status"></div>
+
+        <div id="credentials" style="display:none; margin-top: 2rem;">
+            <div class="section-divide">
+                <h3>Login Credentials:</h3>
+                <pre>
+Admin:
+- User ID: BR-ADM-001 | Email: admin@barak.com
+- Password: password123
+
+Staff:
+- Reception: BR-RCP-001 | reception@barak.com
+- Kitchen:   BR-KIT-001 | kitchen@barak.com
+- H.Waiter:  BR-HW-001  | waiter@barak.com
+- R.Waiter:  BR-RW-001  | restwaiter@barak.com
+- Rest Desk: BR-RD-001  | restdesk@barak.com
+- Stock:     BR-STK-001 | stock@barak.com
+- Password for all staff: password123
+                </pre>
+                <p><i> The initialization script will now automatically register these emails into the Firebase Authentication system for you.</i></p>
+                <a href="index.html" style="color:#D4AF37; font-weight: bold;">&#8594; Go to Login Page</a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { firebaseHooks, firebaseFS, firebaseAuth } from './firebase-sync.js?v=3.0';
+
+        // --- 1. INIT STAFF USERS ---
+        document.getElementById('init-db').onclick = async () => {
+            const status = document.getElementById('status');
+            status.innerHTML = "<b>Initializing Staff Profiles & Auth...</b><br>";
+
+            try {
+                const users = [
+                    { empId: 'BR-ADM-001', assignedEmail: 'admin@barak.com', name: 'Barak Admin', role: 'Admin' },
+                    { empId: 'BR-RCP-001', assignedEmail: 'reception@barak.com', name: 'Reception Staff', role: 'Reception' },
+                    { empId: 'BR-KIT-001', assignedEmail: 'kitchen@barak.com', name: 'Executive Chef', role: 'Kitchen' },
+                    { empId: 'BR-HW-001', assignedEmail: 'waiter@barak.com', name: 'Hotel Waiter', role: 'HotelWaiter' },
+                    { empId: 'BR-RW-001', assignedEmail: 'restwaiter@barak.com', name: 'Rest Waiter', role: 'RestWaiter' },
+                    { empId: 'BR-RD-001', assignedEmail: 'restdesk@barak.com', name: 'Rest Desk', role: 'RestDesk' },
+                    { empId: 'BR-STK-001', assignedEmail: 'stock@barak.com', name: 'Stock Manager', role: 'Stock' }
+                ];
+
+                for (const user of users) {
+                    // 1. Save to Firestore
+                    const docRef = firebaseHooks.doc(firebaseFS, 'users', user.assignedEmail);
+                    await firebaseHooks.setDoc(docRef, { ...user, last_initialized: firebaseHooks.serverTimestamp() });
+                    
+                    // 2. Create in Firebase Auth
+                    try {
+                        await firebaseHooks.createUserWithEmailAndPassword(firebaseAuth, user.assignedEmail, 'password123');
+                        status.innerHTML += `&#9989; <b>${user.empId}</b> (${user.name}) Synced & Auth Created.<br>`;
+                    } catch (authErr) {
+                        if (authErr.code === 'auth/email-already-in-use') {
+                            status.innerHTML += `&#9989; <b>${user.empId}</b> (${user.name}) Synced. (Auth already exists)<br>`;
+                        } else {
+                            status.innerHTML += `&#10060; <b>${user.empId}</b> Auth Error: ${authErr.message}<br>`;
+                        }
+                    }
+                }
+
+                status.innerHTML += "<br><b>&#10024; Staff setup complete!</b>";
+                document.getElementById('credentials').style.display = 'block';
+
+            } catch (err) {
+                console.error(err);
+                status.innerHTML += `<br>&#10060; Error: ${err.message}`;
+            }
+        };
+
+        // --- 2. SYNC MENU FROM CSV ---
+        document.getElementById('init-menu').onclick = async () => {
+            const status = document.getElementById('status');
+            status.innerHTML = "<b>Fetching menu.csv...</b><br>";
+
+            try {
+                const res = await fetch('menu.csv');
+                if (!res.ok) throw new Error('menu.csv not found.');
+                const csvText = await res.text();
+
+                const lines = csvText.trim().split('\n');
+                const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+
+                const newMenu = [];
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i].trim()) continue;
+                    const vals = lines[i].split(',').map(v => v.trim());
+                    const item = {};
+                    headers.forEach((h, idx) => {
+                        const k = h.replace(/[^a-z0-9]/g, '');
+                        if (k === 'name')        item.name = vals[idx] || '';
+                        if (k === 'category')    item.category = vals[idx] || 'General';
+                        if (k === 'pricefull')   item.price = parseFloat(vals[idx]) || 0;
+                        if (k === 'pricehalf')   item.priceHalf = parseFloat(vals[idx]) || 0;
+                        if (k === 'description') item.description = vals[idx] || '';
+                        if (k === 'imageurl')    item.imageUrl = vals[idx] || '';
+                        if (k === 'portiontype') item.portionType = vals[idx] || 'Plate';
+                    });
+                    if (!item.name) continue;
+                    item.id = `m${i}-${item.name.replace(/\s+/g,'').substring(0,6).toLowerCase()}`;
+                    item.isAvailable = true;
+                    newMenu.push(item);
+                }
+
+                if (newMenu.length === 0) throw new Error('No menu items parsed from CSV.');
+                status.innerHTML += `Parsed <b>${newMenu.length}</b> items. Uploading to Firestore...<br>`;
+
+                const { collection, getDocs, deleteDoc, doc, setDoc } = firebaseHooks;
+                const menuCol = collection(firebaseFS, 'menuItems');
+
+                // Clear old menu
+                const oldSnap = await getDocs(menuCol);
+                await Promise.all(oldSnap.docs.map(d => deleteDoc(d.ref)));
+                status.innerHTML += `Old menu cleared. Uploading fresh data...<br>`;
+
+                for (const item of newMenu) {
+                    await setDoc(doc(firebaseFS, 'menuItems', item.id), item);
+                }
+
+                status.innerHTML += `<br><b>&#9989; Menu Sync Complete! ${newMenu.length} items uploaded.</b><br>`;
+                status.innerHTML += `<span style="color:#4ade80;">Guest portal will now show correct menu items with prices.</span>`;
+
+            } catch (err) {
+                console.error(err);
+                status.innerHTML += `<br>&#10060; Error: ${err.message}`;
+            }
+        };
+    </script>
+</body>
+</html>

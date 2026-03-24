@@ -552,7 +552,9 @@ async function boot() {
     const { onAuthStateChanged } = hooks;
     onAuthStateChanged(auth, user => {
         if (!user) {
-            window.location.href = 'index.html';
+            if (window.self === window.top) {
+                window.location.href = 'index.html';
+            }
         } else {
             startListeners();
             renderMenu(); 

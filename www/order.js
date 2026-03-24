@@ -1,0 +1,988 @@
+const BARAK_MENU = [
+    {id:'m1-basmat',name:'Basmati Rice',category:'Main Course',price:80,priceHalf:50,description:'Premium long grain steamed rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m2-bhunak',name:'Bhuna Khichuri',category:'Main Course',price:180,priceHalf:100,description:'Ghee-laden yellow lentil rice',imageUrl:'https://images.unsplash.com/photo-1645177639578-56e89d924bb1?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m3-luchi',name:'Luchi (4 pcs)',category:'Starters',price:60,priceHalf:0,description:'Deep-fried puffed bread',imageUrl:'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m4-chola',name:'Cholar Dal',category:'Main Course',price:90,priceHalf:0,description:'Bengal gram dal with coconut',imageUrl:'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m5-begun',name:'Begun Bhaja',category:'Starters',price:40,priceHalf:0,description:'Fried eggplant slices',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m6-aloop',name:'Aloo Posto',category:'Main Course',price:150,priceHalf:80,description:'Potatoes in poppy seed paste',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m7-shukto',name:'Shukto',category:'Main Course',price:120,priceHalf:70,description:'Traditional bitter-sweet mixed veg',imageUrl:'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m8-mocha',name:'Mochar Ghonto',category:'Main Course',price:160,priceHalf:0,description:'Banana flower dry curry',imageUrl:'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m9-dhoka',name:'Dhokar Dalna',category:'Main Course',price:140,priceHalf:80,description:'Lentil cakes in spicy gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m10-chick',name:'Chicken Kosha',category:'Main Course',price:280,priceHalf:160,description:'Slow-cooked spicy chicken',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m11-mutt',name:'Mutton Kosha',category:'Main Course',price:450,priceHalf:250,description:'Traditional spicy mutton curry',imageUrl:'https://images.unsplash.com/photo-1545247181-516773cae754?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m12-ilish',name:'Ilish Bhapa',category:'Main Course',price:450,priceHalf:0,description:'Hilsa steamed in mustard paste',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m13-ruim',name:'Rui Macher Jhol',category:'Main Course',price:180,priceHalf:0,description:'Rohu fish in light cumin gravy',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m14-pabda',name:'Pabda Jhal',category:'Main Course',price:250,priceHalf:0,description:'Pabda fish in spicy mustard',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m15-ching',name:'Chingri Malaikari',category:'Main Course',price:380,priceHalf:0,description:'Prawns in coconut milk gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m16-bhet',name:'Bhetki Paturi',category:'Main Course',price:320,priceHalf:0,description:'Fish steamed in banana leaf',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m17-sorsh',name:'Sorshe Ilish',category:'Main Course',price:480,priceHalf:0,description:'Hilsa in pungent mustard gravy',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m18-katla',name:'Katla Kalia',category:'Main Course',price:220,priceHalf:0,description:'Rich Katla fish gravy',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m19-pomf',name:'Pomfret Masala',category:'Main Course',price:300,priceHalf:0,description:'Whole fried pomfret masala',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m20-chikb',name:'Chicken Biryani',category:'Main Course',price:320,priceHalf:180,description:'Kolkata style with potato',imageUrl:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m21-mutb',name:'Mutton Biryani',category:'Main Course',price:420,priceHalf:220,description:'Rich aromatic mutton rice',imageUrl:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m22-fishf',name:'Fish Finger (6pcs)',category:'Starters',price:220,priceHalf:0,description:'Crispy breaded fish strips',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m23-chikc',name:'Chicken Cutlet',category:'Starters',price:150,priceHalf:0,description:'Minced chicken deep fried',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m24-vegc',name:'Veg Chop (2pcs)',category:'Starters',price:40,priceHalf:0,description:'Beetroot and peanut croquettes',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m25-alood',name:'Aloo Dum',category:'Main Course',price:110,priceHalf:60,description:'Spicy baby potato curry',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m26-chann',name:'Channar Dalna',category:'Main Course',price:180,priceHalf:100,description:'Cottage cheese balls in gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m27-murig',name:'Muri Ghonto',category:'Main Course',price:200,priceHalf:0,description:'Fish head cooked with rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m28-lauch',name:'Lau Chingri',category:'Main Course',price:190,priceHalf:0,description:'Bottle gourd with small prawns',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m29-papad',name:'Papad Bhaja',category:'Starters',price:15,priceHalf:0,description:'Crispy fried papadum',imageUrl:'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m30-tomat',name:'Tomato Chutney',category:'Starters',price:40,priceHalf:0,description:'Sweet and tangy tomato relish',imageUrl:'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m31-mishti',name:'Mishti Doi',category:'Dessert',price:60,priceHalf:0,description:'Sweet fermented yogurt',imageUrl:'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m32-roso',name:'Rosogolla (2pcs)',category:'Dessert',price:40,priceHalf:0,description:'Sponge syrupy balls',imageUrl:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m33-gulab',name:'Gulab Jamun (2pcs)',category:'Dessert',price:50,priceHalf:0,description:'Fried milk solid balls',imageUrl:'https://images.unsplash.com/photo-1620660998677-f5a6c07db9bb?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m34-payesh',name:'Payesh',category:'Dessert',price:100,priceHalf:0,description:'Rice pudding with jaggery',imageUrl:'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m35-sand',name:'Sandesh (2pcs)',category:'Dessert',price:60,priceHalf:0,description:'Traditional dry milk sweet',imageUrl:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m36-mw1l',name:'Mineral Water 1L',category:'Drinks',price:20,priceHalf:0,description:'Chilled Bisleri',imageUrl:'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',portionType:'Bottle',isAvailable:true},
+    {id:'m37-mw500',name:'Mineral Water 500ml',category:'Drinks',price:10,priceHalf:0,description:'Travel size water',imageUrl:'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',portionType:'Bottle',isAvailable:true},
+    {id:'m38-milkt',name:'Milk Tea',category:'Drinks',price:25,priceHalf:0,description:'Strong Assam CTC Tea',imageUrl:'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=400',portionType:'Cup',isAvailable:true},
+    {id:'m39-blkt',name:'Black Tea',category:'Drinks',price:15,priceHalf:0,description:'Lemon and ginger tea',imageUrl:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',portionType:'Cup',isAvailable:true},
+    {id:'m40-coffee',name:'Coffee',category:'Drinks',price:40,priceHalf:0,description:'Instant milk coffee',imageUrl:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400',portionType:'Cup',isAvailable:true},
+    {id:'m41-lassi',name:'Sweet Lassi',category:'Drinks',price:80,priceHalf:0,description:'Thick yogurt drink',imageUrl:'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400',portionType:'Cup',isAvailable:true},
+    {id:'m42-limsod',name:'Fresh Lime Soda',category:'Drinks',price:60,priceHalf:0,description:'Sweet or Salted',imageUrl:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',portionType:'Cup',isAvailable:true},
+    {id:'m43-cola',name:'Coca Cola 500ml',category:'Drinks',price:45,priceHalf:0,description:'Pet bottle chilled',imageUrl:'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400',portionType:'Bottle',isAvailable:true},
+    {id:'m44-sprite',name:'Sprite 500ml',category:'Drinks',price:45,priceHalf:0,description:'Pet bottle chilled',imageUrl:'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400',portionType:'Bottle',isAvailable:true},
+    {id:'m45-eggc',name:'Egg Curry (2pcs)',category:'Main Course',price:120,priceHalf:0,description:'Boiled eggs in spicy gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m46-dakb',name:'Chicken Dak Bunglow',category:'Main Course',price:300,priceHalf:180,description:'Heritage chicken curry with egg',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m47-posto',name:'Posto Bora (4pcs)',category:'Starters',price:120,priceHalf:0,description:'Poppy seed fried fritters',imageUrl:'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400',portionType:'Quantity',isAvailable:true},
+    {id:'m48-dachr',name:'Macher Matha Diye Dal',category:'Main Course',price:130,priceHalf:0,description:'Roasted Moong dal with fish head',imageUrl:'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m49-kanka',name:'Kancha Lanka Murgi',category:'Main Course',price:290,priceHalf:160,description:'Green chili chicken (spicy)',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
+    {id:'m50-bhetf',name:'Bhetki Fry',category:'Starters',price:180,priceHalf:0,description:'Pure Bhetki fillet fry',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true}
+];
+
+class GuestPortal {
+    constructor() {
+        this.roomNumber = null;
+        this.guestName = "Guest";
+        this.cart = [];
+        this.sessionHistory = []; 
+        this.activeOrderId = null;
+        this.menu = BARAK_MENU;  // Set immediately — no waiting for Firebase
+        this.roomStatus = 'available';
+        this.salutation = '';
+        this.currentView = 'dashboard';
+        
+        this.init();
+    }
+
+    async init() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            this.roomNumber = urlParams.get('room') || urlParams.get('view');
+
+            if (!this.roomNumber) {
+                this.showError("Access Denied", "Invalid QR Code. Please scan the QR in your room.");
+                return;
+            }
+
+            document.getElementById('room-display').innerText = `Room ${this.roomNumber}`;
+            this.activeOrderId = localStorage.getItem(`br_active_order_${this.roomNumber}`);
+
+            // Clear stale cached menu (might have old broken 'Dish/₹0' data)
+            const cachedRaw = localStorage.getItem('br_menu');
+            if (cachedRaw) {
+                try {
+                    const parsed = JSON.parse(cachedRaw);
+                    const isGood = parsed.length > 0 && parsed[0].price > 0 && parsed[0].name !== 'Dish';
+                    if (isGood) { this.menu = parsed; }
+                    else { localStorage.removeItem('br_menu'); }
+                } catch(e) { localStorage.removeItem('br_menu'); }
+            }
+
+            // Render immediately with best available menu
+            this.renderMenu();
+
+            this.initDB().then(() => {
+                this.fetchGuestData();
+                this.setupTracking();
+            });
+
+            this.updateActivePreview();
+
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'br_unavailable_items') this.renderMenu();
+            });
+        } catch (err) {
+            console.error("[Guest Portal] Init Crash:", err);
+        }
+    }
+
+    showError(title, msg) {
+        document.body.innerHTML = `
+            <div style='padding: 3rem; text-align:center; height: 100vh; display: flex; flex-direction: column; justify-content: center; background: #050B1A; color: white;'>
+                <h1 style='color: #D4AF37; margin-bottom: 1rem; font-family: Outfit;'>${title}</h1>
+                <p style='color: #94A3B8;'>${msg}</p>
+            </div>`;
+    }
+
+    initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('br-pro-db', 5);
+            request.onsuccess = (e) => { this.db = e.target.result; resolve(); };
+            request.onerror = (e) => reject(e);
+        });
+    }
+
+    async fetchGuestData() {
+        if (!window.firebaseFS) {
+            setTimeout(() => this.fetchGuestData(), 1000);
+            return;
+        }
+        
+        const { collection, onSnapshot, doc, query, where, or } = window.firebaseHooks;
+
+        // 1. Menu Listener — with hardcoded fallback
+        const BARAK_MENU = [
+            {id:'m1-basmat',name:'Basmati Rice',category:'Main Course',price:80,priceHalf:50,description:'Premium long grain steamed rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m2-bhunak',name:'Bhuna Khichuri',category:'Main Course',price:180,priceHalf:100,description:'Ghee-laden yellow lentil rice',imageUrl:'https://images.unsplash.com/photo-1645177639578-56e89d924bb1?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m3-luchi',name:'Luchi (4 pcs)',category:'Starters',price:60,priceHalf:0,description:'Deep-fried puffed bread',imageUrl:'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m4-chola',name:'Cholar Dal',category:'Main Course',price:90,priceHalf:0,description:'Bengal gram dal with coconut',imageUrl:'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m5-begun',name:'Begun Bhaja',category:'Starters',price:40,priceHalf:0,description:'Fried eggplant slices',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m6-aloop',name:'Aloo Posto',category:'Main Course',price:150,priceHalf:80,description:'Potatoes in poppy seed paste',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m7-shukto',name:'Shukto',category:'Main Course',price:120,priceHalf:70,description:'Traditional bitter-sweet mixed veg',imageUrl:'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m8-mocha',name:'Mochar Ghonto',category:'Main Course',price:160,priceHalf:0,description:'Banana flower dry curry',imageUrl:'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m9-dhoka',name:'Dhokar Dalna',category:'Main Course',price:140,priceHalf:80,description:'Lentil cakes in spicy gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m10-chick',name:'Chicken Kosha',category:'Main Course',price:280,priceHalf:160,description:'Slow-cooked spicy chicken',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m11-mutt',name:'Mutton Kosha',category:'Main Course',price:450,priceHalf:250,description:'Traditional spicy mutton curry',imageUrl:'https://images.unsplash.com/photo-1545247181-516773cae754?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m12-ilish',name:'Ilish Bhapa',category:'Main Course',price:450,priceHalf:0,description:'Hilsa steamed in mustard paste',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m13-ruim',name:'Rui Macher Jhol',category:'Main Course',price:180,priceHalf:0,description:'Rohu fish in light cumin gravy',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m14-pabda',name:'Pabda Jhal',category:'Main Course',price:250,priceHalf:0,description:'Pabda fish in spicy mustard',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m15-ching',name:'Chingri Malaikari',category:'Main Course',price:380,priceHalf:0,description:'Prawns in coconut milk gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m16-bhet',name:'Bhetki Paturi',category:'Main Course',price:320,priceHalf:0,description:'Fish steamed in banana leaf',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m17-sorsh',name:'Sorshe Ilish',category:'Main Course',price:480,priceHalf:0,description:'Hilsa in pungent mustard gravy',imageUrl:'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m18-katla',name:'Katla Kalia',category:'Main Course',price:220,priceHalf:0,description:'Rich Katla fish gravy',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m19-pomf',name:'Pomfret Masala',category:'Main Course',price:300,priceHalf:0,description:'Whole fried pomfret masala',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m20-chikb',name:'Chicken Biryani',category:'Main Course',price:320,priceHalf:180,description:'Kolkata style with potato',imageUrl:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m21-mutb',name:'Mutton Biryani',category:'Main Course',price:420,priceHalf:220,description:'Rich aromatic mutton rice',imageUrl:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m22-fishf',name:'Fish Finger (6pcs)',category:'Starters',price:220,priceHalf:0,description:'Crispy breaded fish strips',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m23-chikc',name:'Chicken Cutlet',category:'Starters',price:150,priceHalf:0,description:'Minced chicken deep fried',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m24-vegc',name:'Veg Chop (2pcs)',category:'Starters',price:40,priceHalf:0,description:'Beetroot and peanut croquettes',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m25-alood',name:'Aloo Dum',category:'Main Course',price:110,priceHalf:60,description:'Spicy baby potato curry',imageUrl:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m26-chann',name:'Channar Dalna',category:'Main Course',price:180,priceHalf:100,description:'Cottage cheese balls in gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m27-murig',name:'Muri Ghonto',category:'Main Course',price:200,priceHalf:0,description:'Fish head cooked with rice',imageUrl:'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m28-lauch',name:'Lau Chingri',category:'Main Course',price:190,priceHalf:0,description:'Bottle gourd with small prawns',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m29-papad',name:'Papad Bhaja',category:'Starters',price:15,priceHalf:0,description:'Crispy fried papadum',imageUrl:'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m30-tomat',name:'Tomato Chutney',category:'Starters',price:40,priceHalf:0,description:'Sweet and tangy tomato relish',imageUrl:'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m31-mishti',name:'Mishti Doi',category:'Dessert',price:60,priceHalf:0,description:'Sweet fermented yogurt',imageUrl:'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m32-roso',name:'Rosogolla (2pcs)',category:'Dessert',price:40,priceHalf:0,description:'Sponge syrupy balls',imageUrl:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m33-gulab',name:'Gulab Jamun (2pcs)',category:'Dessert',price:50,priceHalf:0,description:'Fried milk solid balls',imageUrl:'https://images.unsplash.com/photo-1620660998677-f5a6c07db9bb?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m34-payesh',name:'Payesh',category:'Dessert',price:100,priceHalf:0,description:'Rice pudding with jaggery',imageUrl:'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m35-sand',name:'Sandesh (2pcs)',category:'Dessert',price:60,priceHalf:0,description:'Traditional dry milk sweet',imageUrl:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m36-mw1l',name:'Mineral Water 1L',category:'Drinks',price:20,priceHalf:0,description:'Chilled Bisleri',imageUrl:'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',portionType:'Bottle',isAvailable:true},
+            {id:'m37-mw500',name:'Mineral Water 500ml',category:'Drinks',price:10,priceHalf:0,description:'Travel size water',imageUrl:'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',portionType:'Bottle',isAvailable:true},
+            {id:'m38-milkt',name:'Milk Tea',category:'Drinks',price:25,priceHalf:0,description:'Strong Assam CTC Tea',imageUrl:'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=400',portionType:'Cup',isAvailable:true},
+            {id:'m39-blkt',name:'Black Tea',category:'Drinks',price:15,priceHalf:0,description:'Lemon and ginger tea',imageUrl:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',portionType:'Cup',isAvailable:true},
+            {id:'m40-coffee',name:'Coffee',category:'Drinks',price:40,priceHalf:0,description:'Instant milk coffee',imageUrl:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400',portionType:'Cup',isAvailable:true},
+            {id:'m41-lassi',name:'Sweet Lassi',category:'Drinks',price:80,priceHalf:0,description:'Thick yogurt drink',imageUrl:'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400',portionType:'Cup',isAvailable:true},
+            {id:'m42-limsod',name:'Fresh Lime Soda',category:'Drinks',price:60,priceHalf:0,description:'Sweet or Salted',imageUrl:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',portionType:'Cup',isAvailable:true},
+            {id:'m43-cola',name:'Coca Cola 500ml',category:'Drinks',price:45,priceHalf:0,description:'Pet bottle chilled',imageUrl:'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400',portionType:'Bottle',isAvailable:true},
+            {id:'m44-sprite',name:'Sprite 500ml',category:'Drinks',price:45,priceHalf:0,description:'Pet bottle chilled',imageUrl:'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400',portionType:'Bottle',isAvailable:true},
+            {id:'m45-eggc',name:'Egg Curry (2pcs)',category:'Main Course',price:120,priceHalf:0,description:'Boiled eggs in spicy gravy',imageUrl:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m46-dakb',name:'Chicken Dak Bunglow',category:'Main Course',price:300,priceHalf:180,description:'Heritage chicken curry with egg',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m47-posto',name:'Posto Bora (4pcs)',category:'Starters',price:120,priceHalf:0,description:'Poppy seed fried fritters',imageUrl:'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=400',portionType:'Quantity',isAvailable:true},
+            {id:'m48-dachr',name:'Macher Matha Diye Dal',category:'Main Course',price:130,priceHalf:0,description:'Roasted Moong dal with fish head',imageUrl:'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m49-kanka',name:'Kancha Lanka Murgi',category:'Main Course',price:290,priceHalf:160,description:'Green chili chicken (spicy)',imageUrl:'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',portionType:'Plate',isAvailable:true},
+            {id:'m50-bhetf',name:'Bhetki Fry',category:'Starters',price:180,priceHalf:0,description:'Pure Bhetki fillet fry',imageUrl:'https://images.unsplash.com/photo-1519984388953-d2406bc725e1?w=400',portionType:'Quantity',isAvailable:true}
+        ];
+
+        // Push hardcoded menu to Firestore if collection is empty OR has stale/broken data
+        const pushMenuToFirestore = async (items) => {
+            try {
+                const { collection, getDocs, doc, setDoc, deleteDoc } = window.firebaseHooks;
+                const col = collection(window.firebaseFS, 'menuItems');
+                const snap = await getDocs(col);
+                
+                // Check if Firestore has stale data
+                const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const hasStale = snap.size === 0 || 
+                    docs.some(d => {
+                        const price = parseFloat(d.price || d.PriceFull || d.pricefull || 0);
+                        const name = d.name || d.Name || d.itemName || '';
+                        return !name || price === 0 || price == null;
+                    });
+                
+                if (hasStale) {
+                    console.log('[Menu] Stale/empty Firestore data detected — re-seeding all items...');
+                    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+                    const writes = items.map(item => setDoc(doc(window.firebaseFS, 'menuItems', item.id), item));
+                    await Promise.all(writes);
+                    console.log(`[Menu] Seeded ${items.length} items to Firestore successfully.`);
+                }
+            } catch (e) { console.warn('[Menu] Auto-seed failed:', e); }
+        };
+
+        // Use hardcoded menu immediately & seed Firestore in background
+        this.menu = BARAK_MENU;
+        this.renderMenu();
+        pushMenuToFirestore(BARAK_MENU);
+
+        // Helper: normalize field names from CSV legacy format to standard
+        const normalizeItem = (raw, fallback) => {
+            const name = raw.name || raw.Name || raw.itemName || (fallback ? fallback.name : null);
+            const price = parseFloat(raw.price || raw.PriceFull || raw.pricefull || raw.Price || 0);
+            const priceHalf = parseFloat(raw.priceHalf || raw.PriceHalf || raw.pricehalf || 0);
+            const imageUrl = raw.imageUrl || raw.ImageURL || raw.image || raw.img || (fallback ? fallback.imageUrl : null) || 'br.png';
+            return {
+                id:          raw.id || `m-${Math.random().toString(36).slice(2,8)}`,
+                name:        name || 'Unknown',
+                category:    raw.category || raw.Category || (fallback ? fallback.category : 'General'),
+                price:       price,
+                priceHalf:   priceHalf,
+                description: raw.description || raw.Description || (fallback ? fallback.description : 'Barak Residency Special'),
+                imageUrl:    imageUrl,
+                portionType: raw.portionType || raw.PortionType || (fallback ? fallback.portionType : 'Plate'),
+                isAvailable: raw.isAvailable !== false
+            };
+        };
+
+        onSnapshot(collection(window.firebaseFS, 'menuItems'), (snap) => {
+            if (!snap.empty) {
+                const rawItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                // Merge with BARAK_MENU fallback for missing fields
+                const normalizedItems = rawItems.map(raw => {
+                    const fallback = BARAK_MENU.find(m => m.id === raw.id);
+                    return normalizeItem(raw, fallback);
+                });
+                
+                // Only use cloud items if they are valid (have names and prices)
+                const validItems = normalizedItems.filter(i => i.name && i.name !== 'Unknown' && i.price > 0);
+                if (validItems.length > 0) {
+                    this.menu = validItems;
+                    localStorage.setItem('br_menu', JSON.stringify(validItems));
+                    this.renderMenu();
+                }
+            }
+        });
+
+        // 1b. Availability Listener — sync from cloud
+        const { doc: fsDoc } = window.firebaseHooks;
+        onSnapshot(fsDoc(window.firebaseFS, 'settings', 'availability'), (snap) => {
+            if (snap.exists() && snap.data().unavailableItems) {
+                localStorage.setItem('br_unavailable_items', JSON.stringify(snap.data().unavailableItems));
+                this.renderMenu(); // Re-render with updated availability
+            }
+        });
+
+        // 2. Room & Guest Listener
+        onSnapshot(fsDoc(window.firebaseFS, 'rooms', this.roomNumber.toString()), (d) => {
+            if (d.exists()) {
+                const data = d.data();
+                this.roomStatus = data.status || 'available';
+                this.guestName = data.guestName || 'Guest';
+                this.salutation = data.salutation || '';
+                this.stayID = data.currentStayId || null;
+                this.updateBranding();
+                this.setupOrdersListener(); // Re-setup with stayID if it changed
+            }
+        });
+    }
+
+    setupOrdersListener() {
+        if (this.ordersUnsubscribe) this.ordersUnsubscribe();
+
+        const { collection, onSnapshot, query: qFn, where: wFn } = window.firebaseHooks;
+        let roomOrdersQuery;
+
+        if (this.stayID) {
+            roomOrdersQuery = qFn(
+                collection(window.firebaseFS, 'orders'),
+                wFn('roomNumber', '==', String(this.roomNumber)),
+                wFn('stayID', '==', this.stayID)
+            );
+        } else {
+            roomOrdersQuery = qFn(
+                collection(window.firebaseFS, 'orders'),
+                wFn('roomNumber', '==', String(this.roomNumber))
+            );
+        }
+
+        this.ordersUnsubscribe = onSnapshot(roomOrdersQuery, (snap) => {
+            if (snap.empty) {
+                const tbox = document.querySelector('.tracker-box');
+                if (tbox) tbox.style.display = 'none';
+                this.renderSessionHistory([]);
+                return;
+            }
+
+            const allOrders = snap.docs.map(d => d.data());
+            // Sort by true timestamp
+            allOrders.sort((a, b) => {
+                const ta = a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.timestamp || 0);
+                const tb = b.timestamp?.toMillis ? b.timestamp.toMillis() : (b.timestamp || 0);
+                return tb - ta;
+            });
+
+            this.renderSessionHistory(allOrders);
+
+            // Pick the most recent non-delivered order
+            const active = allOrders
+                .filter(o => o.status !== 'Delivered' && o.status !== 'delivered' && o.status !== 'Cancelled' && o.status !== 'cancelled');
+
+            if (active.length > 0) {
+                const latest = active[0];
+                this.activeOrderId = latest.order_id || latest.id;
+                localStorage.setItem(`br_active_order_${this.roomNumber}`, this.activeOrderId);
+
+                // Set the ID display in Tracker
+                const tid = document.getElementById('order-id-display');
+                if (tid) tid.innerText = `ID: #${this.activeOrderId}`;
+
+                const tbox = document.querySelector('.tracker-box');
+                if (tbox) tbox.style.display = 'block';
+
+                this.updateTrackingUI(latest.status);
+                this.updateActivePreview(true);
+            } else {
+                this.activeOrderId = null;
+                localStorage.removeItem(`br_active_order_${this.roomNumber}`);
+                const tbox = document.querySelector('.tracker-box');
+                if (tbox) tbox.style.display = 'none';
+                this.updateActivePreview(false);
+            }
+        });
+    }
+
+
+    renderSessionHistory(orders) {
+        const listContainer = document.getElementById('session-items-list');
+        if (!listContainer) return;
+        
+        const validOrders = orders.filter(o => o.status !== 'Cancelled' && o.status !== 'cancelled').sort((a, b) => {
+            const ta = a.timestamp?.seconds ? a.timestamp.seconds*1000 : (a.timestamp || 0);
+            const tb = b.timestamp?.seconds ? b.timestamp.seconds*1000 : (b.timestamp || 0);
+            return tb - ta; // Newest first
+        });
+
+        if (validOrders.length === 0) {
+            listContainer.innerHTML = '<div style="opacity: 0.5; font-size: 0.9rem;">No orders in this session yet.</div>';
+            return;
+        }
+
+        listContainer.innerHTML = validOrders.map(o => {
+            const total = Number(o.total_price || o.total_amount || o.total || 0);
+            let stat = o.status || 'Unknown';
+            let statColor = '#94A3B8';
+            if (stat.toLowerCase() === 'delivered') { stat = 'Delivered'; statColor = '#4ade80'; }
+            else { statColor = '#F59E0B'; }
+            
+            const itemsList = (o.items || []).map(i => {
+                const name = typeof i === 'object' ? i.name : i;
+                const qty = typeof i === 'object' ? (i.qty || 1) : 1;
+                return `${name} x${qty}`;
+            }).join(', ');
+            
+            return `
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); padding: 10px; border-radius: 12px; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; margin-bottom: 4px;">
+                        <span>Order #${o.order_id || o.id}</span>
+                        <span>₹${total}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 4px;">${itemsList}</div>
+                    <div style="font-size: 0.75rem; color: ${statColor}; font-weight: bold;">Status: ${stat}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    updateBranding() {
+        const greetEl = document.getElementById('greeting');
+        if (!greetEl) return;
+
+        if (this.roomStatus === 'available') {
+            greetEl.innerHTML = `Welcome House!`;
+            const heroGreet = document.getElementById('hero-greeting');
+            if (heroGreet) heroGreet.innerText = 'Ready for next Guest';
+            return;
+        }
+
+        const hour = new Date().getHours();
+        let intro = "Good Evening";
+        if (hour < 12) intro = "Good Morning";
+        else if (hour < 17) intro = "Good Afternoon";
+
+        greetEl.innerText = `Welcome to Barak Residency`;
+        
+        const heroGreet = document.getElementById('hero-greeting');
+        if (heroGreet) {
+             heroGreet.innerText = `${intro}, ${this.salutation} ${this.guestName.split(' ')[0]}`;
+        }
+    }
+
+    renderMenu() {
+        const grid = document.getElementById('menu-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const unavailableList = JSON.parse(localStorage.getItem('br_unavailable_items') || '[]');
+
+        const categories = {};
+        this.menu.forEach(item => {
+            if (item.isAvailable === false || unavailableList.includes(item.id)) return;
+            const cat = item.category || 'Dishes';
+            if (!categories[cat]) categories[cat] = [];
+            categories[cat].push(item);
+        });
+
+        Object.entries(categories).forEach(([name, items]) => {
+            const title = document.createElement('div');
+            title.className = 'menu-title';
+            title.innerText = name;
+            grid.appendChild(title);
+
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'food-card';
+                const img = item.imageUrl || item.ImageURL || 'br.png';
+                const name = item.name || item.Name || 'Dish';
+                const price = item.price || item.PriceFull || 0;
+                const desc = item.description || item.Description || 'Barak Residency Special';
+                
+                card.innerHTML = `
+                    <img src="${img}" class="food-icon" onerror="this.src='br.png'">
+                    <div class="food-info">
+                        <div class="food-name">${name}</div>
+                        <div class="food-desc">${desc}</div>
+                        <div class="food-price">₹${price}</div>
+                    </div>
+                    <div class="food-add-area">
+                        <div class="added-indicator" id="added-${item.id}">Added to Cart</div>
+                        <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        });
+    }
+
+    filterMenu() {
+        const q = document.getElementById('menu-search')?.value?.toLowerCase() || '';
+        if (!q) { this.renderMenu(); return; }
+        const filtered = this.menu.filter(item => {
+            const n = (item.name || item.Name || '').toLowerCase();
+            const d = (item.description || item.Description || '').toLowerCase();
+            const c = (item.category || item.Category || '').toLowerCase();
+            return n.includes(q) || d.includes(q) || c.includes(q);
+        });
+        this.renderFilteredMenu(filtered);
+    }
+
+    renderFilteredMenu(items) {
+        const grid = document.getElementById('menu-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        
+        if (items.length === 0) {
+            grid.innerHTML = '<div style="text-align:center; padding: 2rem; opacity:0.5;">No items found matching your search.</div>';
+            return;
+        }
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'food-card';
+            const img = item.imageUrl || item.ImageURL || 'br.png';
+            const name = item.name || item.Name || 'Dish';
+            const price = item.price || item.PriceFull || 0;
+            const desc = item.description || item.Description || 'Special';
+
+            card.innerHTML = `
+                <img src="${img}" class="food-icon" onerror="this.src='br.png'">
+                <div class="food-info">
+                    <div class="food-name">${name}</div>
+                    <div class="food-desc">${desc}</div>
+                    <div class="food-price">₹${price}</div>
+                </div>
+                <div class="food-add-area">
+                    <div class="added-indicator" id="added-${item.id}">Added to Cart</div>
+                    <button class="add-btn" onclick="portal.promptPortion('${item.id}')">ADD</button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    promptPortion(itemId) {
+        const raw = this.menu.find(m => m.id === itemId);
+        if (!raw) return;
+
+        // Normalize item fields
+        const item = {
+            ...raw,
+            name:        raw.name || raw.Name || 'Dish',
+            price:       parseFloat(raw.price || raw.PriceFull || 0),
+            priceHalf:   parseFloat(raw.priceHalf || raw.PriceHalf || 0),
+            description: raw.description || raw.Description || '',
+            imageUrl:    raw.imageUrl || raw.ImageURL || 'br.png',
+            portionType: raw.portionType || raw.PortionType || 'Plate',
+        };
+        this.pendingItem = item;
+
+        const type = item.portionType;
+
+        // For Quantity/Cup/Drinks — show quantity counter directly
+        if (type === 'Quantity' || type === 'Cup' || type === 'Drinks' || type === 'Drink' || !type) {
+            this.promptQuantity(item, 'Regular', 'Standard', item.price);
+            return;
+        }
+
+        // For Bottles (Water, etc.) — show SIZE options first
+        if (type === 'Bottle') {
+            document.getElementById('pm-item-name').innerText = item.name;
+            document.getElementById('pm-item-desc').innerText = 'Select size';
+            const container = document.getElementById('pm-options-container');
+            container.innerHTML = '';
+            const sizes = [
+                { label: '1L Bottle', val: '1L', price: item.price },
+                { label: '750ml', val: '750ml', price: Math.floor(item.price * 0.85) },
+                { label: '500ml', val: '500ml', price: Math.floor(item.price * 0.65) }
+            ];
+            sizes.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'reorder-btn tint-blur';
+                btn.style.marginBottom = '0.5rem';
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
+                btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
+                container.appendChild(btn);
+            });
+            document.getElementById('portion-modal').style.display = 'flex';
+            return;
+        }
+
+        // Plate type — show Full/Half options
+        document.getElementById('pm-item-name').innerText = item.name;
+        document.getElementById('pm-item-desc').innerText = 'Select preferred size';
+        const container = document.getElementById('pm-options-container');
+        container.innerHTML = '';
+
+        if (type === 'Plate') {
+            // Full Plate always available; Half only if priceHalf > 0
+            const halfPrice = item.priceHalf > 0 ? item.priceHalf : Math.floor(item.price * 0.6);
+            const opts = [
+                { label: 'Full Plate', val: 'Full', price: item.price }
+            ];
+            if (halfPrice > 0) opts.push({ label: 'Half Plate', val: 'Half', price: halfPrice });
+
+            opts.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'reorder-btn tint-blur';
+                btn.style.marginBottom = '0.5rem';
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
+                btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
+                container.appendChild(btn);
+            });
+        } else if (type === 'Bottle') {
+            const sizes = [
+                { label: '1L Bottle', val: '1L', price: item.price },
+                { label: '750ml', val: '750ml', price: Math.floor(item.price * 0.8) },
+                { label: '500ml', val: '500ml', price: Math.floor(item.price * 0.6) }
+            ];
+            sizes.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'reorder-btn tint-blur';
+                btn.style.marginBottom = '0.5rem';
+                btn.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span>${opt.label}</span><span style="color:var(--gold-primary);font-weight:800">₹${opt.price}</span></div>`;
+                btn.onclick = () => this.promptQuantity(item, opt.val, opt.label, opt.price);
+                container.appendChild(btn);
+            });
+        } else {
+            this.promptQuantity(item, 'Regular', 'Standard', item.price);
+            return;
+        }
+
+        document.getElementById('portion-modal').style.display = 'flex';
+    }
+
+    promptQuantity(item, variant, label, price) {
+        const container = document.getElementById('pm-options-container');
+        document.getElementById('pm-item-name').innerText = `${item.name} (${label})`;
+        document.getElementById('pm-item-desc').innerText = "How many portions?";
+        container.innerHTML = '';
+
+        let qty = 1;
+
+        const counter = document.createElement('div');
+        counter.style.cssText = 'display:flex; align-items:center; justify-content:center; gap:30px; margin: 2rem 0;';
+        counter.innerHTML = `
+            <button class="add-btn" style="width:50px; height:50px; font-size:1.5rem" id="q-dec">-</button>
+            <div style="font-size:2.5rem; font-weight:900" id="q-val">1</div>
+            <button class="add-btn" style="width:50px; height:50px; font-size:1.5rem" id="q-inc">+</button>
+        `;
+        container.appendChild(counter);
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'reorder-btn';
+        addBtn.style.background = 'var(--gold-primary)';
+        addBtn.style.color = '#000';
+        addBtn.innerText = `CONFIRM - ₹${price}`;
+        container.appendChild(addBtn);
+
+        counter.querySelector('#q-dec').onclick = () => { qty = Math.max(1, qty-1); counter.querySelector('#q-val').innerText = qty; addBtn.innerText = `CONFIRM - ₹${price * qty}`; };
+        counter.querySelector('#q-inc').onclick = () => { qty++; counter.querySelector('#q-val').innerText = qty; addBtn.innerText = `CONFIRM - ₹${price * qty}`; };
+
+        addBtn.onclick = () => {
+            this.executeAddToCart(item, variant, label, price, qty);
+            document.getElementById('portion-modal').style.display = 'none';
+        };
+
+        document.getElementById('portion-modal').style.display = 'flex';
+    }
+
+    executeAddToCart(item, variant, label, price, qty) {
+        const id = `${item.id}-${variant}`;
+        const existing = this.cart.find(c => c.id === id);
+        if (existing) {
+            existing.qty += qty;
+        } else {
+            const name = item.name || item.Name || 'Dish';
+            this.cart.push({
+                ...item,
+                id: id,
+                name: variant !== 'Regular' ? `${name} (${label})` : name,
+                variant: label,
+                price: price,
+                qty: qty
+            });
+        }
+        this.updateCartBar();
+        this.renderCartPanel();
+        this.openCart();
+        this.showAddedIndicator(item.id);
+        this.hapticFeedback();
+    }
+
+    showAddedIndicator(itemId) {
+        const el = document.getElementById(`added-${itemId}`);
+        if (el) {
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 2000);
+        }
+    }
+
+    openCart() {
+        document.getElementById('cart-panel').classList.add('open');
+        document.getElementById('cart-panel-overlay').classList.add('show');
+    }
+
+    closeCart() {
+        document.getElementById('cart-panel').classList.remove('open');
+        document.getElementById('cart-panel-overlay').classList.remove('show');
+    }
+
+    updateCartBar() {
+        const bar = document.getElementById('cart-bar');
+        const info = document.getElementById('cart-info');
+        if (!bar) return;
+
+        if (this.cart.length > 0) {
+            const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const count = this.cart.reduce((s, i) => s + i.qty, 0);
+            info.innerHTML = `${count} ${count === 1 ? 'Item' : 'Items'} | ₹${total}`;
+            bar.style.display = 'flex';
+        } else {
+            bar.style.display = 'none';
+        }
+    }
+
+    renderCartPanel() {
+        const itemsList = document.getElementById('cart-panel-items');
+        const totalEl = document.getElementById('cart-panel-total-val');
+        if (!itemsList) return;
+        
+        if (this.cart.length === 0) {
+            itemsList.innerHTML = '<div class="cart-empty-msg">Your cart is empty.<br>Start adding delicacies!</div>';
+            totalEl.innerHTML = '₹0';
+            return;
+        }
+
+        itemsList.innerHTML = '';
+        const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
+        totalEl.innerHTML = '₹' + total;
+        
+        this.cart.forEach((c, index) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'cart-panel-item';
+            itemDiv.innerHTML = `
+                <div class="cart-panel-item-info">
+                    <div class="cart-panel-item-name">${c.name}</div>
+                    <div class="cart-panel-item-price">₹${c.price}</div>
+                </div>
+                <div class="cart-qty-ctrl">
+                    <button onclick="portal.updateItemQty(${index}, -1)">-</button>
+                    <div class="cart-qty-val">${c.qty}</div>
+                    <button onclick="portal.updateItemQty(${index}, 1)">+</button>
+                </div>
+            `;
+            itemsList.appendChild(itemDiv);
+        });
+    }
+
+    updateItemQty(index, delta) {
+        this.cart[index].qty += delta;
+        if (this.cart[index].qty <= 0) {
+            this.cart.splice(index, 1);
+        }
+        this.updateCartBar();
+        this.renderCartPanel();
+        if (this.cart.length === 0) {
+            this.closeCart();
+        }
+        this.hapticFeedback();
+    }
+
+    async placeOrder() {
+        if (this.cart.length === 0) return;
+
+        // DEBOUNCE: Prevent double-tap duplicate orders
+        if (this._isOrdering) { console.warn('[placeOrder] Already processing'); return; }
+        this._isOrdering = true;
+
+        // Disable the order button visually
+        const btn = document.querySelector('.cart-bar-btn, .place-order-btn');
+        if (btn) { btn.disabled = true; btn.innerText = 'Sending...'; }
+
+        const panel = document.getElementById('cart-panel');
+        if(panel) this.closeCart();
+
+        const releaseLock = () => {
+            this._isOrdering = false;
+            if (btn) { btn.disabled = false; btn.innerText = 'ORDER NOW'; }
+        };
+
+        try {
+        const total = this.cart.reduce((s, i) => s + (i.price * i.qty), 0);
+        let orderObj;
+        let isAddon = false;
+        let orderId = this.activeOrderId;
+
+        if (orderId) {
+            const { doc, getDoc } = window.firebaseHooks;
+            const existingRef = doc(window.firebaseFS, 'orders', String(orderId));
+            const existingSnap = await getDoc(existingRef);
+            if(existingSnap.exists()) {
+                const s = existingSnap.data().status.toLowerCase();
+                if(s === 'pending' || s === 'preparing' || s === 'kitchen') {
+                    isAddon = true;
+                    const eData = existingSnap.data();
+                    orderObj = {
+                        ...eData,
+                        items: [...(eData.items || []), ...this.cart],
+                        total_price: (eData.total_price || 0) + total
+                    };
+                }
+            }
+        }
+
+        if (!isAddon) {
+            orderId = await window.FirebaseSync.getNextOrderSerial(this.roomNumber);
+            this.activeOrderId = orderId;
+            localStorage.setItem(`br_active_order_${this.roomNumber}`, orderId);
+
+            orderObj = {
+                order_id: orderId,
+                id: orderId,
+                roomNumber: String(this.roomNumber),
+                roomId: String(this.roomNumber),
+                stayID: this.stayID,
+                guestName: this.guestName || 'Guest',
+                salutation: this.salutation || '',
+                items: this.cart,
+                total_price: total,
+                status: 'Pending',
+                timestamp: window.firebaseHooks.serverTimestamp(),
+                orderType: 'Room'
+            };
+        }
+
+        if (window.FirebaseSync) {
+            if (isAddon) {
+                const { doc, setDoc } = window.firebaseHooks;
+                await setDoc(doc(window.firebaseFS, 'orders', String(orderId)), orderObj, {merge: true});
+                console.log('[Order] ADDON appended to:', orderId);
+            } else {
+                await window.FirebaseSync.pushOrderToCloud(orderObj);
+                console.log('[Order] Placed:', orderId, 'for Room', this.roomNumber);
+            }
+        }
+
+        this.cart = [];
+        this.updateCartBar();
+        
+        // Show success screen
+        const success = document.getElementById('success-screen');
+        if (success) success.style.display = 'flex';
+        
+        // Auto-redirect to Home (Dashboard) after 2 seconds
+        setTimeout(() => {
+            if (success) success.style.display = 'none';
+            this.switchView('dashboard');
+        }, 2500);
+
+        this.updateActivePreview(true);
+        this.fetchGuestData(); // Refresh tracking
+        releaseLock();
+        } catch(e) {
+            console.error('[placeOrder] failed:', e);
+            releaseLock();
+        }
+    }
+
+    updateTrackingUI(status) {
+        const tracker = document.getElementById('tracker');
+        if (!tracker) return;
+
+        const label = document.getElementById('status-label');
+        const progress = document.getElementById('timeline-progress');
+        
+        const steps = {
+            'Pending': { p: '0%', n: 1, text: 'Order Placed', title3: 'Out for Delivery', msg3: 'Waiting for dispatcher' },
+            'Kitchen': { p: '33%', n: 2, text: 'Preparing Meal', title3: 'Out for Delivery', msg3: 'Chef is cooking your meal' },
+            'preparing': { p: '33%', n: 2, text: 'Preparing Meal', title3: 'Out for Delivery', msg3: 'Chef is cooking your meal' },
+            'Served': { p: '66%', n: 3, text: 'Order Ready', title3: 'Out for Delivery', msg3: 'Order packed! Waiting for waiter.' },
+            'ready': { p: '66%', n: 3, text: 'Order Ready', title3: 'Out for Delivery', msg3: 'Order packed! Waiting for waiter.' },
+            'On the Way': { p: '85%', n: 3, text: 'On the Way', title3: 'On the Way', msg3: `Coming to Room ${this.roomNumber}` },
+            'ontheway': { p: '85%', n: 3, text: 'On the Way', title3: 'On the Way', msg3: `Coming to Room ${this.roomNumber}` },
+            'delivered': { p: '100%', n: 4, text: 'Delivered', title3: 'Delivered', msg3: 'Delivered' },
+            'Delivered': { p: '100%', n: 4, text: 'Delivered', title3: 'Delivered', msg3: 'Delivered' }
+        };
+
+        const current = steps[status] || steps['Pending'];
+        if (label) label.innerText = current.text;
+        if (progress) progress.style.height = current.p;
+        
+        const title3 = document.getElementById('step-3-title');
+        const msg3 = document.getElementById('step-3-msg');
+        if (title3) title3.innerText = current.title3;
+        if (msg3) msg3.innerHTML = current.msg3;
+
+        for (let i = 1; i <= 4; i++) {
+            const s = document.getElementById(`step-${i}`);
+            if (s) {
+                s.classList.remove('active', 'done');
+                if (i <= current.n) {
+                    // For steps up to N, they are DONE unless it's exactly N and not 100% completed
+                    if (i < current.n) s.classList.add('done');
+                    else s.classList.add('active'); // i == current.n
+                    
+                    // Specific override for "ready": It COMPLETES step 2, but step 3 is waiting actively
+                    if ((status.toLowerCase() === 'ready' || status === 'Served') && i === 2) {
+                        s.classList.remove('active');
+                        s.classList.add('done');
+                    }
+                }
+            }
+        }
+
+        if (status.toLowerCase() === 'delivered') {
+            localStorage.removeItem(`br_active_order_${this.roomNumber}`);
+            this.activeOrderId = null;
+            setTimeout(() => this.updateActivePreview(false), 5000);
+            
+            // Re-fetch session data to populate order history after delivery
+            setTimeout(() => this.fetchGuestData(), 1000);
+        }
+    }
+
+    updateActivePreview(show = false) {
+        const preview = document.getElementById('active-order-preview');
+        const orderBtn = document.getElementById('f-card-order');
+        if (!preview) return;
+
+        if (this.activeOrderId || show) {
+            preview.style.display = 'flex';
+            if (orderBtn) orderBtn.style.display = 'none'; // Hide "Order Food" card on home
+        } else {
+            preview.style.display = 'none';
+            if (orderBtn) orderBtn.style.display = 'flex'; // Show "Order Food" card on home
+        }
+    }
+
+    switchView(view) {
+        const views = ['dashboard', 'menu', 'service'];
+        views.forEach(v => {
+            const el = document.getElementById(`view-${v}`);
+            if (el) el.style.display = 'none';
+            const nav = document.getElementById(`nav-${v}`);
+            if (nav) nav.classList.remove('active');
+        });
+
+        const target = document.getElementById(`view-${view}`);
+        if (target) target.style.display = 'block';
+        const navTarget = document.getElementById(`nav-${view}`);
+        if (navTarget) navTarget.classList.add('active');
+
+        this.currentView = view;
+        this.updateCartBar();
+    }
+
+    showTracker() {
+        const tracker = document.getElementById('tracker');
+        if (tracker) {
+            tracker.style.display = 'flex';
+            const roomNums = tracker.querySelectorAll('.room-num');
+            roomNums.forEach(el => el.innerText = this.roomNumber);
+        }
+    }
+
+    switchSubTab(tab) {
+        if (tab === 'wifi') {
+            document.getElementById('view-wifi').style.display = 'flex';
+        } else if (tab === 'laundry') {
+            document.getElementById('view-laundry').style.display = 'flex';
+        }
+    }
+
+    async sendQuickRequest(type) {
+        if (!window.firebaseFS) return;
+        const { collection, addDoc, serverTimestamp } = window.firebaseHooks;
+        try {
+            await addDoc(collection(window.firebaseFS, 'serviceRequests'), {
+                roomNumber: this.roomNumber,
+                type: type,
+                status: 'pending',
+                timestamp: Date.now(),
+                serverTimestamp: serverTimestamp()
+            });
+            
+            // Show Luxury Confirmation
+            const modal = document.getElementById('service-confirm-modal');
+            const marketingText = document.getElementById('service-marketing-txt');
+            if (modal) {
+                if (marketingText) {
+                    marketingText.innerText = `Your request for ${type} has been received. Our team at Barak Residency is dedicated to providing you with world-class hospitality. Please relax while we handle the rest.`;
+                }
+                modal.style.display = 'flex';
+            }
+        } catch (e) {
+            console.error("Service request failed", e);
+            alert("Connection error. Please try again.");
+        }
+    }
+
+    async sendCustomRequest() {
+        const msg = document.getElementById('service-message').value;
+        if (!msg) return;
+        
+        await this.sendQuickRequest(`Message: ${msg}`);
+        document.getElementById('service-message').value = '';
+    }
+
+    hapticFeedback() {
+        if (navigator.vibrate) navigator.vibrate(10);
+    }
+
+    setupTracking() {
+        // Polling as ultimate fallback
+        setInterval(() => {
+            if (this.activeOrderId) this.fetchGuestData();
+        }, 10000);
+    }
+}
+
+const portal = new GuestPortal();
+window.portal = portal;
+window.placeGuestOrder = () => portal.placeOrder();
+window.showTracker = () => portal.showTracker();
+window.activateReorder = () => {
+    document.getElementById('tracker').style.display = 'none';
+    portal.switchView('menu');
+};

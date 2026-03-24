@@ -366,7 +366,9 @@ async function init() {
     // so we directly call the data/listener functions.
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
-            window.location.href = 'index.html';
+            if (window.self === window.top) {
+                window.location.href = 'index.html';
+            }
         } else {
             await loadInitialData();
             startListeners();
