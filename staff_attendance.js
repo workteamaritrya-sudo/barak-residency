@@ -214,17 +214,12 @@ function listenToday(uid) {
 
         if (inT) {
             if (inEl) inEl.innerHTML = `<span class="ps-time">${inT.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}</span>`;
-            if (btnIn)  btnIn.disabled  = true;
-            if (btnOut) btnOut.disabled = !!outT;
         } else {
             if (inEl) inEl.innerHTML  = `<span class="ps-empty">Not punched</span>`;
-            if (btnIn)  btnIn.disabled  = false;
-            if (btnOut) btnOut.disabled = true;
         }
 
         if (outT) {
             if (outEl) outEl.innerHTML = `<span class="ps-time">${outT.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}</span>`;
-            if (btnOut) btnOut.disabled = true;
         } else {
             if (outEl) outEl.innerHTML = `<span class="ps-empty">Not punched</span>`;
         }
@@ -829,6 +824,7 @@ window.confirmUseStock = async function() {
     const newQty = Math.max(0, _useStockCurrentQty - qty);
     try {
         await updateDoc(doc(db, 'stock', _useStockSelectedId), { qty: newQty, updatedAt: serverTimestamp() });
+        updateDoc(doc(db, 'menuItems', _useStockSelectedId), { isAvailable: newQty > 0 }).catch(e=>{});
         if (msg) { msg.style.display='block'; msg.style.color='#22C55E'; msg.textContent='Removed ' + qty + ' from "' + _useStockSelectedName + '". New qty: ' + newQty; }
         _useStockSelectedId = null;
         setTimeout(() => window.openUseStockPopup(), 1300);

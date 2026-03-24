@@ -106,11 +106,13 @@ async function decrementDrinksFromStock(cartItems) {
                     sName.includes(name.split(' ')[0]);
             });
             if (match) {
+                const Math = window.Math;
                 const newQty = Math.max(0, (Number(match.qty) || 0) - (Number(ordered.qty) || 1));
                 await updateDoc(doc(db, 'stock', match.id), {
                     qty: newQty,
                     updatedAt: serverTimestamp()
                 });
+                updateDoc(doc(db, 'menuItems', match.id), { isAvailable: newQty > 0 }).catch(e=>{});
                 match.qty = newQty;
             }
         }
@@ -578,22 +580,19 @@ function promptVariant(item) {
     const viewVar = document.getElementById('qp-view-variant');
     const viewQty = document.getElementById('qp-view-quantity');
     
-    viewVar.style.display = 'flex';
-    viewQty.style.display = 'none';
-
-    if (type === 'Plate' || type === 'Portion') {
+    if ((type === 'Plate' || type === 'Portion') && item.priceHalf > 0) {
         const price = item.price || 0;
         const priceHalf = item.priceHalf || 0;
         viewVar.innerHTML = `
             <p class="text-sm text-gray">Select Portion Size</p>
             <div style="display:flex;flex-direction:column;gap:1.2rem;margin-top:1rem;">
                 <button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;" onclick="qpSelectVariant('Full', 'Full Plate', ${price})">Full Plate — ₹${price}</button>
-                ${priceHalf > 0 ? `<button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;border-color:var(--color-indigo-400);" onclick="qpSelectVariant('Half', 'Half Plate', ${priceHalf})">Half Plate — ₹${priceHalf}</button>` : ''}
+                <button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;border-color:var(--color-indigo-400);" onclick="qpSelectVariant('Half', 'Half Plate', ${priceHalf})">Half Plate — ₹${priceHalf}</button>
                 <button class="btn btn-outline" style="border:none;text-decoration:underline;margin-top:1rem;" onclick="document.getElementById('quantity-prompt-modal').style.display='none'">Cancel</button>
             </div>
         `;
     } else {
-        qpSelectVariant('Regular', 'Standard', item.price || 0);
+        qpSelectVariant(type === 'Bottle' ? 'Bottle' : 'Full', type === 'Bottle' ? '1 Item' : 'Full Plate', item.price || 0);
     }
     modal.style.display = 'flex';
 }

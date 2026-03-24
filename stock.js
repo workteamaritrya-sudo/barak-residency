@@ -17,10 +17,14 @@ import {
     getAuth, signInWithEmailAndPassword, signOut,
     onAuthStateChanged, browserLocalPersistence, setPersistence
 } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+import {
+    getStorage, ref, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/11.1.0/firebase-storage.js";
 import { firebaseConfig, app } from "./firebase-config.js";
 
-const db   = getFirestore(app);
-const auth = getAuth(app);
+const db      = getFirestore(app);
+const auth    = getAuth(app);
+const storage = getStorage(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
 //  State 
@@ -176,7 +180,7 @@ window.renderStock = function () {
     }).join('');
 };
 
-//  Add Stock Item (Admin Only) 
+// Add Stock Item (Admin Only)
 window.addStockItem = async function () {
     if (!isAdmin) { showToast('Only admin can add items', 'error'); return; }
 
@@ -185,22 +189,56 @@ window.addStockItem = async function () {
     const qty      = parseFloat(document.getElementById('add-qty').value) || 0;
     const unit     = document.getElementById('add-unit').value.trim() || 'pcs';
     const lowThresh= parseFloat(document.getElementById('add-low-thresh').value) || 5;
+    const price    = parseFloat(document.getElementById('add-price')?.value) || 0;
 
     if (!name || !category) { showToast('Please fill name and category', 'error'); return; }
+    
+    const btn = document.querySelector('.btn-add');
+    if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
 
     try {
-        await addDoc(collection(db, 'stock'), {
-            name, category, qty, unit, lowThresh,
+        let imageUrl = '';
+        const fileInput = document.getElementById('add-image');
+        if (fileInput && fileInput.files[0]) {
+            const file = fileInput.files[0];
+            const storageRef = ref(storage, 'menu/' + Date.now() + '_' + file.name);
+            await uploadBytes(storageRef, file);
+            imageUrl = await getDownloadURL(storageRef);
+        }
+
+        const docRef = await addDoc(collection(db, 'stock'), {
+            name, category, qty, unit, lowThresh, price, imageUrl,
             addedBy:   currentUser?.email || 'Admin',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         });
+
+        // Auto-sync to Menu if Beverage or priced
+        if (price > 0 || category === 'Beverages') {
+            const { setDoc } = await import("https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js");
+            await setDoc(doc(db, 'menuItems', docRef.id), {
+                id: docRef.id,
+                name: name,
+                category: category === 'Beverages' ? 'Drinks' : category,
+                price: price || 0,
+                priceHalf: 0,
+                description: `Auto-synced from inventory (${unit})`,
+                imageUrl: imageUrl || '',
+                portionType: 'Bottle',
+                isAvailable: qty > 0
+            });
+        }
+
         showToast(` ${name} added to inventory`, 'success');
+        
         // Clear form
-        ['add-name','add-qty','add-unit','add-low-thresh'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+        ['add-name','add-qty','add-unit','add-low-thresh','add-price'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         document.getElementById('add-category').value = '';
+        if (fileInput) fileInput.value = '';
     } catch (e) {
         showToast('Failed: ' + e.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '+ Add to Inventory'; }
     }
 };
 
@@ -220,6 +258,10 @@ window.markUsed = async function (id, currentQty, name) {
             updatedAt:  serverTimestamp(),
             lastUsedBy: currentUser?.email || 'Staff'
         });
+
+        // Try to update menu availability silently
+        updateDoc(doc(db, 'menuItems', id), { isAvailable: newQty > 0 }).catch(e => {});
+
         showToast(` ${name} updated: ${currentQty} → ${newQty}`, 'success');
     } catch (e) {
         showToast('Update failed: ' + e.message, 'error');
