@@ -18,12 +18,7 @@
     --color-red-500:       #EF4444;
     --color-yellow-500:    #F59E0B;
     --color-green-400:     #4ADE80;
-    --color-mint-400:      #52ffae;
     --gold-primary:        #D4AF37;
-    --gold-dim:            rgba(212, 175, 55, 0.25);
-    --gold-glow:           rgba(212, 175, 55, 0.4);
-    --glass-bg:            rgba(5, 11, 26, 0.8);
-    --glass-border:        rgba(212, 175, 55, 0.2);
     --text-gray:           #94A3B8;
 }
 
@@ -654,7 +649,8 @@ select option { background: #0B1427; color: #fff; }
     .luxury-portal-header { 
         padding: 0.8rem 0; margin-bottom: 0.5rem; 
         position: sticky; top: 0; z-index: 1000;
-        background: rgba(5, 11, 26, 0.9); backdrop-filter: blur(16px);
+        background: rgba(5, 11, 26, 0.95); backdrop-filter: blur(20px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
     .luxury-identity { font-size: 0.8rem; letter-spacing: 2px; }
     .portal-time-luxury { font-size: 1.1rem; }

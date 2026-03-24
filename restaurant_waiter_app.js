@@ -177,9 +177,11 @@ async function init() {
     startClock();
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
-            if (window.self === window.top) {
-                window.location.href = 'index.html';
-            }
+            onAuthStateChanged(auth, u => {
+                if (!u && window.self === window.top) {
+                    window.location.href = 'index.html';
+                }
+            });
         } else {
             await loadInitialData();
             startListeners();
@@ -881,14 +883,15 @@ async function submitLinkTable() {
     showToast(`Table ${tid} linked to Bill ${billId}`, 'success');
 }
 
-async function handleLogout() {
+window.handleLogout = async () => {
+    if (window.self !== window.top) return; // Prevent iframe logout redirect
     try {
         await signOut(auth);
         window.location.href = 'index.html';
     } catch (e) {
         window.location.href = 'index.html';
     }
-}
+};
 
 //  Export to window 
 // All functions exposed so inline HTML onclick handlers work
