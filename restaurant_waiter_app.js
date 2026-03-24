@@ -650,28 +650,78 @@ function addToCartFromModal() {
 
 
 function renderCart() {
-    const el = document.getElementById('rest-waiter-cart-items');
-    const tot = document.getElementById('rest-waiter-cart-total');
-    const btn = document.getElementById('btn-rest-waiter-order');
-    if (!el) return;
-    if (cart.length === 0) {
-        el.innerHTML = '<div class="empty-cart">Cart is empty</div>';
-        tot.innerText = '0'; btn.disabled = true; return;
+    const ctnDesktop = document.getElementById('rest-waiter-cart-items');
+    const footerCommon = document.getElementById('cart-footer-common');
+    const placeholderMob = document.getElementById('cart-placeholder-mob');
+    const badge = document.getElementById('cart-badge-val');
+    const totalEl = document.getElementById('rest-waiter-cart-total');
+    
+    // Total Items for Badge
+    const totalQty = cart.reduce((s, i) => s + i.qty, 0);
+    if (badge) {
+        badge.innerText = totalQty;
+        badge.style.display = totalQty > 0 ? 'flex' : 'none';
     }
-    let total = 0; el.innerHTML = '';
-    cart.forEach(c => {
-        const it = c.qty * c.item.price; total += it;
-        const d = document.createElement('div'); d.className = 'cart-item';
-        d.innerHTML = `<div><span class="cart-item-qty">${c.qty}x</span><span>${c.item.name}</span></div><span>₹${it}</span>`;
-        el.appendChild(d);
-    });
-    tot.innerText = total; btn.disabled = false;
+
+    if (cart.length === 0) {
+        const emptyHtml = '<div style="color:gray;text-align:center;padding:2rem;">Cart is empty</div>';
+        ctnDesktop.innerHTML = emptyHtml;
+        if (placeholderMob) placeholderMob.innerHTML = emptyHtml;
+        totalEl.innerText = '0';
+        document.getElementById('btn-rest-waiter-order').disabled = true;
+        return;
+    }
+
+    const itemsHtml = cart.map((c, idx) => `
+        <div class="cart-row" style="display:flex; justify-content:space-between; align-items:center; padding:0.8rem; background:rgba(255,255,255,0.03); border-radius:12px; margin-bottom:0.8rem; border:1px solid rgba(255,255,255,0.05);">
+            <div>
+                <div style="font-weight:700; font-size:0.9rem; color:white;">${c.item.name}</div>
+                <div style="color:var(--gold-primary); font-size:0.8rem;">₹${c.item.price}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.8rem;">
+                <button onclick="window.updateCartQty(${idx}, -1)" style="width:28px; height:28px; border-radius:8px; border:none; background:rgba(255,255,255,0.1); color:white;">-</button>
+                <div style="font-weight:900; min-width:20px; text-align:center; color:white;">${c.qty}</div>
+                <button onclick="window.updateCartQty(${idx}, 1)" style="width:28px; height:28px; border-radius:8px; border:none; background:rgba(212,175,55,0.2); color:var(--gold-primary);">+</button>
+            </div>
+        </div>
+    `).join('');
+
+    ctnDesktop.innerHTML = itemsHtml;
+    if (placeholderMob) {
+        placeholderMob.innerHTML = '<div style="flex:1; overflow-y:auto; padding-right:0.5rem;" id="mob-cart-list"></div>';
+        if (footerCommon) placeholderMob.innerHTML += footerCommon.innerHTML;
+        const mobCartList = placeholderMob.querySelector('#mob-cart-list');
+        if (mobCartList) mobCartList.innerHTML = itemsHtml;
+    }
+
+    const total = cart.reduce((s, i) => s + (i.item.price * i.qty), 0);
+    totalEl.innerText = total.toLocaleString();
+    if (placeholderMob) {
+        const mobTotalEl = placeholderMob.querySelector('#rest-waiter-cart-total');
+        if (mobTotalEl) mobTotalEl.innerText = total.toLocaleString();
+    }
+    document.getElementById('btn-rest-waiter-order').disabled = false;
+
     const info = document.getElementById('rest-waiter-table-info');
     if (info && info.innerText) {
         const base = info.innerText.split(' | Total:')[0];
         info.innerHTML = `${base} <span style="color:var(--color-green-400);font-weight:bold;margin-left:0.5rem;">| Total: ₹${total}</span>`;
     }
 }
+
+window.updateCartQty = (idx, delta) => {
+    if (cart[idx]) {
+        cart[idx].qty += delta;
+        if (cart[idx].qty <= 0) {
+            cart.splice(idx, 1);
+        }
+        renderCart();
+    }
+};
+
+window.toggleCart = () => {
+    document.getElementById('cart-overlay-mob').classList.toggle('active');
+};
 
 //  Place Order 
 
@@ -758,15 +808,25 @@ async function placeOrder() {
             { type: isUpdating ? 'addon' : 'dinein', orderId: orderIdStr, tableId: String(activeTableId) }
         );
 
-        // Clear cart and show success
-        cart = []; editingOrderId = null;
+        // 4. Record the specific order
+        await pushOrderToCloud(orderObj);
+
+        // --- SUCCESS SEQUENCE ---
+        new Audio('orderconfirm.mp3').play().catch(e => console.log("Audio play failed"));
+        document.getElementById('success-screen').style.display = 'flex';
+
+        // 5. Update Stock (Async)
+        decrementDrinksFromStock(cart);
+        
+        cart = [];
         renderCart();
-        renderTableSidebar();
-        showSuccessOverlay(orderObj, isUpdating);
+
+        // Auto-Home
+        setTimeout(() => window.backToHome(), 2500);
 
     } catch (e) {
-        console.error('[placeOrder] Failed:', e);
-        showToast('Order failed. Check connection.', 'error');
+        console.error('Order Fail:', e);
+        alert('Order Submission Failed. Check network.');
     } finally {
         _isPlacingOrder = false;
     }

@@ -7,12 +7,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="restaurant_portal.css?v=1.6">
     <link rel="icon" href="br.png" type="image/png">
+    <style>
+        /* Mobile POS Refactor */
+        @media (max-width: 900px) {
+            .waiter-sidebar { display: none !important; }
+            .pos-cart { display: none !important; }
+            .luxury-portal-header { justify-content: space-between !important; padding: 1rem !important; }
+            .luxury-portal-header .luxury-identity { font-size: 0.9rem !important; }
+            .waiter-layout { padding: 0.5rem !important; }
+            .pos-menu { grid-template-columns: 1fr 1fr !important; }
+        }
+
+        /* Floating Cart (Mobile Friendly) */
+        .cart-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(5, 11, 26, 0.98); backdrop-filter: blur(20px); flex-direction: column; padding: 2rem; }
+        .cart-overlay.active { display: flex; animation: slideUp 0.4s cubic-bezier(.22,1,.36,1); }
+        .floating-cart-btn { position: fixed; bottom: 2rem; right: 2rem; z-index: 900; background: var(--gold-primary); color: #000; border-radius: 50%; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 40px rgba(212,175,55,0.4); border: none; cursor: pointer; transition: 0.2s; }
+        .cart-badge { position: absolute; top: -5px; right: -5px; background: #FF4444; color: white; border-radius: 50%; min-width: 22px; height: 22px; font-size: 0.75rem; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid #050B1A; }
+
+        /* Success Screen */
+        .success-overlay { display: none; position: fixed; inset: 0; z-index: 2000; background: #050B1A; align-items: center; justify-content: center; flex-direction: column; text-align: center; }
+        .success-medal { width: 120px; height: 120px; background: var(--gold-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 4rem; margin-bottom: 2rem; box-shadow: 0 0 50px rgba(212,175,55,0.3); animation: medalPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        
+        @keyframes medalPop { 0% { transform: scale(0); opacity:0; } 100% { transform: scale(1); opacity:1; } }
+        @keyframes slideUp { 0% { transform: translateY(100%); } 100% { transform: translateY(0); } }
+    </style>
 </head>
 <body>
 
 <div class="page">
-    <header class="luxury-portal-header" style="justify-content:center; padding:1.25rem;">
+    <header class="luxury-portal-header" style="justify-content:space-between; padding:1.25rem;">
         <div class="luxury-identity">BARAK TABLE ORDER</div>
+        <button class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.75rem; border-color:rgba(255,255,255,0.2);" onclick="window.backToHome()">BACK TO PORTAL ×</button>
     </header>
 
 
@@ -43,10 +68,10 @@
                     </div>
                     <div class="pos-menu" id="rest-waiter-menu-grid"></div>
                 </div>
-                <div class="pos-cart">
+                <div id="desktop-cart" class="pos-cart">
                     <div style="padding:1.25rem; border-bottom:1px solid var(--glass-border); font-weight:800; color:var(--gold-primary); text-transform:uppercase; letter-spacing:1px; font-size:0.9rem;">Live Cart</div>
                     <div class="cart-items" id="rest-waiter-cart-items" style="flex:1; overflow-y:auto; padding:1.25rem;"></div>
-                    <div class="cart-total">
+                    <div id="cart-footer-common" class="cart-total">
                         <div class="d-flex justify-between" style="font-size:1.6rem; font-weight:800; margin-bottom:1.5rem;">
                             <span style="opacity:0.6; font-size:1rem; padding-top:0.4rem;">Total</span>
                             <span class="font-bold" style="color:#4ADE80;">₹<span id="rest-waiter-cart-total">0</span></span>
@@ -58,6 +83,27 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Mobile Cart Layer -->
+<div id="cart-overlay-mob" class="cart-overlay">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+        <h2 style="color:var(--gold-primary); font-family:'Outfit'; font-weight:800; letter-spacing:2px;">REVIEW ORDER</h2>
+        <button onclick="window.toggleCart()" style="background:transparent; border:none; color:white; font-size:2rem;">&times;</button>
+    </div>
+    <div id="cart-placeholder-mob" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>
+</div>
+
+<button id="floating-cart" class="floating-cart-btn" onclick="window.toggleCart()">
+    <svg style="width:28px; height:28px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6zM3 6h18M16 10a4 4 0 01-8 0"></path></svg>
+    <span id="cart-badge-val" class="cart-badge" style="display:none;">0</span>
+</button>
+
+<!-- Success Screen Overlay -->
+<div id="success-screen" class="success-overlay">
+    <div class="success-medal">✓</div>
+    <h1 style="color:var(--gold-primary); font-family:'Outfit'; font-weight:900; letter-spacing:3px; margin-bottom:1rem;">ORDER PLACED</h1>
+    <p style="color:white; opacity:0.6; letter-spacing:1px;">Redirecting back to portal...</p>
 </div>
 
 <!-- Success Overlay -->

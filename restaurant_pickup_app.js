@@ -5,6 +5,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
 import { getFirestore, collection, doc, onSnapshot, updateDoc, setDoc, query, where, arrayUnion, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo",
@@ -129,18 +130,29 @@ window.addToCart = (id, flavor, price) => {
 };
 
 function renderCart() {
-    const ctn = document.getElementById('cart-items');
+    const ctnCommon = document.getElementById('cart-content-common');
+    const placeholderMob = document.getElementById('cart-placeholder-mob');
+    const badge = document.getElementById('cart-badge-val');
     const totalEl = document.getElementById('total-amt');
     const placeBtn = document.getElementById('place-btn');
     
+    // Total Items for Badge
+    const totalQty = cart.reduce((s, i) => s + i.qty, 0);
+    if (badge) {
+        badge.innerText = totalQty;
+        badge.style.display = totalQty > 0 ? 'flex' : 'none';
+    }
+
     if (cart.length === 0) {
-        ctn.innerHTML = '<div style="color:gray;text-align:center;padding:2rem;">Cart is empty</div>';
+        const emptyHtml = '<div style="color:gray;text-align:center;padding:2rem;">Cart is empty</div>';
+        document.getElementById('cart-items').innerHTML = emptyHtml;
+        if (placeholderMob) placeholderMob.innerHTML = emptyHtml;
         totalEl.innerText = '0';
         placeBtn.disabled = true;
         return;
     }
 
-    ctn.innerHTML = cart.map((c, idx) => `
+    const itemsHtml = cart.map((c, idx) => `
         <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:0.8rem; border-radius:12px; margin-bottom:0.8rem; border:1px solid rgba(255,255,255,0.05);">
             <div style="flex:1;">
                 <div style="font-weight:700; font-size:0.9rem; color:white;">${c.name}</div>
@@ -154,10 +166,25 @@ function renderCart() {
         </div>
     `).join('');
 
+    document.getElementById('cart-items').innerHTML = itemsHtml;
+    if (placeholderMob) {
+        // For mobile, we clone the common controls but keep them functional
+        placeholderMob.innerHTML = ctnCommon.innerHTML;
+        // Re-inject items specifically into the mobile placeholder's cart-items div
+        placeholderMob.querySelector('#cart-items').innerHTML = itemsHtml;
+    }
+
     const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
     totalEl.innerText = total.toLocaleString();
+    if (placeholderMob) placeholderMob.querySelector('#total-amt').innerText = total.toLocaleString();
+    
     placeBtn.disabled = false;
+    if (placeholderMob) placeholderMob.querySelector('#place-btn').disabled = false;
 }
+
+window.toggleCart = () => {
+    document.getElementById('cart-overlay-mob').classList.toggle('active');
+};
 
 window.updateCartQty = (idx, delta) => {
     cart[idx].qty += delta;
@@ -192,13 +219,16 @@ window.submitOrder = async () => {
             });
         }
 
-        alert('Order Placed Successfully!');
+        // --- SUCCESS SEQUENCE ---
+        new Audio('orderconfirm.mp3').play().catch(e => console.log("Audio play failed"));
+        document.getElementById('success-screen').style.display = 'flex';
+        
         cart = [];
         renderCart();
-        btn.innerText = 'PLACE ORDER';
         
-        // Auto-Home on Success
-        setTimeout(() => window.backToHome(), 100);
+        // Return to Home after delay
+        setTimeout(() => window.backToHome(), 2500);
+
     } catch (e) {
         alert('Order Failed: ' + e.message);
         btn.disabled = false;

@@ -27,13 +27,36 @@
         .qty-ctrl button { background: transparent; border: none; color: #fff; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         
         .history-card { background: rgba(34,197,94,0.05); border: 1px solid rgba(34,197,94,0.1); border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; }
+        .history-card { background: rgba(34,197,94,0.05); border: 1px solid rgba(34,197,94,0.1); border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; }
+
+        /* Floating Cart (Mobile Friendly) */
+        .cart-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(5, 11, 26, 0.98); backdrop-filter: blur(20px); flex-direction: column; padding: 2rem; }
+        .cart-overlay.active { display: flex; animation: slideUp 0.4s cubic-bezier(.22,1,.36,1); }
+        .floating-cart-btn { position: fixed; bottom: 2rem; right: 2rem; z-index: 900; background: var(--gold-primary); color: #000; border-radius: 50%; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 40px rgba(212,175,55,0.4); border: none; cursor: pointer; transition: 0.2s; }
+        .cart-badge { position: absolute; top: -5px; right: -5px; background: #FF4444; color: white; border-radius: 50%; min-width: 22px; height: 22px; font-size: 0.75rem; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid #050B1A; }
+
+        /* Success Screen */
+        .success-overlay { display: none; position: fixed; inset: 0; z-index: 2000; background: #050B1A; align-items: center; justify-content: center; flex-direction: column; text-align: center; }
+        .success-medal { width: 120px; height: 120px; background: var(--gold-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 4rem; margin-bottom: 2rem; box-shadow: 0 0 50px rgba(212,175,55,0.3); animation: medalPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        
+        @keyframes medalPop { 0% { transform: scale(0); opacity:0; } 100% { transform: scale(1); opacity:1; } }
+        @keyframes slideUp { 0% { transform: translateY(100%); } 100% { transform: translateY(0); } }
+        
+        @media (max-width: 900px) {
+            .pos-cart { display: none !important; }
+            .waiter-sidebar { display: none !important; }
+            .luxury-portal-header { justify-content: space-between !important; padding: 1rem !important; }
+            .luxury-portal-header .luxury-identity { font-size: 0.9rem !important; }
+            .waiter-layout { padding: 0.5rem !important; }
+        }
     </style>
     <link rel="icon" href="br.png" type="image/png">
 </head>
 <body>
     <div class="page">
-        <header class="luxury-portal-header" style="justify-content: center; padding: 1.25rem;">
+        <header class="luxury-portal-header" style="justify-content: space-between; padding: 1.25rem;">
             <div class="luxury-identity">ROOM ORDER POS</div>
+            <button class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.75rem; border-color:rgba(255,255,255,0.2);" onclick="window.backToHome()">BACK TO PORTAL ×</button>
         </header>
 
         <main class="waiter-layout">
@@ -76,12 +99,12 @@
                         <div id="order-menu-grid" class="pos-menu" style="grid-template-columns: 1fr 1fr !important; display:grid;"></div>
                     </div>
 
-                    <!-- Cart -->
-                    <div class="pos-cart" style="flex:1; min-width:320px;">
+                    <!-- Cart (Desktop Only) -->
+                    <div id="desktop-cart" class="pos-cart" style="flex:1; min-width:320px;">
                         <h3 style="color:var(--gold-primary); font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:1rem; margin-bottom:1.5rem;">Live Cart</h3>
                         <div id="waiter-cart-items" class="cart-items" style="flex:1; overflow-y:auto;"></div>
                         
-                        <div class="cart-total" style="margin-top:auto; padding-top:2rem; border-top:1px solid rgba(255,255,255,0.1);">
+                        <div id="cart-footer-common" class="cart-total" style="margin-top:auto; padding-top:2rem; border-top:1px solid rgba(255,255,255,0.1);">
                             <div class="d-flex justify-between" style="font-size:1.6rem; font-weight:800; margin-bottom:1.5rem;">
                                 <span style="opacity:0.6; font-size:1rem; padding-top:0.4rem;">Order Total</span>
                                 <span style="color:#4ADE80;">₹<span id="waiter-total-amt">0</span></span>
@@ -92,6 +115,27 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Mobile Cart Layer -->
+    <div id="cart-overlay-mob" class="cart-overlay">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+            <h2 style="color:var(--gold-primary); font-family:'Outfit'; font-weight:800; letter-spacing:2px;">REVIEW ORDER</h2>
+            <button onclick="window.toggleCart()" style="background:transparent; border:none; color:white; font-size:2rem;">&times;</button>
+        </div>
+        <div id="cart-placeholder-mob" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>
+    </div>
+
+    <button id="floating-cart" class="floating-cart-btn" onclick="window.toggleCart()">
+        <svg style="width:28px; height:28px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6zM3 6h18M16 10a4 4 0 01-8 0"></path></svg>
+        <span id="cart-badge-val" class="cart-badge" style="display:none;">0</span>
+    </button>
+
+    <!-- Success Screen Overlay -->
+    <div id="success-screen" class="success-overlay">
+        <div class="success-medal">✓</div>
+        <h1 style="color:var(--gold-primary); font-family:'Outfit'; font-weight:900; letter-spacing:3px; margin-bottom:1rem;">ORDER PLACED</h1>
+        <p style="color:white; opacity:0.6; letter-spacing:1px;">Redirecting back to portal...</p>
     </div>
 
     <!-- Portion/Qty Modal -->
