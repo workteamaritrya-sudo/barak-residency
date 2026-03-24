@@ -77,9 +77,9 @@
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo",
@@ -114,11 +114,13 @@
             return;
         }
 
-        grid.innerHTML = orders.map(o => `
+        grid.innerHTML = orders.map(o => {
+            const target = o.orderType === 'Pickup' ? 'PICKUP' : (o.roomNumber ? `ROOM ${o.roomNumber}` : `TABLE ${o.tableId}`);
+            return `
             <div class="order-card" style="border-top: 5px solid ${getStatusColor(o.status)}">
                 <div class="order-header">
                     <div>
-                        <div class="target">ROOM ${o.roomNumber || 'T-'+o.tableId}</div>
+                        <div class="target">${target}</div>
                         <div style="font-size: 0.7rem; opacity: 0.5;">ID: ${o.id.slice(-6)}</div>
                     </div>
                     <div class="time">${new Date(o.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
@@ -126,7 +128,10 @@
                 <div class="order-items">
                     ${o.items.map(item => `
                         <div class="item">
-                            <span><span class="qty">${item.qty}x</span> ${item.name}</span>
+                            ${typeof item === 'object' 
+                                ? `<span><span class="qty">${item.qty || 1}x</span> ${item.name || item.itemName || 'Item'}</span>`
+                                : `<span><span class="qty">1x</span> ${item}</span>`
+                            }
                         </div>
                     `).join('')}
                 </div>
@@ -137,8 +142,8 @@
                         <button class="btn btn-served" onclick="updateOrderStatus('${o.id}', 'Served')">SERVED</button>
                     `}
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     });
 
     function getStatusColor(s) {

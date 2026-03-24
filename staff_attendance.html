@@ -57,8 +57,19 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /*  Sticky Time Bar  */
+        .sticky-time-bar {
+            position: sticky; top: 0; z-index: 1000;
+            background: rgba(11, 20, 39, 0.85); backdrop-filter: blur(14px);
+            padding: 0.8rem 1.25rem; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            animation: slideDown 0.3s ease;
+        }
+        .stb-time { font-family: 'Inter', sans-serif; font-weight: 700; color: var(--gold); font-size: 1rem; }
+        .stb-status { font-size: 0.65rem; color: var(--text-mute); text-transform: uppercase; letter-spacing: 1px; }
+
         /*  Brand  */
-        .brand { text-align: center; padding: 2.5rem 1rem 1rem; }
+        .brand { text-align: center; padding: 1.5rem 1rem 1rem; }
         .brand h1 {
             font-family: 'Cormorant Garamond', serif;
             font-size: 1.7rem; letter-spacing: 5px; color: var(--gold); font-weight: 600;
@@ -337,27 +348,40 @@
 </div>
 
 <!--  DASHBOARD  -->
-<div id="dashboard">
+<div id="dashboard" style="display:none;">
 
-    <!-- Welcome -->
-    <div class="brand">
-        <h1>BARAK RESIDENCY</h1>
-        <p>Staff Portal</p>
+    <!-- Sticky Header -->
+    <div id="sticky-header" class="sticky-time-bar" style="display:none;">
+        <div>
+            <div id="stb-clock" class="stb-time">00:00:00</div>
+            <div id="stb-shift" class="stb-status">-- --</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+            <button class="btn-punch in" id="stb-btn-in" onclick="punchIn()" style="padding:0.4rem 0.8rem;font-size:0.65rem;border-radius:12px;">IN</button>
+            <button class="btn-punch out" id="stb-btn-out" onclick="punchOut()" style="padding:0.4rem 0.8rem;font-size:0.65rem;border-radius:12px;">OUT</button>
+        </div>
     </div>
 
-    <div class="welcome-banner">
-        <div class="avatar-circle" id="avatar-initials">?</div>
+    <!-- Brand -->
+    <div class="brand">
+        <h1>BARAK RESIDENCY</h1>
+        <p>Unified Staff Portal</p>
+    </div>
+
+    <!-- Welcome & Avatar -->
+    <div class="welcome-row card">
+        <div class="avatar" id="avatar-initials">?</div>
         <div class="welcome-text">
             <h2 id="welcome-name">Hello!</h2>
             <p id="welcome-dept">Loading…</p>
         </div>
     </div>
 
-    <!-- Live Clock -->
-    <div class="clock-card">
+    <!-- Live Clock (Hidden as we have sticky) -->
+    <div class="clock-card" style="display:none;">
         <div id="live-time">--:--:--</div>
         <div id="live-date">---</div>
-        <span id="shift-badge">Detecting shift…</span>
+        <span id="shift-badge">---</span>
     </div>
 
     <!-- Attendance Punch -->
@@ -432,7 +456,7 @@
             id="btn-open-rest-waiter"
             onclick="openRestWaiter()"
             style="
-                width:100%; padding:1.1rem; margin-bottom:1.2rem;
+                width:100%; padding:1.1rem; margin-bottom:0.8rem;
                 border:none; border-radius:20px; cursor:pointer;
                 background:linear-gradient(135deg,#1a6e3c,#22C55E);
                 color:#fff; font-family:'Inter',sans-serif;
@@ -440,9 +464,22 @@
                 text-transform:uppercase; transition:0.25s;
                 box-shadow:0 6px 20px rgba(34,197,94,0.25);
             "
-            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 28px rgba(34,197,94,0.4)'"
-            onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(34,197,94,0.25)'"
         >️&nbsp; Place Table Order</button>
+
+        <!-- New Pickup Order Button -->
+        <button
+            id="btn-open-pickup"
+            onclick="openPickupOverlay()"
+            style="
+                width:100%; padding:1.1rem; margin-bottom:1.2rem;
+                border:none; border-radius:20px; cursor:pointer;
+                background:linear-gradient(135deg,#5B21B6,#7C3AED);
+                color:#fff; font-family:'Inter',sans-serif;
+                font-size:0.9rem; font-weight:800; letter-spacing:2px;
+                text-transform:uppercase; transition:0.25s;
+                box-shadow:0 6px 20px rgba(124,58,237,0.25);
+            "
+        >️&nbsp; NEW PICKUP ORDER</button>
 
         <!-- Active Food Orders (from kitchen) -->
         <div class="notif-card">
@@ -462,8 +499,8 @@
         </div>
     </div>
 
-    <button onclick="openStockApp()" style="width:100%; padding:0.9rem; margin-top:1.5rem; margin-bottom:0.5rem; border:1px solid rgba(212,175,55,0.4); border-radius:12px; background:transparent; color:var(--gold); font-family:'Inter',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:0.2s;"> Update Stock / Inventory</button>
-    <button onclick="openUseStockPopup()" style="width:100%; padding:0.9rem; margin-bottom:0.5rem; border:1px solid rgba(239,68,68,0.4); border-radius:12px; background:rgba(239,68,68,0.06); color:#FCA5A5; font-family:'Inter',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:0.2s;"> Remove Stock Item</button>
+    <button id="btn-adm-inventory" onclick="openStockApp()" style="display:none; width:100%; padding:0.9rem; margin-top:1.5rem; margin-bottom:0.5rem; border:1px solid rgba(212,175,55,0.4); border-radius:12px; background:transparent; color:var(--gold); font-family:'Inter',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:0.2s;"> Full Inventory</button>
+    <button onclick="openUseStockPopup()" style="width:100%; padding:0.9rem; margin-bottom:0.5rem; border:1px solid rgba(239,68,68,0.4); border-radius:12px; background:rgba(239,68,68,0.06); color:#FCA5A5; font-family:'Inter',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:0.2s;"> Remove Drink Stock</button>
     <button class="btn-logout" onclick="staffLogout()"> Sign Out</button>
 </div>
 
@@ -584,6 +621,38 @@
         src=""
         style="flex:1; border:none; width:100%; height:100%;"
         allow="camera; microphone"
+    ></iframe>
+</div>
+
+<!--  Pickup Order Full-Screen Overlay  -->
+<div id="pickup-overlay" style="
+    display:none;
+    position:fixed; inset:0; z-index:10002;
+    background:#050B18;
+    flex-direction:column;
+">
+    <div style="
+        display:flex; align-items:center; justify-content:space-between;
+        padding:0.9rem 1.2rem;
+        background:rgba(124,58,237,0.07);
+        border-bottom:1px solid rgba(124,58,237,0.2);
+        flex-shrink:0;
+    ">
+        <span style="font-family:'Cormorant Garamond',serif; font-size:1.2rem; color:#A78BFA; letter-spacing:3px; font-weight:600;">NEW PICKUP</span>
+        <button
+            onclick="closePickupOverlay()"
+            style="
+                background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4);
+                color:#FCA5A5; border-radius:10px; padding:0.5rem 1.1rem;
+                font-family:'Inter',sans-serif; font-size:0.8rem; font-weight:700;
+                letter-spacing:1px; cursor:pointer; transition:0.2s;
+            "
+        > Close</button>
+    </div>
+    <iframe
+        id="pickup-iframe"
+        src=""
+        style="flex:1; border:none; width:100%; height:100%;"
     ></iframe>
 </div>
 

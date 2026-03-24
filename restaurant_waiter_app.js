@@ -5,13 +5,13 @@
  * 
  */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
 import {
     getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc,
     onSnapshot, query, orderBy, limit, updateDoc, serverTimestamp,
     runTransaction, increment
-} from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 
 //  Firebase Config 
 const firebaseConfig = {
@@ -72,7 +72,7 @@ async function pushOrderToCloud(orderObj) {
     try {
         const oid = orderObj.order_id || orderObj.id;
         const orderRef = doc(db, 'orders', String(oid));
-        let cloudStatus = orderObj.status || 'preparing';
+        let cloudStatus = orderObj.status || 'Pending'; // Use Pending for KDS
         await setDoc(orderRef, {
             ...orderObj,
             order_id: oid,
@@ -153,17 +153,18 @@ function startListeners() {
         if (!snap.empty) {
             const cloudItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             
-            const updatedMenu = getDefaultMenu().map(baseItem => {
-                const cloudItem = cloudItems.find(c => c.id === baseItem.id);
-                if (!cloudItem) return baseItem;
+            // source of truth is cloudItems. Merge base items only for missing fields.
+            const updatedMenu = cloudItems.map(cloudItem => {
+                const baseItem = getDefaultMenu().find(b => b.id === cloudItem.id) || {};
                 return {
                     ...baseItem,
-                    price: cloudItem.price || cloudItem.PriceFull || cloudItem.Price || baseItem.price,
-                    priceHalf: cloudItem.priceHalf || cloudItem.PriceHalf || baseItem.priceHalf,
-                    imageUrl: cloudItem.imageUrl || cloudItem.ImageURL || cloudItem.image || baseItem.imageUrl,
-                    isAvailable: cloudItem.isAvailable !== false
+                    ...cloudItem,
+                    name: cloudItem.name || cloudItem.Name || cloudItem.itemName || baseItem.name,
+                    price: Number(cloudItem.price || cloudItem.PriceFull || cloudItem.Price || baseItem.price || 0),
+                    priceHalf: Number(cloudItem.priceHalf || cloudItem.PriceHalf || baseItem.priceHalf || 0)
                 };
-            });
+            }).filter(i => (i.name || i.Name) && i.price > 0);
+            
             menu = updatedMenu;
             renderMenu(document.getElementById('rest-waiter-menu-search')?.value || '');
         }
@@ -199,13 +200,8 @@ async function loadInitialData() {
 
     const menuSnap = await getDocs(collection(db, 'menuItems'));
     if (!menuSnap.empty) {
-        const cloudMenu = [];
-        menuSnap.forEach(d => {
-            const data = d.data();
-            const name = data.name || data.Name || data.itemName || '';
-            if (name.trim().length > 0) cloudMenu.push({ id: d.id, ...data });
-        });
-        menu = cloudMenu;
+        menu = menuSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .filter(i => (i.name || i.Name || i.itemName) && Number(i.price || i.PriceFull || i.Price || 0) > 0);
         console.log('[Menu] Loaded from Cloud:', menu.length);
     } 
     
@@ -570,30 +566,39 @@ let pendingPortionQty = 1;
 
 function promptVariant(item) {
     if (!activeTableId) { showToast('Select a table first', 'warning'); return; }
+    
+    const type = item.portionType || 'Plate';
+    const hasVariants = (type === 'Plate' || type === 'Portion') && item.priceHalf > 0;
+
+    if (!hasVariants) {
+        // Quick add for simple items like Water Bottles / Drinks
+        pendingPortionItem = item;
+        pendingPortionVariant = { variant: 'Full', label: '1 Item', price: item.price || 0 };
+        const qtyEl = document.getElementById('qp-qty');
+        if (qtyEl) qtyEl.value = 1; // Ensure qty is reset for quick add
+        addToCartFromModal(); // Reuse the logic which already handles cart merge
+        return;
+    }
+
     pendingPortionItem = item;
     const modal = document.getElementById('quantity-prompt-modal');
     if (!modal) return;
     const name = item.name || 'Item';
     document.getElementById('qp-item-name').innerText = name;
     
-    const type = item.portionType || 'Plate';
     const viewVar = document.getElementById('qp-view-variant');
     const viewQty = document.getElementById('qp-view-quantity');
     
-    if ((type === 'Plate' || type === 'Portion') && item.priceHalf > 0) {
-        const price = item.price || 0;
-        const priceHalf = item.priceHalf || 0;
-        viewVar.innerHTML = `
-            <p class="text-sm text-gray">Select Portion Size</p>
-            <div style="display:flex;flex-direction:column;gap:1.2rem;margin-top:1rem;">
-                <button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;" onclick="qpSelectVariant('Full', 'Full Plate', ${price})">Full Plate — ₹${price}</button>
-                <button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;border-color:var(--color-indigo-400);" onclick="qpSelectVariant('Half', 'Half Plate', ${priceHalf})">Half Plate — ₹${priceHalf}</button>
-                <button class="btn btn-outline" style="border:none;text-decoration:underline;margin-top:1rem;" onclick="document.getElementById('quantity-prompt-modal').style.display='none'">Cancel</button>
-            </div>
-        `;
-    } else {
-        qpSelectVariant(type === 'Bottle' ? 'Bottle' : 'Full', type === 'Bottle' ? '1 Item' : 'Full Plate', item.price || 0);
-    }
+    const price = item.price || 0;
+    const priceHalf = item.priceHalf || 0;
+    viewVar.innerHTML = `
+        <p class="text-sm text-gray">Select Portion Size</p>
+        <div style="display:flex;flex-direction:column;gap:1.2rem;margin-top:1rem;">
+            <button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;" onclick="qpSelectVariant('Full', 'Full Plate', ${price})">Full Plate — ₹${price}</button>
+            <button class="btn btn-outline" style="padding:1.5rem;font-size:1.1rem;border-color:var(--color-indigo-400);" onclick="qpSelectVariant('Half', 'Half Plate', ${priceHalf})">Half Plate — ₹${priceHalf}</button>
+            <button class="btn btn-outline" style="border:none;text-decoration:underline;margin-top:1rem;" onclick="document.getElementById('quantity-prompt-modal').style.display='none'">Cancel</button>
+        </div>
+    `;
     modal.style.display = 'flex';
 }
 
@@ -721,7 +726,7 @@ async function placeOrder() {
                 ? ((table.orders?.find(o => o.id === orderIdStr)?.total || 0) + total)
                 : Number(total),
             total_price: Number(total),
-            status: 'preparing',
+            status: 'Pending', // Unified status for KDS
             orderType: 'table',
             guestName: currentGuestName || 'Walk-in',
             pax: currentPax || 1,

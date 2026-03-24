@@ -56,3 +56,22 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : { title: 'Barak Residency', message: 'New update available!' };
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.message,
+      icon: './br.png',
+      badge: './br.png',
+      vibrate: [200, 100, 200]
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow('./staff_attendance.html')
+  );
+});

@@ -6,13 +6,13 @@
  * 
  */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
 import {
     getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc,
     onSnapshot, query, orderBy, limit, updateDoc, deleteDoc,
     serverTimestamp, where, increment, arrayUnion
-} from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 
 //  Firebase Config 
 const firebaseConfig = {
@@ -323,25 +323,30 @@ function startListeners() {
         }
     });
 
+    // Real-time Revenue (Ledger) Sync
+    onSnapshot(doc(db, 'stats', 'restaurant'), snap => {
+        if (snap.exists()) {
+            restaurantRevenue = snap.data().rev || 0;
+            updateRevDisplay();
+        }
+    });
+
     // Menu items — Merge Sync (Safety First)
     onSnapshot(collection(db, 'menuItems'), async snap => {
         if (!snap.empty) {
             const cloudItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-            // Core Merge Logic: Master Fallback is the Ground Truth for Structure
-            const updatedMenu = JSON.parse(JSON.stringify(SHARED_MENU)).map(baseItem => {
-                const cloudItem = cloudItems.find(c => String(c.id) === String(baseItem.id));
-                if (!cloudItem) return baseItem;
-
-                // Merge only valid properties — preserve structural keys (name, category)
+            // source of truth is cloudItems. Merge base items only for missing fields.
+            const updatedMenu = cloudItems.map(cloudItem => {
+                const baseItem = SHARED_MENU.find(b => b.id === cloudItem.id) || {};
                 return {
                     ...baseItem,
-                    price: cloudItem.price || cloudItem.PriceFull || cloudItem.Price || baseItem.price,
-                    priceHalf: cloudItem.priceHalf || cloudItem.PriceHalf || baseItem.priceHalf,
-                    imageUrl: cloudItem.imageUrl || cloudItem.ImageURL || cloudItem.image || baseItem.imageUrl,
-                    isAvailable: cloudItem.isAvailable !== false
+                    ...cloudItem,
+                    name: cloudItem.name || cloudItem.Name || cloudItem.itemName || baseItem.name,
+                    price: Number(cloudItem.price || cloudItem.PriceFull || cloudItem.Price || baseItem.price || 0),
+                    priceHalf: Number(cloudItem.priceHalf || cloudItem.PriceHalf || baseItem.priceHalf || 0)
                 };
-            });
+            }).filter(i => (i.name || i.Name) && i.price > 0);
 
             menu = updatedMenu;
             renderAvailabilityTool();
@@ -665,8 +670,8 @@ async function checkoutBill(tableId, billId, amount) {
 
     bill.status = 'paid';
     bill.paid = true;
-    restaurantRevenue += amount;
-    localStorage.setItem('yukt_rest_rev', restaurantRevenue);
+    const nextRev = restaurantRevenue + amount;
+    await setDoc(doc(db, 'stats', 'restaurant'), { rev: nextRev }, { merge: true });
 
     try {
         await setDoc(doc(db, 'tables', tableId), table, { merge: true });
@@ -689,8 +694,8 @@ async function printAndCloseTable() {
     const grandTotal = parseFloat(modal.dataset.grandTotal) || 0;
     const table = tables[tableId]; if (!table) return;
 
-    restaurantRevenue += grandTotal;
-    localStorage.setItem('yukt_rest_rev', restaurantRevenue);
+    const nextRev = restaurantRevenue + grandTotal;
+    await setDoc(doc(db, 'stats', 'restaurant'), { rev: nextRev }, { merge: true });
 
     // Save to Firestore ledger
     try {
@@ -911,7 +916,7 @@ async function submitPickupOrder() {
         items: pickupCart,
         total_price: total,
         total: total,
-        status: 'preparing',
+        status: 'Pending',
         orderType: 'Pickup',
         timestamp: Date.now(),
         paymentStatus: 'pending'
@@ -979,6 +984,13 @@ function renderPickupList() {
 
 async function markPickupPaid(id) {
     try {
+        const snap = await getDoc(doc(db, 'orders', id));
+        if (snap.exists()) {
+            const data = snap.data();
+            const amt  = data.total_price || data.total || 0;
+            const nextRev = restaurantRevenue + amt;
+            await setDoc(doc(db, 'stats', 'restaurant'), { rev: nextRev }, { merge: true });
+        }
         await updateDoc(doc(db, 'orders', id), { paymentStatus: 'paid' });
         await pushNotification('payment', `${id} PAYMENT RECEIVED`, 'desk', { orderId: id });
         showToast(`${id} marked as paid`, 'success');
