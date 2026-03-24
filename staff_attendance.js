@@ -59,9 +59,9 @@ function todayStr() {
 }
 function todayDocId(uid) { return `${uid}_${todayStr()}`; }
 
-// --- GPS Geofencing Configuration ---
+// --- GPS Geofencing Configuration (1KM BETA RADIUS) ---
 const HOTEL_LOCATION = { lat: 24.8152692, lng: 92.799027 }; 
-const MAX_DISTANCE_METERS = 200; 
+const MAX_DISTANCE_METERS = 1000; 
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3; // Earth's radius in meters
@@ -80,21 +80,22 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 function verifyLocationAndPunch(type) {
     if (!navigator.geolocation) { alert("GPS not supported on this device."); return; }
     
-    setStatus('punch-status', 'Verifying your location…', 'warning');
+    setStatus('punch-status', '🛰️ Verifying GPS…', 'warning');
     
     navigator.geolocation.getCurrentPosition((pos) => {
         const dist = calculateDistance(pos.coords.latitude, pos.coords.longitude, HOTEL_LOCATION.lat, HOTEL_LOCATION.lng);
         if (dist > MAX_DISTANCE_METERS) {
-            alert(`ACCESS DENIED: You are ${Math.round(dist)}m away from the hotel. You must be on-site to mark attendance.`);
-            setStatus('punch-status', `Out of range (${Math.round(dist)}m)`, 'error');
+            const km = (dist / 1000).toFixed(2);
+            alert(`ACCESS DENIED: You are ${km}km away from Barak Residency. Please be on-site to mark attendance.`);
+            setStatus('punch-status', `Out of range (${km}km)`, 'error');
         } else {
             if (type === 'in') doProcessPunchIn(pos.coords.latitude, pos.coords.longitude);
             else doProcessPunchOut(pos.coords.latitude, pos.coords.longitude);
         }
     }, (err) => {
-        alert("Location Access Required: Please enable GPS and allow browser location access.");
+        alert("Location Error: Please turn on High Accuracy GPS in your phone settings.");
         setStatus('punch-status', 'Location Error', 'error');
-    }, { enableHighAccuracy: true });
+    }, { enableHighAccuracy: true, timeout: 5000 });
 }
 
 //  Audio Notification (works even with screen off via AudioContext) 
