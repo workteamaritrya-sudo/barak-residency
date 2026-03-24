@@ -2,150 +2,239 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Restaurant Waiter | Barak Residency</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="restaurant_portal.css?v=1.6">
+    <link rel="stylesheet" href="restaurant_portal.css?v=1.7">
     <link rel="icon" href="br.png" type="image/png">
     <style>
-        /* ── Mobile POS Refactor ── */
-        @media (max-width: 900px) {
-            /* Sidebar becomes a horizontal scrolling chip bar */
-            .waiter-sidebar {
-                display: flex !important;
-                flex-direction: column !important;
-                width: 100% !important;
-                flex: none !important;
-                padding: 0.5rem 0.8rem 0.2rem !important;
-                min-height: unset !important;
-                background: rgba(212,175,55,0.06) !important;
-                border-radius: 0 !important;
-                border-bottom: 1px solid rgba(212,175,55,0.18) !important;
-            }
-            .waiter-sidebar h2 { display: none !important; }
-            .waiter-room-list {
-                display: flex !important;
-                flex-direction: row !important;
-                gap: 0.5rem !important;
-                overflow-x: auto !important;
-                padding: 0.4rem 0 0.4rem !important;
-                scrollbar-width: none !important;
-            }
-            /* Table chips: hide complex furniture, show pill only */
-            .w-room-btn .restaurant-table-view { display: none !important; }
-            .w-room-btn > div:last-of-type { display: none !important; } /* hide status text */
-            .w-room-btn {
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                min-width: 62px !important;
-                max-width: 80px !important;
-                height: 72px !important;
-                padding: 0 !important;
-                border-radius: 18px !important;
-                font-size: 0.8rem !important;
-                font-weight: 800 !important;
-                white-space: nowrap !important;
-                flex-shrink: 0 !important;
-                background: rgba(15,23,42,0.95) !important;
-                border: 1.5px solid rgba(255,255,255,0.1) !important;
-                color: #94A3B8 !important;
-                transition: all 0.2s !important;
-                cursor: pointer !important;
-            }
-            .w-room-btn.active {
-                background: rgba(212,175,55,0.12) !important;
-                border-color: #D4AF37 !important;
-            }
-            /* Menu fills remaining height */
-            .pos-cart { display: none !important; }
-            .luxury-portal-header { justify-content: space-between !important; padding: 0.7rem 1rem !important; }
-            .luxury-portal-header .luxury-identity { font-size: 0.85rem !important; }
-            .waiter-layout { padding: 0 !important; flex-direction: column !important; overflow: visible !important; gap: 0 !important; }
-            .waiter-pos { overflow: visible !important; height: auto !important; border-radius: 0 !important; }
-            .pos-header { padding: 0.6rem 1rem !important; }
-            .pos-body { flex-direction: column !important; height: auto !important; overflow: visible !important; }
-            .pos-menu { grid-template-columns: 1fr 1fr !important; gap: 0.6rem !important; padding: 0.6rem !important; }
-            #rest-waiter-menu-search { border-radius: 8px !important; }
-        }
+        /* ═══ SELF-CONTAINED LAYOUT — overrides all base CSS conflicts ═══ */
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #050B18; font-family: 'Outfit', sans-serif; color: #fff; }
 
-        /* Chip label card — only visible on mobile */
-        .mob-chip-label {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 2px;
-            width: 100%;
-            height: 100%;
-            padding: 8px 6px;
+        /* ── APP SHELL ── */
+        #rw-app { display: flex; flex-direction: column; height: 100vh; width: 100%; overflow: hidden; }
+
+        /* ── TOP HEADER ── */
+        #rw-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.8rem 1.2rem; flex-shrink: 0;
+            background: rgba(212,175,55,0.06);
+            border-bottom: 1px solid rgba(212,175,55,0.2);
+        }
+        #rw-header .rw-title { font-family: 'Outfit',sans-serif; font-size: 1rem; font-weight: 800; color: #D4AF37; letter-spacing: 3px; text-transform: uppercase; }
+        #rw-close-btn { background: transparent; border: none; color: #D4AF37; font-size: 2rem; line-height: 1; padding: 0 0.3rem; cursor: pointer; opacity: 0.85; transition: opacity 0.15s; }
+        #rw-close-btn:hover { opacity: 1; }
+
+        /* ── TABLE CHIP STRIP (always visible, horizontal scroll) ── */
+        #rw-table-strip {
+            flex-shrink: 0;
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.6rem 0.8rem;
+            overflow-x: auto; overflow-y: hidden;
+            background: rgba(5,11,24,0.7);
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            scrollbar-width: none;
+        }
+        #rw-table-strip::-webkit-scrollbar { display: none; }
+        #rw-strip-label { font-size: 0.65rem; font-weight: 700; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1.5px; flex-shrink: 0; padding-right: 0.5rem; border-right: 1px solid rgba(255,255,255,0.1); margin-right: 0.3rem; white-space: nowrap; }
+
+        /* ── TABLE CHIP ── */
+        .rw-chip {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            flex-shrink: 0; gap: 3px;
+            min-width: 58px; height: 64px;
+            padding: 6px 8px;
             border-radius: 16px;
             border: 1.5px solid rgba(255,255,255,0.1);
-            text-align: center;
-            box-sizing: border-box;
+            background: rgba(15,23,42,0.8);
+            cursor: pointer; transition: all 0.18s;
+            position: relative;
         }
-        @media (max-width: 900px) { .mob-chip-label { display: flex !important; } }
+        .rw-chip:hover { border-color: rgba(212,175,55,0.4); }
+        .rw-chip.active { background: rgba(212,175,55,0.12); border-color: #D4AF37; box-shadow: 0 0 12px rgba(212,175,55,0.2); }
+        .rw-chip.occupied { border-color: #4ADE80; }
+        .rw-chip .chip-id { font-size: 0.9rem; font-weight: 900; color: #fff; line-height: 1; }
+        .rw-chip .chip-pax { font-size: 0.6rem; color: #94A3B8; font-weight: 600; line-height: 1; }
+        .rw-chip .chip-dots { display: flex; gap: 3px; align-items: center; justify-content: center; }
+        .rw-chip .bill-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
-        /* Floating Cart (Mobile Friendly) */
-        .cart-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(5, 11, 26, 0.98); backdrop-filter: blur(20px); flex-direction: column; padding: 2rem; }
-        .cart-overlay.active { display: flex; animation: slideUp 0.4s cubic-bezier(.22,1,.36,1); }
-        .floating-cart-btn { position: fixed; bottom: 2rem; right: 2rem; z-index: 900; background: var(--gold-primary); color: #000; border-radius: 50%; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 40px rgba(212,175,55,0.4); border: none; cursor: pointer; transition: 0.2s; }
-        .cart-badge { position: absolute; top: -5px; right: -5px; background: #FF4444; color: white; border-radius: 50%; min-width: 22px; height: 22px; font-size: 0.75rem; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid #050B1A; }
+        /* ── DESKTOP SIDEBAR (hidden on mobile) ── */
+        #rw-sidebar-desktop {
+            display: none; /* hidden by default, shown only on desktop */
+            flex-direction: column;
+            width: 220px; flex-shrink: 0;
+            background: rgba(0,0,0,0.3);
+            border-right: 1px solid rgba(255,255,255,0.07);
+            overflow-y: auto;
+            padding: 1rem 0.75rem;
+        }
+        #rw-sidebar-desktop h3 { font-size: 0.7rem; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0.75rem; padding-left: 0.25rem; }
+        /* Full table furniture cards in desktop sidebar */
+        .rw-desk-table-btn {
+            width: 100%; background: rgba(15,23,42,0.8); border: 1.5px solid rgba(255,255,255,0.08);
+            border-radius: 14px; padding: 0.8rem 0.5rem; margin-bottom: 0.5rem;
+            cursor: pointer; transition: all 0.2s; color: #fff;
+        }
+        .rw-desk-table-btn:hover { border-color: rgba(212,175,55,0.4); }
+        .rw-desk-table-btn.active { border-color: #D4AF37; background: rgba(212,175,55,0.08); }
+        .rw-desk-table-btn.occupied { border-color: #4ADE80; }
 
-        /* Success Screen */
-        .success-overlay { display: none; position: fixed; inset: 0; z-index: 2000; background: #050B1A; align-items: center; justify-content: center; flex-direction: column; text-align: center; }
-        .success-medal { width: 120px; height: 120px; background: var(--gold-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 4rem; margin-bottom: 2rem; box-shadow: 0 0 50px rgba(212,175,55,0.3); animation: medalPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        
-        @keyframes medalPop { 0% { transform: scale(0); opacity:0; } 100% { transform: scale(1); opacity:1; } }
-        @keyframes slideUp { 0% { transform: translateY(100%); } 100% { transform: translateY(0); } }
+        /* ── CONTENT AREA ── */
+        #rw-content { display: flex; flex: 1; overflow: hidden; }
+
+        /* ── POS PANEL (menu + desktop cart) ── */
+        #rw-pos { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+        /* ── POS HEADER BAR ── */
+        #rw-pos-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.6rem 1rem; flex-shrink: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            background: rgba(0,0,0,0.15);
+        }
+        #rest-waiter-pos-title { font-size: 1rem; font-weight: 700; margin: 0; }
+        #rest-waiter-table-info { font-size: 0.75rem; color: #94A3B8; }
+
+        /* ── SEARCH ── */
+        #rw-search-wrap { padding: 0.6rem 0.75rem; flex-shrink: 0; }
+        #rest-waiter-menu-search {
+            width: 100%; padding: 0.65rem 1rem;
+            background: rgba(15,23,42,0.9); border: 1px solid rgba(212,175,55,0.3);
+            border-radius: 10px; color: #fff; font-size: 0.9rem; outline: none;
+        }
+        #rest-waiter-menu-search::placeholder { color: rgba(255,255,255,0.35); }
+
+        /* ── MENU GRID ── */
+        #rw-menu-scroll { flex: 1; overflow-y: auto; padding: 0.5rem 0.75rem 5rem; }
+        #rest-waiter-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 0.75rem; }
+        @media (max-width: 600px) { #rest-waiter-menu-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; } }
+
+        /* ── DESKTOP CART ── */
+        #rw-desktop-cart {
+            display: none; /* shown only on desktop via media query */
+            flex-direction: column;
+            width: 300px; flex-shrink: 0;
+            border-left: 1px solid rgba(255,255,255,0.07);
+            background: rgba(0,0,0,0.2);
+        }
+        #rw-desktop-cart .cart-head { padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.07); font-weight: 800; color: #D4AF37; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; }
+        #rest-waiter-cart-items { flex: 1; overflow-y: auto; padding: 1rem; }
+        #rw-cart-footer { padding: 1rem; border-top: 1px solid rgba(255,255,255,0.07); }
+
+        /* ── DESKTOP LAYOUT (>= 900px) ── */
+        @media (min-width: 900px) {
+            #rw-table-strip { display: none; } /* hide chip strip on desktop */
+            #rw-sidebar-desktop { display: flex; } /* show sidebar on desktop */
+            #rw-desktop-cart { display: flex; } /* show cart panel on desktop */
+        }
+
+        /* ── FLOATING CART BTN (mobile only) ── */
+        #floating-cart {
+            position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 900;
+            background: #D4AF37; color: #000; border-radius: 50%;
+            width: 60px; height: 60px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 32px rgba(212,175,55,0.45); border: none; cursor: pointer;
+        }
+        @media (min-width: 900px) { #floating-cart { display: none; } }
+
+        #cart-badge-val {
+            position: absolute; top: -4px; right: -4px;
+            background: #FF4444; color: #fff; border-radius: 50%;
+            min-width: 20px; height: 20px; font-size: 0.7rem; font-weight: 900;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid #050B18;
+        }
+
+        /* ── MOBILE CART OVERLAY ── */
+        #cart-overlay-mob {
+            display: none; position: fixed; inset: 0; z-index: 2000;
+            background: rgba(5,11,26,0.98); backdrop-filter: blur(20px);
+            flex-direction: column; padding: 1.5rem;
+        }
+        #cart-overlay-mob.active { display: flex; animation: slideUp 0.35s cubic-bezier(.22,1,.36,1); }
+
+        /* ── SUCCESS OVERLAY ── */
+        #success-screen {
+            display: none; position: fixed; inset: 0; z-index: 5000;
+            background: #050B1A; align-items: center; justify-content: center;
+            flex-direction: column; text-align: center;
+        }
+        .success-medal { width: 110px; height: 110px; background: #D4AF37; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 3.5rem; margin-bottom: 1.5rem; box-shadow: 0 0 50px rgba(212,175,55,0.35); animation: medalPop 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+
+        /* ── ANIMATIONS ── */
+        @keyframes medalPop { 0% { transform:scale(0); opacity:0; } 100% { transform:scale(1); opacity:1; } }
+        @keyframes slideUp { 0% { transform:translateY(100%); } 100% { transform:translateY(0); } }
+
+        /* ── DESKTOP TABLE FURNITURE inside sidebar ── */
+        .rw-furn { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 4px; }
+        .rw-furn-row { display: flex; gap: 4px; }
+        .rw-chair { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .rw-chair svg { width: 14px; height: 14px; }
+        .rw-table-box { font-size: 0.8rem; font-weight: 900; color: #D4AF37; border: 1.5px solid rgba(212,175,55,0.4); border-radius: 6px; padding: 2px 8px; }
     </style>
 </head>
 <body>
 
-<div class="page">
-    <header class="luxury-portal-header" style="justify-content:space-between; padding:1.25rem;">
-        <div class="luxury-identity">BARAK TABLE ORDER</div>
-        <button style="background:transparent; border:none; color:#D4AF37; font-size:1.8rem; line-height:1; padding:0 0.5rem; cursor:pointer;" onclick="window.backToHome()">&times;</button>
+<div id="rw-app">
+    <!-- ── HEADER ── -->
+    <header id="rw-header">
+        <span class="rw-title">Barak Table Order</span>
+        <button id="rw-close-btn" onclick="window.backToHome()">&times;</button>
     </header>
 
+    <!-- ── MOBILE: TABLE CHIP STRIP ── -->
+    <div id="rw-table-strip">
+        <span id="rw-strip-label">Tables</span>
+        <div id="rest-waiter-table-list" style="display:flex;gap:0.5rem;"></div>
+    </div>
 
-    <div class="waiter-layout">
-        <!-- Table Sidebar -->
-        <div class="waiter-sidebar glass-panel">
-            <h2>Select Table</h2>
-            <div class="waiter-room-list" id="rest-waiter-table-list"></div>
+    <!-- ── MAIN CONTENT ── -->
+    <div id="rw-content">
+
+        <!-- DESKTOP ONLY: Sidebar with full table cards -->
+        <div id="rw-sidebar-desktop">
+            <h3>Select Table</h3>
+            <div id="rw-desk-table-list"></div>
         </div>
 
-        <!-- POS Area -->
-        <div class="waiter-pos glass-panel" id="rest-waiter-pos-area">
-            <div class="pos-header">
-                <div style="display:flex;align-items:center;gap:1rem;">
-                    <h2 id="rest-waiter-pos-title">Select a table</h2>
+        <!-- POS Panel -->
+        <div id="rw-pos">
+            <!-- POS Title -->
+            <div id="rw-pos-header">
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <h2 id="rest-waiter-pos-title" style="margin:0;font-size:1rem;">Select a table</h2>
                     <button id="btn-link-table" class="btn btn-outline"
-                        style="display:none;padding:0.3rem 0.8rem;font-size:0.9rem;border-color:#A020F0;color:#A020F0;"
-                        onclick="showLinkTableModal()"> Link Table</button>
+                        style="display:none;padding:0.25rem 0.7rem;font-size:0.8rem;border-color:#A020F0;color:#A020F0;"
+                        onclick="showLinkTableModal()">Link Table</button>
                 </div>
-                <span id="rest-waiter-table-info" class="text-gray text-sm"></span>
+                <span id="rest-waiter-table-info" style="font-size:0.75rem;color:#94A3B8;"></span>
             </div>
-            <div class="pos-body">
-                <div style="display:flex;flex-direction:column;overflow:hidden;flex:2;">
-                    <div style="padding:1rem 1.5rem 0;">
-                        <input type="search" id="rest-waiter-menu-search" class="form-control"
-                            placeholder="Search menu..." oninput="filterMenu(this.value)"
-                            style="background:rgba(15,23,42,0.9);padding:0.8rem;color:white;border:1px solid gold;border-radius:8px;width:100%;">
-                    </div>
-                    <div class="pos-menu" id="rest-waiter-menu-grid"></div>
+
+            <!-- Search -->
+            <div id="rw-search-wrap">
+                <input type="search" id="rest-waiter-menu-search" placeholder="Search menu..." oninput="filterMenu(this.value)">
+            </div>
+
+            <!-- Menu grid + Desktop cart side by side -->
+            <div style="display:flex;flex:1;overflow:hidden;">
+                <div id="rw-menu-scroll">
+                    <div id="rest-waiter-menu-grid"></div>
                 </div>
-                <div id="desktop-cart" class="pos-cart">
-                    <div style="padding:1.25rem; border-bottom:1px solid var(--glass-border); font-weight:800; color:var(--gold-primary); text-transform:uppercase; letter-spacing:1px; font-size:0.9rem;">Live Cart</div>
-                    <div class="cart-items" id="rest-waiter-cart-items" style="flex:1; overflow-y:auto; padding:1.25rem;"></div>
-                    <div id="cart-footer-common" class="cart-total">
-                        <div class="d-flex justify-between" style="font-size:1.6rem; font-weight:800; margin-bottom:1.5rem;">
-                            <span style="opacity:0.6; font-size:1rem; padding-top:0.4rem;">Total</span>
-                            <span class="font-bold" style="color:#4ADE80;">₹<span id="rest-waiter-cart-total">0</span></span>
+                <!-- Desktop Cart Panel -->
+                <div id="rw-desktop-cart">
+                    <div class="cart-head">Live Cart</div>
+                    <div id="rest-waiter-cart-items"></div>
+                    <div id="rw-cart-footer">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                            <span style="opacity:0.6;font-size:0.9rem;">Total</span>
+                            <span style="color:#4ADE80;font-size:1.5rem;font-weight:900;">₹<span id="rest-waiter-cart-total">0</span></span>
                         </div>
-                        <button class="btn btn-primary btn-block" style="padding:1.3rem; font-size:1.2rem; background:var(--gold-primary); color:black; font-weight:900;"
-                            id="btn-rest-waiter-order" disabled onclick="showOrderConfirm()">PLACE ORDER</button>
+                        <button class="btn btn-primary btn-block" id="btn-rest-waiter-order" disabled onclick="showOrderConfirm()"
+                            style="padding:1.1rem;font-size:1.1rem;background:#D4AF37;color:#000;font-weight:900;width:100%;border-radius:12px;">
+                            PLACE ORDER
+                        </button>
                     </div>
                 </div>
             </div>
@@ -153,32 +242,42 @@
     </div>
 </div>
 
-<!-- Mobile Cart Layer -->
-<div id="cart-overlay-mob" class="cart-overlay">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
-        <h2 style="color:var(--gold-primary); font-family:'Outfit'; font-weight:800; letter-spacing:2px;">REVIEW ORDER</h2>
-        <button onclick="window.toggleCart()" style="background:transparent; border:none; color:white; font-size:2rem;">&times;</button>
+<!-- Mobile Cart Overlay -->
+<div id="cart-overlay-mob">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <h2 style="color:#D4AF37;font-weight:900;letter-spacing:2px;font-size:1.1rem;">REVIEW ORDER</h2>
+        <button onclick="window.toggleCart()" style="background:transparent;border:none;color:#fff;font-size:2rem;cursor:pointer;">&times;</button>
     </div>
-    <div id="cart-placeholder-mob" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>
+    <div id="cart-placeholder-mob" style="flex:1;display:flex;flex-direction:column;overflow:hidden;"></div>
+    <div style="flex-shrink:0;padding-top:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <span style="opacity:0.6;">Total</span>
+            <span style="color:#4ADE80;font-size:1.5rem;font-weight:900;">₹<span id="mob-cart-total">0</span></span>
+        </div>
+        <button class="btn btn-primary btn-block" id="btn-mob-order" disabled onclick="showOrderConfirm()"
+            style="padding:1.1rem;font-size:1.1rem;background:#D4AF37;color:#000;font-weight:900;width:100%;border-radius:12px;">
+            PLACE ORDER
+        </button>
+    </div>
 </div>
 
-<button id="floating-cart" class="floating-cart-btn" onclick="window.toggleCart()">
-    <svg style="width:28px; height:28px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6zM3 6h18M16 10a4 4 0 01-8 0"></path></svg>
-    <span id="cart-badge-val" class="cart-badge" style="display:none;">0</span>
+<!-- Floating Cart FAB -->
+<button id="floating-cart" onclick="window.toggleCart()">
+    <svg style="width:26px;height:26px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6zM3 6h18M16 10a4 4 0 01-8 0"></path></svg>
+    <span id="cart-badge-val" style="display:none;">0</span>
 </button>
 
-<!-- Success Screen Overlay -->
-<div id="success-screen" class="success-overlay">
+<!-- Success Screen -->
+<div id="success-screen">
     <div class="success-medal">✓</div>
-    <h1 style="color:var(--gold-primary); font-family:'Outfit'; font-weight:900; letter-spacing:3px; margin-bottom:1rem;">ORDER PLACED</h1>
-    <p style="color:white; opacity:0.6; letter-spacing:1px;">Redirecting back to portal...</p>
+    <h1 style="color:#D4AF37;font-weight:900;letter-spacing:3px;margin-bottom:0.75rem;">ORDER PLACED</h1>
+    <p style="color:rgba(255,255,255,0.5);letter-spacing:1px;">Returning to portal...</p>
 </div>
 
-<!-- Success Overlay -->
+<!-- ── MODALS (unchanged) ── -->
 <div id="success-overlay-pms" class="success-overlay-pms" style="display:none;"></div>
 <div id="print-area"></div>
 
-<!-- Table Check-in Modal -->
 <div id="waiter-modal-overlay" class="modal-overlay" style="display:none;z-index:10005;">
     <div class="security-box" style="padding:2.5rem 2rem;width:450px;position:relative;max-width:95vw;">
         <h3 class="color-primary" style="text-align:center;margin-bottom:1.5rem;" id="tci-title">Table Check-in</h3>
@@ -204,23 +303,19 @@
     </div>
 </div>
 
-<!-- Order Confirm Modal -->
 <div id="order-confirm-modal" class="modal-overlay" style="display:none;z-index:10006;">
-    <div class="security-box" style="padding:2rem;width:450px;">
+    <div class="security-box" style="padding:2rem;width:450px;max-width:95vw;">
         <h3 style="text-align:center;margin-bottom:1.5rem;">Confirm Order: <span id="confirm-order-id"></span></h3>
         <div id="confirm-order-items" style="text-align:left;color:white;max-height:250px;overflow-y:auto;margin-bottom:1.5rem;"></div>
         <div style="display:flex;flex-direction:column;gap:1rem;">
-            <button class="btn btn-primary" style="padding:1rem;font-size:1.1rem;background:linear-gradient(135deg,#10b981,#059669);"
-                onclick="confirmOrder()">Confirm & Send to Kitchen</button>
-            <button class="btn btn-outline" style="padding:0.8rem;"
-                onclick="document.getElementById('order-confirm-modal').style.display='none'">Edit Order</button>
+            <button class="btn btn-primary" style="padding:1rem;font-size:1.1rem;background:linear-gradient(135deg,#10b981,#059669);" onclick="confirmOrder()">Confirm &amp; Send to Kitchen</button>
+            <button class="btn btn-outline" style="padding:0.8rem;" onclick="document.getElementById('order-confirm-modal').style.display='none'">Edit Order</button>
         </div>
     </div>
 </div>
 
-<!-- Quantity + Variant Modal -->
 <div id="quantity-prompt-modal" class="modal-overlay" style="display:none;z-index:10006;">
-    <div class="security-box" style="padding:2.5rem 2rem;width:400px;text-align:center;">
+    <div class="security-box" style="padding:2.5rem 2rem;width:400px;max-width:95vw;text-align:center;">
         <h3 id="qp-item-name" style="color:var(--color-indigo-400);margin-bottom:1.5rem;"></h3>
         <div id="qp-view-variant" style="display:flex;flex-direction:column;gap:1rem;">
             <p class="text-sm text-gray">Select Portion Size</p>
@@ -231,11 +326,9 @@
         <div id="qp-view-quantity" style="display:none;flex-direction:column;gap:1.5rem;">
             <p id="qp-selected-variant-text" style="color:var(--color-indigo-400);font-weight:bold;">Full Plate</p>
             <div style="display:flex;align-items:center;gap:1rem;justify-content:center;background:rgba(0,0,0,0.3);border-radius:8px;padding:1rem;">
-                <button class="btn btn-outline" style="width:50px;height:50px;border-radius:50%;padding:0;font-size:1.5rem;"
-                    onclick="document.getElementById('qp-qty').value=Math.max(1,parseInt(document.getElementById('qp-qty').value)-1)">-</button>
+                <button class="btn btn-outline" style="width:50px;height:50px;border-radius:50%;padding:0;font-size:1.5rem;" onclick="document.getElementById('qp-qty').value=Math.max(1,parseInt(document.getElementById('qp-qty').value)-1)">-</button>
                 <input type="number" id="qp-qty" min="1" value="1" style="width:80px;text-align:center;background:transparent;border:none;color:white;font-size:2rem;font-weight:bold;outline:none;">
-                <button class="btn btn-outline" style="width:50px;height:50px;border-radius:50%;padding:0;font-size:1.5rem;"
-                    onclick="document.getElementById('qp-qty').value=parseInt(document.getElementById('qp-qty').value)+1">+</button>
+                <button class="btn btn-outline" style="width:50px;height:50px;border-radius:50%;padding:0;font-size:1.5rem;" onclick="document.getElementById('qp-qty').value=parseInt(document.getElementById('qp-qty').value)+1">+</button>
             </div>
             <div style="display:flex;gap:1rem;">
                 <button class="btn btn-outline" style="flex:1;" onclick="qpBack()">← Back</button>
@@ -245,11 +338,10 @@
     </div>
 </div>
 
-<!-- Link Table Modal -->
 <div id="link-table-modal" class="modal-overlay" style="display:none;z-index:10005;align-items:stretch;justify-content:stretch;padding:2rem;">
     <div style="width:100%;height:100%;display:grid;grid-template-columns:1fr 1fr;gap:2rem;background:rgba(15,23,42,0.95);border-radius:16px;border:1px solid var(--glass-border);overflow:hidden;">
         <div style="padding:2rem;border-right:1px solid var(--glass-border);display:flex;flex-direction:column;">
-            <h2 style="color:#A020F0;margin-bottom:0.5rem;"> Master Bill Group</h2>
+            <h2 style="color:#A020F0;margin-bottom:0.5rem;">Master Bill Group</h2>
             <p class="text-gray" id="link-table-subtitle" style="margin-bottom:2rem;"></p>
             <h3 style="margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px dashed var(--glass-border);">Previously Linked</h3>
             <div id="link-existing-list" style="flex:1;overflow-y:auto;"></div>
@@ -259,31 +351,17 @@
             <h2 style="margin-bottom:1rem;">Link A New Table</h2>
             <div class="form-group mb-4">
                 <label>Pax to Link</label>
-                <input type="number" id="link-pax-input" class="form-control" min="1" value="1" oninput="renderLinkDropdown()"
-                    style="background:rgba(0,0,0,0.5);padding:1.25rem;color:white;border:1px solid var(--glass-border);border-radius:8px;font-size:1.2rem;">
+                <input type="number" id="link-pax-input" class="form-control" min="1" value="1" oninput="renderLinkDropdown()" style="background:rgba(0,0,0,0.5);padding:1.25rem;color:white;border:1px solid var(--glass-border);border-radius:8px;font-size:1.2rem;">
             </div>
             <div class="form-group" style="display:flex;flex-direction:column;flex:1;">
                 <label>Available Tables</label>
-                <select id="link-table-dropdown" class="form-control" size="8"
-                    style="flex:1;background:rgba(0,0,0,0.5);padding:1rem;color:white;border:1px solid var(--glass-border);border-radius:8px;font-size:1.1rem;"></select>
+                <select id="link-table-dropdown" class="form-control" size="8" style="flex:1;background:rgba(0,0,0,0.5);padding:1rem;color:white;border:1px solid var(--glass-border);border-radius:8px;font-size:1.1rem;"></select>
             </div>
             <button class="btn btn-primary" style="background:#A020F0;border-color:#A020F0;padding:1.25rem;font-size:1.2rem;margin-top:1rem;" onclick="submitLinkTable()">Confirm Link</button>
         </div>
     </div>
 </div>
 
-<!-- Embedded-mode detection -->
-<script>
-(function() {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('embedded') === '1') {
-        const logoutBtn = document.getElementById('btn-rw-logout');
-        const closeBtn  = document.getElementById('btn-rw-close');
-        if (logoutBtn) logoutBtn.style.display = 'none';
-        if (closeBtn)  closeBtn.style.display  = 'inline-block';
-    }
-})();
-</script>
-<script type="module" src="restaurant_waiter_app.js"></script>
+<script type="module" src="restaurant_waiter_app.js?v=2.0"></script>
 </body>
 </html>
