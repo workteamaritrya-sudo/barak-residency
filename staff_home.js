@@ -742,13 +742,13 @@ window.staffLogout = async function () {
 onAuthStateChanged(auth, async user => {
     if (user) {
         // --- NEW: Add a small grace period for Profile to sync from Firestore ---
-        // (Prevents immediate kick-out if network is slow right after registration)
+        // (Prevents immediate kick-out if network is slow)
         try {
             let profile = await loadProfile(user.uid);
             
             if (!profile) {
-                console.log("[Auth] Profile not found immediately. Retrying in 2.5s...");
-                await new Promise(r => setTimeout(r, 2500));
+                console.log("[Auth] Profile not found immediately. Retrying in 3s...");
+                await new Promise(r => setTimeout(r, 3000));
                 profile = await loadProfile(user.uid);
             }
 
@@ -758,6 +758,7 @@ onAuthStateChanged(auth, async user => {
                 window.location.replace('index.html');
                 return;
             }
+            
             currentProfile = profile;
             populateDashboard(profile);
             startClock();
@@ -777,14 +778,13 @@ onAuthStateChanged(auth, async user => {
                         await PushNotifications.register();
                         console.log("[NativePush] Registered successfully.");
                         
-                        // Handle notification arrival while app is background/lockscreen
                         PushNotifications.addListener('pushNotificationReceived', (notification) => {
                             console.log('[NativePush] Received:', notification);
                         });
                     }
                 }
             } catch(pushErr) {
-                console.warn("[NativePush] Push registration failed natively (often emulator). Continuing without push:", pushErr);
+                console.warn("[NativePush] Push registration issues (expected on web):", pushErr.message);
             }
 
             // Start the right notification listeners
@@ -795,11 +795,19 @@ onAuthStateChanged(auth, async user => {
             }
 
         } catch (err) {
-            console.error('[Auth]', err);
-            window.location.replace('index.html');
+            console.error('[Auth Error] Transient failure during profile load:', err);
+            // DO NOT REDIRECT! This causes refresh loops on network flicker.
+            hideLoader();
+            showToast('Cloud connection flicker. Keeping session active.', 'info');
         }
     } else {
-        window.location.href = 'index.html';
+        // Verify we are ACTUALLY logged out before redirecting (prevent transient flicker loop)
+        setTimeout(() => {
+            if (!auth.currentUser) {
+                console.log("[Auth] Confirmed logged out. Redirecting to login...");
+                window.location.href = 'index.html';
+            }
+        }, 2000);
     }
 });
 
