@@ -5,17 +5,30 @@
  * 
  */
 
-//  Global References (Late-bound) 
-let db, auth, hooks;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+import {
+    getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc,
+    onSnapshot, query, orderBy, limit, updateDoc, serverTimestamp,
+    runTransaction, increment, arrayUnion, Timestamp
+} from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 
-function refreshFirebaseRefs() {
-    db = window.firebaseFS;
-    auth = window.firebaseAuth;
-    hooks = window.firebaseHooks;
-}
+//  Firebase Config 
+const firebaseConfig = {
+    apiKey: "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo",
+    authDomain: "barak-residency-59405.firebaseapp.com",
+    projectId: "barak-residency-59405",
+    databaseURL: "https://barak-residency-59405-default-rtdb.firebaseio.com",
+    storageBucket: "barak-residency-59405.firebasestorage.app",
+    messagingSenderId: "3871550492",
+    appId: "1:3871550492:web:2cf49bc0a963b4888f43d9"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const auth = getAuth(firebaseApp);
 
 async function pushNotification(type, message, target, data = null) {
-    const { collection, addDoc } = hooks;
     try {
         const nRef = collection(db, 'notifications');
         await addDoc(nRef, {
@@ -93,7 +106,6 @@ let kitchenOrders = [];
 
 //  Listeners 
 function startListeners() {
-    const { collection, onSnapshot, query, orderBy, limit, doc } = hooks;
 
     // Listen to Rooms (for status updates)
     onSnapshot(collection(db, 'rooms'), (snap) => {
@@ -103,6 +115,9 @@ function startListeners() {
         });
         populateRoomSelect();
         if (selectedRoom) window.selectRoom(selectedRoom);
+    }, err => {
+        console.warn('[Rooms] Listen failed', err);
+        showToast('Database Error: Rooms could not load. (Possible index/auth issue)', 'error');
     });
 
     // Listen to Menu (Ground Truth Sync with Fallback)
@@ -412,7 +427,6 @@ window.enterAddonMode = function(orderId) {
 //  Actions 
 
 async function getNextGlobalSerial(roomNum) {
-    const { doc, runTransaction } = hooks;
     try {
         const roomRef = doc(db, 'rooms', String(roomNum));
         let nextSerial = 1;
@@ -430,7 +444,6 @@ async function getNextGlobalSerial(roomNum) {
 
 window.placeOrder = async function() {
     if (!selectedRoom || waiterCart.length === 0) return;
-    const { doc, updateDoc, setDoc, serverTimestamp, increment, arrayUnion, collection, getDocs } = hooks;
     
     const btn = document.getElementById('waiter-place-btn');
     if (btn) {
@@ -475,6 +488,10 @@ window.placeOrder = async function() {
 
         if (room.currentGuestId) {
             const guestRef = doc(db, 'guests', room.currentGuestId);
+            const itemsToAppend = waiterCart.map(i => ({
+                name: i.name, qty: i.qty, price: i.price, variant: i.variant || 'Full', timestamp: Date.now()
+            }));
+
             await updateDoc(guestRef, {
                 foodTotal: increment(total),
                 billItems: arrayUnion(...itemsToAppend)
@@ -482,7 +499,7 @@ window.placeOrder = async function() {
         }
 
         // Auto-decrement drink stock
-        await decrementDrinksFromStock(waiterCart, db, { collection, getDocs, doc, updateDoc, increment, serverTimestamp });
+        await decrementDrinksFromStock(waiterCart, db);
 
         waiterCart = [];
         updateCartUI();
@@ -509,9 +526,8 @@ window.placeOrder = async function() {
 };
 
 // Auto-decrement stock for drinks ordered
-async function decrementDrinksFromStock(cartItems, dbRef, fns) {
+async function decrementDrinksFromStock(cartItems, dbRef) {
     try {
-        const { collection, getDocs, doc, updateDoc, increment, serverTimestamp } = fns;
         const drinkItems = cartItems.filter(i =>
             (i.category === 'Drinks') ||
             (i.portionType === 'Bottle') ||
@@ -548,7 +564,7 @@ async function decrementDrinksFromStock(cartItems, dbRef, fns) {
 
 window.handleLogout = async () => {
     if (confirm('Logout from Waiter Portal?')) {
-        await window.firebaseHooks.signOut(window.firebaseAuth);
+        await signOut(auth);
         window.location.href = 'index.html';
     }
 };
@@ -565,12 +581,6 @@ function showToast(msg, type = 'info') {
 }
 
 async function boot() {
-    if (!window.firebaseHooks) {
-        setTimeout(boot, 500);
-        return;
-    }
-    refreshFirebaseRefs();
-    const { onAuthStateChanged } = hooks;
     onAuthStateChanged(auth, user => {
         if (!user) {
             if (window.self === window.top) {
