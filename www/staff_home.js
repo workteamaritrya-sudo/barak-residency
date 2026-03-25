@@ -733,21 +733,18 @@ window.staffLogout = async function () {
     if (attendanceUnsub) attendanceUnsub();
     if (hotelNotifUnsub) hotelNotifUnsub();
     if (restNotifUnsub)  restNotifUnsub();
-    localStorage.removeItem('br_session_active');
     await signOut(auth);
     currentProfile = null;
-    window.location.href = 'index.html';
+    window.location.replace('index.html');
 };
 
 //  Auth State Observer 
 onAuthStateChanged(auth, async user => {
     if (user) {
-        localStorage.setItem('br_session_active', 'true');
         try {
             const profile = await loadProfile(user.uid);
             if (!profile) {
-                localStorage.removeItem('br_session_active');
-                window.location.href = 'index.html';
+                window.location.replace('index.html');
                 return;
             }
             currentProfile = profile;
@@ -788,11 +785,9 @@ onAuthStateChanged(auth, async user => {
 
         } catch (err) {
             console.error('[Auth]', err);
-            localStorage.removeItem('br_session_active');
-            window.location.href = 'index.html';
+            window.location.replace('index.html');
         }
     } else {
-        localStorage.removeItem('br_session_active');
         window.location.href = 'index.html';
     }
 });
