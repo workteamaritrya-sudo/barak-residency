@@ -207,7 +207,7 @@ window.selectRoom = function(roomNum) {
     }
 
     waiterCart = [];
-    updateCartUI();
+    renderCart();
 
     // Setup room-specific order listener for Live Orders
     if (window._roomOrderUnsub) window._roomOrderUnsub();
@@ -238,10 +238,17 @@ window.selectRoom = function(roomNum) {
 function renderMenu(categoryFilter = 'All') {
     const grid = document.getElementById('order-menu-grid');
     const pills = document.getElementById('order-categories');
+    const searchVal = (document.getElementById('hotel-menu-search')?.value || '').toLowerCase();
     if (!grid) return;
 
-    const filteredMenu = menu.filter(i => i.isAvailable !== false && !unavailableItems.includes(i.id));
-    const cats = ['All', ...new Set(filteredMenu.map(i => i.category || 'General'))];
+    const filteredMenu = menu.filter(i => {
+        const nameMatch = (i.name || i.itemName || '').toLowerCase().includes(searchVal);
+        const catMatch = (i.category || 'General').toLowerCase().includes(searchVal);
+        const avail = i.isAvailable !== false && !unavailableItems.includes(i.id);
+        return avail && (nameMatch || catMatch);
+    });
+
+    const cats = ['All', ...new Set(menu.filter(i => i.isAvailable !== false).map(i => i.category || 'General'))];
     
     if (pills) {
         pills.innerHTML = cats.map(c => `<button class="cat-pill ${categoryFilter === c ? 'active' : ''}" onclick="window.renderMenu('${c}')" style="min-width:110px;">${c}</button>`).join('');
@@ -336,7 +343,7 @@ function promptQuantity(item, variant, label, price) {
         const existing = waiterCart.find(c => c.id === cartItem.id);
         if (existing) existing.qty += qty;
         else waiterCart.push(cartItem);
-        updateCartUI();
+        renderCart();
         document.getElementById('waiter-portion-modal').style.display = 'none';
         showToast('Added to cart', 'success');
     };
@@ -568,7 +575,7 @@ window.placeOrder = async function() {
         await decrementDrinksFromStock(waiterCart, db);
 
         waiterCart = [];
-        updateCartUI();
+        renderCart();
         addonOrderId = null;
         if (document.getElementById('waiter-addon-badge')) document.getElementById('waiter-addon-badge').style.display = 'none';
         if (document.getElementById('ordering-room-display')) document.getElementById('ordering-room-display').innerText = `ROOM ${selectedRoom} — NEW ORDER`;

@@ -54,9 +54,20 @@
 
         <div class="pickup-layout">
             <section class="pickup-pos glass-panel">
-                <div style="padding:1.25rem; border-bottom:1px solid var(--glass-border); display:flex; gap:1rem; background:rgba(0,0,0,0.2);">
-                    <input type="text" id="menu-search" class="form-control" placeholder="Search menu..." style="flex:1;">
-                    <button class="btn btn-outline" onclick="window.renderMenu()">&#10227;</button>
+                <div style="padding:1.25rem; border-bottom:1px solid var(--glass-border); display:flex; flex-direction:column; gap:1rem; background:rgba(0,0,0,0.2);">
+                    <div class="type-toggle" style="margin-bottom:0;">
+                        <button id="toggle-pickup" class="active" onclick="window.setOrderType('Pickup')">WALK-IN PICKUP</button>
+                        <button id="toggle-table" onclick="window.setOrderType('Table')">ADD TO TABLE</button>
+                    </div>
+
+                    <div id="table-selector-wrap" style="display:none; margin-bottom:0.5rem;">
+                        <label style="font-size:0.65rem; color:var(--gold-primary); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:0.5rem;">Select Table</label>
+                        <select id="table-select" class="form-control" style="font-size:1rem; padding:0.8rem; border-color:var(--gold-primary);"></select>
+                    </div>
+
+                    <div style="display:flex; gap:1rem;">
+                        <input type="text" id="menu-search" class="form-control" placeholder="Search menu..." style="flex:1;">
+                    </div>
                 </div>
                 
                 <div style="flex:1; display:flex; flex-direction:column; overflow:hidden; padding:1.5rem;">
@@ -70,15 +81,7 @@
             <aside id="desktop-sidebar" class="pickup-sidebar glass-panel" style="width: 340px; flex-shrink: 0;">
                 <h3 style="color:var(--gold-primary); font-size:0.9rem; letter-spacing:1px; margin-bottom:1.25rem; text-transform:uppercase;">Order Summary</h3>
                 <div id="cart-content-common">
-                    <div class="type-toggle">
-                        <button id="toggle-pickup" class="active" onclick="window.setOrderType('Pickup')">WALK-IN PICKUP</button>
-                        <button id="toggle-table" onclick="window.setOrderType('Table')">ADD TO TABLE</button>
-                    </div>
-
-                    <div id="table-selector-wrap" style="display:none; margin-bottom:1.5rem;">
-                        <label style="font-size:0.65rem; color:var(--gold-primary); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:0.5rem;">Select Table</label>
-                        <select id="table-select" class="form-control" style="font-size:1rem; padding:0.8rem; border-color:var(--gold-primary);"></select>
-                    </div>
+                    <!-- Tabs moved to top of the page -->
 
                     <div id="cart-items" style="max-height: 48vh; overflow-y:auto; margin-bottom:1.5rem;">
                         <div style="color:rgba(255,255,255,0.2); text-align:center; padding:2rem; font-size:0.85rem;">Cart is empty</div>

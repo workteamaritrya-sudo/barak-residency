@@ -208,7 +208,7 @@ window.selectRoom = function(roomNum) {
     }
 
     waiterCart = [];
-    updateCartUI();
+    renderCart();
     renderLiveOrders();
 };
 
@@ -313,7 +313,7 @@ function promptQuantity(item, variant, label, price) {
         const existing = waiterCart.find(c => c.id === cartItem.id);
         if (existing) existing.qty += qty;
         else waiterCart.push(cartItem);
-        updateCartUI();
+        renderCart();
         document.getElementById('waiter-portion-modal').style.display = 'none';
         showToast('Added to cart', 'success');
     };
@@ -502,7 +502,7 @@ window.placeOrder = async function() {
         await decrementDrinksFromStock(waiterCart, db);
 
         waiterCart = [];
-        updateCartUI();
+        renderCart();
         addonOrderId = null;
         if (document.getElementById('waiter-addon-badge')) document.getElementById('waiter-addon-badge').style.display = 'none';
         if (document.getElementById('ordering-room-display')) document.getElementById('ordering-room-display').innerText = `ROOM ${selectedRoom} — NEW ORDER`;
