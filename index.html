@@ -14,14 +14,6 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <script>
-        // --- SESSION HINT (FAST REDIRECT) ---
-        // If we have a hint that a session was active, keep the loader up and jump!
-        if (localStorage.getItem('br_session_active') === 'true') {
-            // Pre-emptively redirect to home while Firebase is loading
-            window.location.href = 'staff_home.html';
-        }
-    </script>
     <style>
         :root {
             --bg: #030712;

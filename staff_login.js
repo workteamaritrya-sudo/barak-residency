@@ -99,11 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 onAuthStateChanged(auth, user => {
     if (user) {
-        localStorage.setItem('br_session_active', 'true');
         // Do NOT hide loader if redirecting, to prevent blank gap
-        window.location.href = 'staff_home.html';
+        window.location.replace('staff_home.html');
     } else {
-        localStorage.removeItem('br_session_active');
         hideLoader();
         const authPanel = document.getElementById('auth-panel');
         if (authPanel) {
