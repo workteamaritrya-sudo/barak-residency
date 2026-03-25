@@ -142,34 +142,37 @@ class CentralDatabase {
         });
     }
 
-    async loadMenu() {
-        await this.fetchMenuFromCloud();
-        
-        // Wait, if fetch from cloud found NO items, THEN we build default BARAK_MENU and seed to loud
-        if (!this.menu || this.menu.length === 0) {
-            this.menu = this.buildBarakMenu();
-            if (window.firebaseFS) this._seedMenuToFirestore(this.menu);
-        }
-        
-        const unavailable = JSON.parse(localStorage.getItem('br_unavailable_items') || '[]');
-        if (unavailable.length > 0) this.menu = this.menu.map(i => ({ ...i, isAvailable: !unavailable.includes(i.id) }));
+    loadMenu() {
+        this.fetchMenuFromCloud();
     }
 
-    async fetchMenuFromCloud() {
+    fetchMenuFromCloud() {
         if (!window.firebaseFS) return;
-        try {
-            const { collection, getDocs } = window.firebaseHooks;
-            const snap = await getDocs(collection(window.firebaseFS, 'menuItems'));
-            
-            if (!snap.empty) {
-                const newMenu = [];
-                snap.forEach(d => newMenu.push({ id: d.id, ...d.data() }));
-                this.menu = newMenu;
-                console.log('[Menu] Fetched from cloud. Total Items:', this.menu.length);
+        const { collection, onSnapshot, getDocs } = window.firebaseHooks;
+        
+        // Initial check to seed if completely empty
+        getDocs(collection(window.firebaseFS, 'menuItems')).then(snap => {
+            if (snap.empty) {
+                this.menu = this.buildBarakMenu();
+                this._seedMenuToFirestore(this.menu);
             }
-        } catch (e) {
-            console.warn('[Menu] Failed to fetch:', e.message);
-        }
+        }).catch(e => console.warn('[Menu] Seed Check Skip:', e.message));
+
+        // Real-time listener for the menu
+        onSnapshot(collection(window.firebaseFS, 'menuItems'), (snap) => {
+            const newMenu = [];
+            snap.forEach(d => newMenu.push({ id: d.id, ...d.data() }));
+            
+            const unavailable = JSON.parse(localStorage.getItem('br_unavailable_items') || '[]');
+            this.menu = newMenu.map(i => ({ ...i, isAvailable: !unavailable.includes(i.id) }));
+            
+            console.log('[Menu] Live sync updated. Total Items:', this.menu.length);
+            
+            // Re-render UI if inventory tab is active
+            if (typeof this.renderInventoryList === 'function' && document.getElementById('inventory-list')) {
+                this.renderInventoryList();
+            }
+        });
     }
 
     async _seedMenuToFirestore(menu) {
@@ -3629,40 +3632,40 @@ class PMSApp {
         const guest = room.guest;
         const guestId = guest.cloudId || room.currentGuestId;
 
-        // 1. Precise Itemized Ledger &#8212; use billItems if available, fall back to kitchenOrders
-        let itemizedFood = (guest.billItems && guest.billItems.length > 0) ? guest.billItems : [];
+        // 1. Precise Itemized Ledger — Dynamically build from all valid orders in this session
+        let itemizedFood = [];
+        const checkInTs = guest.checkInTimestamp || 0;
+        const stayID = room.currentStayId || guest.stayID;
 
-        // Fallback: build itemized list from kitchenOrders if billItems is empty
-        if (itemizedFood.length === 0) {
-            const checkInTs = guest.checkInTimestamp || 0;
-            const stayID = room.currentStayId || guest.stayID;
+        const sessionOrders = this.db.kitchenOrders.filter(o => {
+            const oTime = o.timestamp?.seconds ? o.timestamp.seconds * 1000 : (Number(o.timestamp) || 0);
+            const matchesRoom = (String(o.roomNumber) === String(roomNum) || String(o.roomId) === String(roomNum));
+            const matchesStay = stayID ? (o.stayID === stayID) : (oTime >= checkInTs);
 
-            const fallbackOrders = this.db.kitchenOrders.filter(o => {
-                const oTime = o.timestamp?.seconds ? o.timestamp.seconds * 1000 : (Number(o.timestamp) || 0);
-                const matchesRoom = (String(o.roomNumber) === String(roomNum) || String(o.roomId) === String(roomNum));
-                const matchesStay = stayID ? (o.stayID === stayID) : (oTime >= checkInTs);
+            return matchesRoom &&
+                matchesStay &&
+                o.status !== 'Cancelled' &&
+                o.status !== 'cancelled';
+        });
 
-                return matchesRoom &&
-                    matchesStay &&
-                    o.status !== 'Cancelled' &&
-                    o.status !== 'cancelled';
+        sessionOrders.forEach(o => {
+            (o.items || []).forEach(i => {
+                if (typeof i === 'object') {
+                    itemizedFood.push({
+                        name: i.name || 'Item',
+                        qty: i.qty || 1,
+                        price: i.price || 0,
+                        variant: i.variant || 'Full',
+                        orderId: o.id || o.order_id,
+                        timestamp: o.timestamp
+                    });
+                } else if (typeof i === 'string') {
+                    itemizedFood.push({
+                        name: i, qty: 1, price: 0, variant: 'Full', orderId: o.id || o.order_id, timestamp: o.timestamp
+                    });
+                }
             });
-
-            fallbackOrders.forEach(o => {
-                (o.items || []).forEach(i => {
-                    if (typeof i === 'object') {
-                        itemizedFood.push({
-                            name: i.name || 'Item',
-                            qty: i.qty || 1,
-                            price: i.price || 0,
-                            variant: i.variant || 'Full',
-                            orderId: o.id,
-                            timestamp: o.timestamp
-                        });
-                    }
-                });
-            });
-        }
+        });
 
         const foodSubtotal = itemizedFood.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.qty || 1)), 0);
 
@@ -3945,7 +3948,7 @@ class PMSApp {
 
     generateInvoice() { this.generateFinalBill(); }
 
-    //   Raise Housekeeping Request from Reception 
+    //   Raise Housekeeping Request from Reception (Command Center)
     async raiseHousekeepingRequest() {
         if (!this.selectedRoomId) {
             this.showToast('Please select a room first.', 'warning');
@@ -3967,6 +3970,51 @@ class PMSApp {
             this.showToast(` Housekeeping request sent to hotel staff for Room ${this.selectedRoomId}`, 'success');
         } catch (e) {
             this.showToast('Failed to raise request: ' + e.message, 'error');
+        }
+    }
+
+    //   Global Raise Housekeeping Request (From Dashboard Header)
+    openGlobalHousekeepingModal() {
+        const select = document.getElementById('global-hk-room');
+        const modal = document.getElementById('global-hk-modal');
+        if (!select || !modal) return;
+        
+        select.innerHTML = '<option value="" disabled selected>Select an occupied room...</option>';
+        Object.entries(this.db.rooms).forEach(([rNum, data]) => {
+            if (data.status === 'occupied' && data.guestName) {
+                select.innerHTML += `<option value="${rNum}">Room ${rNum} — ${data.guestName}</option>`;
+            }
+        });
+        
+        document.getElementById('global-hk-msg').value = '';
+        modal.style.display = 'flex';
+    }
+
+    async submitGlobalHousekeeping() {
+        const roomNum = document.getElementById('global-hk-room').value;
+        const msg = document.getElementById('global-hk-msg').value || 'General housekeeping required';
+        
+        if (!roomNum) {
+            this.showToast('Please select a room.', 'warning');
+            return;
+        }
+        
+        const room = this.db.rooms[roomNum] || {};
+        try {
+            const { collection, addDoc, serverTimestamp } = window.firebaseHooks;
+            await addDoc(collection(window.firebaseFS, 'serviceRequests'), {
+                type:       'housekeeping',
+                roomNumber: String(roomNum),
+                guestName:  room.guestName || 'Guest',
+                message:    msg,
+                status:     'pending',
+                source:     'reception',
+                timestamp:  serverTimestamp()
+            });
+            document.getElementById('global-hk-modal').style.display = 'none';
+            this.showToast(` Housekeeping request sent to hotel staff for Room ${roomNum}`, 'success');
+        } catch (e) {
+            this.showToast('Failed to dispatch request: ' + e.message, 'error');
         }
     }
 

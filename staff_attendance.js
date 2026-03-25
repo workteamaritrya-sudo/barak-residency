@@ -853,10 +853,9 @@ window.openUseStockPopup = async function() {
     try {
         const snap  = await getDocs(collection(db, 'stock'));
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-            .filter(i => (i.category || '').toLowerCase().includes('drink')) // Drink filter requested
             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         if (!items.length) {
-            list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:2rem;">No drink items in stock.</div>';
+            list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:2rem;">No items in stock.</div>';
             return;
         }
         list.innerHTML = items.map(item => {
