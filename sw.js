@@ -1,4 +1,4 @@
-const CACHE_NAME = 'br-pro-v1';
+const CACHE_NAME = 'br-pro-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -33,25 +33,36 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only intercept same-origin or specific CDN requests
-  if (event.request.url.startsWith(self.location.origin) || event.request.url.includes('cdn.jsdelivr')) {
+  // Network-First Strategy for Logic Files
+  const url = event.request.url;
+  const isLogicFile = url.endsWith('.html') || url.endsWith('.js') || url.includes('/barak-residency/');
+
+  if (isLogicFile && event.request.method === 'GET') {
     event.respondWith(
-      caches.match(event.request).then((response) => {
-        // Return cached version if found, otherwise fetch from network
-        return response || fetch(event.request).then((fetchRes) => {
-           return caches.open(CACHE_NAME).then((cache) => {
-             // Cache new requests dynamically (like the logo if not pre-cached)
-             if(event.request.method === 'GET') {
-                cache.put(event.request.url, fetchRes.clone());
-             }
-             return fetchRes;
-           });
+      fetch(event.request).then((networkResponse) => {
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
         });
       }).catch(() => {
-        // Fallback for offline mode if the resource isn't cached (e.g. index.html)
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
+  // Cache-First Strategy for Assets (CSS, Fonts, Images)
+  if (url.startsWith(self.location.origin) || url.includes('cdn.jsdelivr') || url.includes('fonts.googleapis')) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        return cachedResponse || fetch(event.request).then((networkResponse) => {
+          return caches.open(CACHE_NAME).then((cache) => {
+            if (event.request.method === 'GET') {
+              cache.put(event.request, networkResponse.clone());
+            }
+            return networkResponse;
+          });
+        });
       })
     );
   }
@@ -72,6 +83,6 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow('./staff_attendance.html')
+    clients.openWindow('./staff_home.html')
   );
 });
