@@ -134,6 +134,23 @@ async function pushNotification(type, message, target, data = null) {
     } catch (e) { console.warn('[Notification] Push failed', e); }
 }
 
+// --- Global order ID using system_counters (shared across all POS modules) ---
+async function getNextOrderId() {
+    const counterRef = doc(db, 'system_counters', 'orders');
+    let newId;
+    try {
+        await runTransaction(db, async (tx) => {
+            const snap = await tx.get(counterRef);
+            const current = snap.exists() ? (snap.data().currentId || 100) : 100;
+            newId = current + 1;
+            tx.set(counterRef, { currentId: newId }, { merge: true });
+        });
+        return `BR-${newId}`;
+    } catch (e) {
+        return `BR-${Date.now().toString().slice(-6)}`;
+    }
+}
+
 //  Real-time Listeners 
 
 function startListeners() {
@@ -812,11 +829,10 @@ async function placeOrder() {
 
         showToast('Sending to Kitchen...', 'info');
 
-        // Get order ID
         let orderIdStr = editingOrderId;
         let isUpdating = !!orderIdStr;
         if (!isUpdating) {
-            orderIdStr = await getNextOrderSerial(activeTableId);
+            orderIdStr = await getNextOrderId();
         }
 
         const orderObj = {
@@ -851,13 +867,9 @@ async function placeOrder() {
         else { table.orders.push(orderObj); table.total = (table.total || 0) + total; }
         await pushTableToCloud(table);
 
-        // Push notification to Firestore → Desk sees it
-        await pushNotification(
-            'order',
-            `${isUpdating ? 'ADD-ON' : 'DINE-IN ORDER'}: Table ${activeTableId} — Bill ${orderIdStr}`,
-            'desk',
-            { type: isUpdating ? 'addon' : 'dinein', orderId: orderIdStr, tableId: String(activeTableId) }
-        );
+        // Route: Table orders go to Restaurant Desk + Kitchen
+        await pushNotification('order', `${isUpdating ? 'ADD-ON' : 'DINE-IN ORDER'}: Table ${activeTableId} — Bill ${orderIdStr}`, 'desk', { type: isUpdating ? 'addon' : 'dinein', orderId: orderIdStr, tableId: String(activeTableId) });
+        await pushNotification('kot', `KOT: Table ${activeTableId} — ${itemsList.map(i=>i.qty+'x '+i.name).join(', ')}`, 'kitchen', { type: 'table', orderId: orderIdStr, tableId: String(activeTableId), items: itemsList });
 
         // 4. Record the specific order
         await pushOrderToCloud(orderObj);
