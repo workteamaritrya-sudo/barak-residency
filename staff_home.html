@@ -1049,55 +1049,6 @@
     </div>
 
     <script>
-
-
-        function switchPortal(p) {
-            document.getElementById('portal-hotel').classList.toggle('active', p === 'hotel');
-            document.getElementById('portal-restaurant').classList.toggle('active', p === 'restaurant');
-            document.getElementById('pbtn-hotel').classList.toggle('active', p === 'hotel');
-            document.getElementById('pbtn-restaurant').classList.toggle('active', p === 'restaurant');
-        }
-
-        /*  Hotel Waiter Overlay  */
-        function openHotelWaiter() {
-            const overlay = document.getElementById('waiter-overlay');
-            const iframe = document.getElementById('waiter-iframe');
-            if (!iframe.src || iframe.src === window.location.href || iframe.src === 'about:blank') {
-                iframe.src = 'hotel_waiter.html?embedded=1';
-            }
-            overlay.style.display = 'flex';
-            overlay.style.animation = 'none';
-            requestAnimationFrame(() => { overlay.style.animation = 'slideUp 0.32s cubic-bezier(.22,1,.36,1)'; });
-            document.body.style.overflow = 'hidden';
-        }
-        function closeHotelWaiter() {
-            const overlay = document.getElementById('waiter-overlay');
-            overlay.style.opacity = '0'; overlay.style.transform = 'translateY(30px)';
-            overlay.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
-            setTimeout(() => { overlay.style.display = 'none'; overlay.style.opacity = ''; overlay.style.transform = ''; overlay.style.transition = ''; }, 220);
-            document.body.style.overflow = '';
-        }
-
-        /*  Restaurant Waiter Overlay  */
-        function openRestWaiter() {
-            const overlay = document.getElementById('rest-waiter-overlay');
-            const iframe = document.getElementById('rest-waiter-iframe');
-            if (!iframe.src || iframe.src === window.location.href || iframe.src === 'about:blank') {
-                iframe.src = 'restaurant_waiter.html?embedded=1';
-            }
-            overlay.style.display = 'flex';
-            overlay.style.animation = 'none';
-            requestAnimationFrame(() => { overlay.style.animation = 'slideUp 0.32s cubic-bezier(.22,1,.36,1)'; });
-            document.body.style.overflow = 'hidden';
-        }
-        function closeRestWaiter() {
-            const overlay = document.getElementById('rest-waiter-overlay');
-            overlay.style.opacity = '0'; overlay.style.transform = 'translateY(30px)';
-            overlay.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
-            setTimeout(() => { overlay.style.display = 'none'; overlay.style.opacity = ''; overlay.style.transform = ''; overlay.style.transition = ''; }, 220);
-            document.body.style.overflow = '';
-        }
-
         // Close with ESC key or Android Back Button
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') handleBackButton();
