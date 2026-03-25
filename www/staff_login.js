@@ -1,5 +1,5 @@
 import { app } from "./firebase-config.js";
-import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 
 const db = getFirestore(app);
@@ -97,10 +97,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
     if (user) {
-        // Do NOT hide loader if redirecting, to prevent blank gap
-        window.location.replace('staff_home.html');
+        // --- BREAK REDIRECT LOOP ---
+        // Verify profile exists before jumping to staff_home.html
+        try {
+            const profileSnap = await getDoc(doc(db, 'staffProfiles', user.uid));
+            if (profileSnap.exists()) {
+                window.location.replace('staff_home.html');
+            } else {
+                console.warn("[Auth] No profile found for UID:", user.uid);
+                // Stay on login page so user can register or wait for fix
+                hideLoader();
+                const authPanel = document.getElementById('auth-panel');
+                if (authPanel) authPanel.style.display = 'flex';
+                setMsg('login-msg', 'Account exists but profile is missing. Please contact admin.', 'error');
+            }
+        } catch (err) {
+            console.error("[Auth] Profile verify error:", err);
+            hideLoader();
+            if (document.getElementById('auth-panel')) document.getElementById('auth-panel').style.display = 'flex';
+        }
     } else {
         hideLoader();
         const authPanel = document.getElementById('auth-panel');

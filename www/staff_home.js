@@ -744,6 +744,8 @@ onAuthStateChanged(auth, async user => {
         try {
             const profile = await loadProfile(user.uid);
             if (!profile) {
+                console.warn("[Auth] No profile found on Home, signing out to break loop.");
+                await signOut(auth);
                 window.location.replace('index.html');
                 return;
             }
