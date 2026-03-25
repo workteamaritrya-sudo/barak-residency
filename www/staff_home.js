@@ -77,6 +77,17 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c; 
 }
 
+//  Emergency Safety Timeout (Pre-reveal UI if network/FB hangs)
+setTimeout(() => {
+    const loader = document.getElementById('page-loader');
+    if (loader && loader.style.display !== 'none') {
+        console.warn("[InitialLoad] Safety timeout triggered. Re-forcing UI visibility.");
+        const dash = document.getElementById('dashboard');
+        if (dash) dash.style.display = 'block';
+        hideLoader();
+    }
+}, 6000);
+
 function verifyLocationAndPunch(type) {
     if (!navigator.geolocation) { alert("GPS not supported on this device."); return; }
     
@@ -227,7 +238,11 @@ async function loadProfile(uid) {
 
 function populateDashboard(profile) {
     const el = id => document.getElementById(id);
-    if (el('dashboard')) el('dashboard').style.display = 'block';
+    if (el('dashboard')) {
+        el('dashboard').style.display = 'block';
+        el('dashboard').style.opacity = '1';
+        el('dashboard').style.visibility = 'visible';
+    }
     if (el('welcome-name'))  el('welcome-name').textContent  = greeting(profile.name);
     if (el('welcome-dept'))  el('welcome-dept').textContent  = `${profile.department || 'Staff'} · ${profile.email}`;
     if (el('avatar-initials')) el('avatar-initials').textContent = (profile.name || '?').charAt(0).toUpperCase();

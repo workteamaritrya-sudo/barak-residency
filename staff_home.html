@@ -296,7 +296,7 @@
 
         /*  Dashboard Layout  */
         #dashboard {
-            display: none;
+            /* display: none; Removed to prevent blank screen issues */
             max-width: 600px;
             margin: 0 auto;
             padding: 0 1rem 6rem;
@@ -815,6 +815,11 @@
 </head>
 
 <body>
+    <!--  Sticky Time Bar  -->
+    <div class="sticky-time-bar" id="sticky-header" style="display:none; position:fixed; width:100%; top:0; left:0; z-index:1000;">
+        <div class="stb-time" id="stb-clock">00:00:00</div>
+        <div class="stb-status" id="stb-shift">Live Dashboard</div>
+    </div>
 
     <!--  Page Loader / Splash  -->
     <div id="page-loader">
