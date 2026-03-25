@@ -730,6 +730,60 @@ function renderStockAdminView() {
     </div>`;
 }
 
+// --- Hard Reset (Admin Panel) ---
+// Archives all active rooms/tables to Ledger_History, resets status.
+// DOES NOT modify system_counters — order IDs continue uninterrupted.
+window.hardReset = async function() {
+    if (!confirm('HARD RESET\n\nThis will:\n• Clear all ACTIVE rooms and tables\n• Archive current data to Ledger_History\n• Order ID numbering will continue from where it left off\n\nThis cannot be undone. Proceed?')) return;
+    try {
+        const ts = Date.now();
+        const batch = [];
+
+        // Archive & reset rooms
+        const roomsSnap = await getDocs(collection(db, 'rooms'));
+        for (const d of roomsSnap.docs) {
+            const data = d.data();
+            if (data.status === 'occupied') {
+                await setDoc(doc(db, 'Ledger_History', `room_${d.id}_${ts}`), {
+                    type: 'room', entityId: d.id,
+                    archivedAt: serverTimestamp(),
+                    ...data
+                });
+                await updateDoc(doc(db, 'rooms', d.id), {
+                    status: 'available',
+                    guestName: null,
+                    guestPhone: null,
+                    currentStayId: null,
+                    isActive: false
+                });
+            }
+        }
+
+        // Archive & reset tables
+        const tablesSnap = await getDocs(collection(db, 'tables'));
+        for (const d of tablesSnap.docs) {
+            const data = d.data();
+            if ((data.status || '').toLowerCase() === 'occupied') {
+                await setDoc(doc(db, 'Ledger_History', `table_${d.id}_${ts}`), {
+                    type: 'table', entityId: d.id,
+                    archivedAt: serverTimestamp(),
+                    ...data
+                });
+                await updateDoc(doc(db, 'tables', d.id), {
+                    status: 'available',
+                    guestName: null, pax: 0,
+                    activeBills: [], orders: [], total: 0,
+                    isActive: false
+                });
+            }
+        }
+
+        alert('Hard Reset complete. All rooms/tables cleared. Order ID counter preserved.');
+    } catch (e) {
+        alert('Hard Reset failed: ' + e.message);
+    }
+};
+
 // --- Global Actions ---
 window.handleLogout = async () => {
     await signOut(auth);

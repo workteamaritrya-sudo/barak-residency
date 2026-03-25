@@ -426,21 +426,62 @@ window.enterAddonMode = function(orderId) {
 
 //  Actions 
 
-async function getNextGlobalSerial(roomNum) {
+// --- Global order ID using system_counters (shared across all POS modules) ---
+async function getNextGlobalSerial() {
+    const counterRef = doc(db, 'system_counters', 'orders');
+    let newId;
     try {
-        const roomRef = doc(db, 'rooms', String(roomNum));
-        let nextSerial = 1;
         await runTransaction(db, async (tx) => {
-            const snap = await tx.get(roomRef);
-            const current = snap.exists() ? (snap.data().lifetimeOrderCount || 0) : 0;
-            nextSerial = current + 1;
-            tx.update(roomRef, { lifetimeOrderCount: nextSerial });
+            const snap = await tx.get(counterRef);
+            const current = snap.exists() ? (snap.data().currentId || 100) : 100;
+            newId = current + 1;
+            tx.set(counterRef, { currentId: newId }, { merge: true });
         });
-        return `${roomNum}-${nextSerial}`;
+        return `BR-${newId}`;
     } catch (e) {
-        return `R${roomNum}-${Date.now().toString().slice(-4)}`;
+        return `BR-${Date.now().toString().slice(-6)}`;
     }
 }
+
+// --- Service Request (Housekeeping + Reception notification) ---
+window.placeServiceRequest = async function(serviceType, roomNum) {
+    if (!roomNum) roomNum = selectedRoom;
+    if (!roomNum) { showToast('Select a room first', 'error'); return; }
+    const room = rooms[roomNum] || {};
+    const reqId = `SVC-${roomNum}-${Date.now().toString().slice(-5)}`;
+    try {
+        await setDoc(doc(db, 'serviceRequests', reqId), {
+            id: reqId,
+            roomNumber: String(roomNum),
+            guestName: room.guestName || 'Guest',
+            serviceType,
+            status: 'Pending',
+            requestedAt: serverTimestamp()
+        });
+        // Notify housekeeping to fulfil
+        await pushNotification('service', `SERVICE REQUEST: Room ${roomNum} needs ${serviceType}`, 'housekeeping', { roomNumber: roomNum, reqId, serviceType });
+        // Also notify reception so they know it was raised
+        await pushNotification('service', `[INFO] Room ${roomNum} service request raised: ${serviceType}`, 'reception', { roomNumber: roomNum, reqId, serviceType });
+        showToast(`Service request sent — Housekeeping notified`, 'success');
+    } catch (e) {
+        console.error('[Service] Request failed', e);
+        showToast('Service request failed', 'error');
+    }
+};
+
+window.markServiceCompleted = async function(reqId, serviceType, roomNum) {
+    try {
+        await updateDoc(doc(db, 'serviceRequests', reqId), {
+            status: 'Completed',
+            completedAt: serverTimestamp()
+        });
+        // Completion report goes to reception
+        await pushNotification('service_done', `COMPLETED: Room ${roomNum} — ${serviceType} done`, 'reception', { roomNumber: roomNum, reqId, serviceType, status: 'Completed' });
+        showToast('Marked complete — Reception notified', 'success');
+    } catch (e) {
+        showToast('Update failed', 'error');
+    }
+};
 
 window.placeOrder = async function() {
     if (!selectedRoom || waiterCart.length === 0) return;
@@ -466,7 +507,7 @@ window.placeOrder = async function() {
             });
             showToast('Add-on items added!', 'success');
         } else {
-            const orderId = await getNextGlobalSerial(roomNum);
+            const orderId = await getNextGlobalSerial();
             const orderObj = {
                 order_id: orderId,
                 id: orderId,
@@ -507,12 +548,9 @@ window.placeOrder = async function() {
         if (document.getElementById('waiter-addon-badge')) document.getElementById('waiter-addon-badge').style.display = 'none';
         if (document.getElementById('ordering-room-display')) document.getElementById('ordering-room-display').innerText = `ROOM ${selectedRoom} — NEW ORDER`;
 
-        await pushNotification(
-            'order',
-            `ROOM ORDER: Room ${roomNum} — ${room.guestName || 'Guest'}`,
-            'desk',
-            { type: 'room', roomNumber: roomNum, orderId: addonOrderId || 'New' }
-        );
+        // Route room food orders: notify Reception + Kitchen (not Restaurant Desk)
+        await pushNotification('order', `ROOM ORDER: Room ${roomNum} — ${room.guestName || 'Guest'}`, 'reception', { type: 'room', roomNumber: roomNum, kotTarget: 'reception' });
+        await pushNotification('kot', `KOT: Room ${roomNum} — ${waiterCart.map(i=>i.qty+'x '+i.name).join(', ')}`, 'kitchen', { type: 'room', roomNumber: roomNum, items: waiterCart });
         
     } catch (e) {
         console.error(e);

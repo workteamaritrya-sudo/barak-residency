@@ -626,12 +626,23 @@ function selectDeskCheckout(tableId, billId = null) {
                 </div>
                 <div style="font-size:0.85rem; border-top:1px dashed var(--glass-border); padding-top:0.8rem;">
                     ${orders.length > 0 ?
-                orders.map(o => (o.items || []).map(i => `<div style="display:flex; justify-content:space-between; margin-bottom:0.2rem;">
-                            <span class="text-gray">${i.qty}x ${i.name}</span>
-                            <span>₹${i.qty * i.price}</span>
-                        </div>`).join('')).join('') :
+                orders.map(o => (o.items || []).map((i, iIdx) => {
+                    const isAddOn = i.isAddOn || o.isAddOn;
+                    const addOnStyle = isAddOn ? 'border:1px solid #F59E0B; border-radius:6px; background:rgba(245,158,11,0.08); animation:addonPulse 1.5s ease-in-out infinite;' : '';
+                    const addOnTag = isAddOn ? '<span style="font-size:0.6rem;background:#F59E0B;color:#000;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700;">URGENT ADD-ON</span>' : '';
+                    const cbId = `cb_${b.billID}_${o.id || o.order_id}_${iIdx}`;
+                    const paidStyle = i.paid ? 'opacity:0.4; text-decoration:line-through;' : '';
+                    return `<div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.3rem; padding:0.25rem; ${addOnStyle} ${paidStyle}">
+                                <input type="checkbox" id="${cbId}" data-bill="${b.billID}" data-order="${o.id || o.order_id}" data-idx="${iIdx}" data-price="${i.qty * i.price}" ${i.paid ? 'checked disabled' : ''} style="width:16px;height:16px;accent-color:#D4AF37;cursor:pointer;">
+                                <label for="${cbId}" style="flex:1;display:flex;justify-content:space-between;cursor:pointer;">
+                                    <span class="text-gray">${i.qty}x ${i.name}${addOnTag}</span>
+                                    <span>${i.paid ? '<span style="color:#10B981;font-size:0.7rem;">PAID</span>' : '₹'+(i.qty * i.price)}</span>
+                                </label>
+                            </div>`;
+                }).join('')).join('') :
                 '<div class="text-gray italic">No items found</div>'
             }
+                    <button onclick="window.deskApp.partialCheckout('${tableId}', '${b.billID}')" style="margin-top:0.8rem;width:100%;padding:0.5rem;background:rgba(212,175,55,0.12);color:var(--gold-primary);border:1px solid rgba(212,175,55,0.3);border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;letter-spacing:1px;">PARTIAL CHECKOUT (SELECTED ITEMS)</button>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-top:1rem; font-weight:bold; font-size:1.1rem; border-top:1px solid var(--glass-border); padding-top:0.8rem;">
                     <span>Subtotal</span>
@@ -663,6 +674,46 @@ function selectDeskCheckout(tableId, billId = null) {
     modal.dataset.tableId = tableId;
     modal.dataset.grandTotal = grandTotal;
     modal.style.display = 'flex';
+}
+
+// --- Partial Checkout: mark only checked items as paid, keep table active ---
+async function partialCheckout(tableId, billId) {
+    const checkboxes = document.querySelectorAll(`input[type=checkbox][data-bill="${billId}"]:checked:not(:disabled)`);
+    if (checkboxes.length === 0) {
+        showToast('Select at least one item to partially checkout', 'warning');
+        return;
+    }
+    const table = tables[tableId]; if (!table) return;
+    let partialTotal = 0;
+    const paidItemRefs = [];
+    checkboxes.forEach(cb => {
+        paidItemRefs.push({ orderId: cb.dataset.order, itemIdx: parseInt(cb.dataset.idx) });
+        partialTotal += parseFloat(cb.dataset.price) || 0;
+    });
+
+    try {
+        // Mark items as paid in the local orders array
+        (table.orders || []).forEach(o => {
+            paidItemRefs.forEach(ref => {
+                if ((o.id === ref.orderId || o.order_id === ref.orderId) && o.items?.[ref.itemIdx]) {
+                    o.items[ref.itemIdx].paid = true;
+                }
+            });
+        });
+        await setDoc(doc(db, 'tables', tableId), table, { merge: true });
+        await addDoc(collection(db, 'ledger'), {
+            tableId, billId,
+            amount: partialTotal,
+            guestName: (table.activeBills || []).find(b => b.billID === billId)?.guestName || 'Guest',
+            closedAt: serverTimestamp(),
+            logType: 'PARTIAL_CHECKOUT',
+            itemCount: checkboxes.length
+        });
+        showToast(`Partial checkout: ₹${partialTotal} settled`, 'success');
+        selectDeskCheckout(tableId, billId); // Refresh modal
+    } catch (e) {
+        showToast('Partial checkout failed', 'error');
+    }
 }
 
 async function checkoutBill(tableId, billId, amount) {
