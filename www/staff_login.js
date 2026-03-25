@@ -6,6 +6,17 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch(console.warn);
 
+//  Emergency Safety Timeout (Pre-reveal UI if network/FB hangs)
+setTimeout(() => {
+    const loader = document.getElementById('page-loader');
+    if (loader && loader.style.display !== 'none') {
+        hideLoader();
+        const authPanel = document.getElementById('auth-panel');
+        if (authPanel) authPanel.style.display = 'flex';
+    }
+}, 6000);
+
+
 function setMsg(id, text, type = 'error') {
     const el = document.getElementById(id);
     if (!el) return;
