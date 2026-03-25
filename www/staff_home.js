@@ -753,9 +753,20 @@ onAuthStateChanged(auth, async user => {
             }
 
             if (!profile) {
-                console.warn("[Auth] No profile found on Home, signing out to break loop.");
-                await signOut(auth);
-                window.location.replace('index.html');
+                console.warn("[Auth] No profile found. User UID:", user.uid);
+                hideLoader();
+                // Show a clear error but stay on page to prevent loop
+                showToast("Profile Not Found. Please contact admin.", "error");
+                document.body.innerHTML = `
+                    <div style="background:#050B18; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; text-align:center; padding:2rem;">
+                        <h1 style="color:var(--gold); font-family:'Cormorant Garamond',serif;">Access Pending</h1>
+                        <p style="opacity:0.7;">Your profile (${user.email}) has not been approved or indexed yet.</p>
+                        <button onclick="signOut(auth).then(()=>window.location.href='index.html')" 
+                                style="margin-top:2rem; padding:1rem 2rem; background:rgba(255,255,255,0.05); border:1px solid var(--gold); color:var(--gold); border-radius:12px; cursor:pointer;">
+                            Return to Login
+                        </button>
+                    </div>
+                `;
                 return;
             }
             
@@ -801,13 +812,10 @@ onAuthStateChanged(auth, async user => {
             showToast('Cloud connection flicker. Keeping session active.', 'info');
         }
     } else {
-        // Verify we are ACTUALLY logged out before redirecting (prevent transient flicker loop)
-        setTimeout(() => {
-            if (!auth.currentUser) {
-                console.log("[Auth] Confirmed logged out. Redirecting to login...");
-                window.location.href = 'index.html';
-            }
-        }, 2000);
+        // Non-destructive: If user is null, simply stay on page.
+        // This prevents infinite loops if App Check/ReCAPTCHA flickers.
+        console.warn("[Auth] User is null. Waiting for reconnection...");
+        // showToast('Connection unstable. Please wait...', 'warning');
     }
 });
 

@@ -872,8 +872,8 @@ async function placeOrder() {
         cart = [];
         renderCart();
 
-        // Auto-Home
-        setTimeout(() => window.backToHome(), 2500);
+        // Stay on page — let waiter place more orders
+        showToast('Order placed! Ready for next order.', 'success');
 
     } catch (e) {
         console.error('Order Fail:', e);

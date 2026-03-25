@@ -11,6 +11,9 @@ const firebaseConfig = {
     apiKey: "AIzaSyANudXFm6QK4jJXKtXtAaDe9hWFDcBF8Vo",
     authDomain: "barak-residency-59405.firebaseapp.com",
     projectId: "barak-residency-59405",
+    databaseURL: "https://barak-residency-59405-default-rtdb.firebaseio.com",
+    storageBucket: "barak-residency-59405.firebasestorage.app",
+    messagingSenderId: "3871550492",
     appId: "1:3871550492:web:2cf49bc0a963b4888f43d9"
 };
 
@@ -50,22 +53,15 @@ window.addEventListener('message', (e) => {
 });
 
 window.backToHome = () => {
-    resetState(); // Always clean up before closing
-    if (window.parent && window.parent !== window && window.parent.closePickupOverlay) {
-        window.parent.closePickupOverlay();
-    } else if (window.parent && window.parent !== window && window.parent.closeRestWaiter) {
-        window.parent.closeRestWaiter();
-    } else if (window.parent && window.parent !== window) {
-        window.parent.postMessage({ action: 'closeOverlay', overlay: 'pickup' }, '*');
-    }
-    // Removed unconditional fallback redirect to index.html
+    resetState();
+    window.location.href = 'staff_home.html';
 };
 
 // Real-time Listeners
 onSnapshot(collection(db, 'menuItems'), snap => {
     menu = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderMenu();
-});
+}, err => console.warn('[Menu] Listen failed', err));
 
 onSnapshot(doc(db, 'settings', 'availability'), snap => {
     if (snap.exists()) unavailableItems = snap.data().unavailableItems || [];
@@ -75,7 +71,7 @@ onSnapshot(doc(db, 'settings', 'availability'), snap => {
 onSnapshot(collection(db, 'tables'), snap => {
     tables = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => (t.status || '').toLowerCase() === 'occupied');
     renderTables();
-});
+}, err => console.warn('[Tables] Listen failed', err));
 
 function renderTables() {
     const sel = document.getElementById('table-select');
@@ -290,8 +286,7 @@ window.submitOrder = async () => {
         cart = [];
         renderCart();
         
-        // Return to Home after delay
-        setTimeout(() => window.backToHome(), 2500);
+        // Stay visible — waiter presses close when ready
 
     } catch (e) {
         alert('Order Failed: ' + e.message);

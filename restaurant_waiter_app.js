@@ -872,8 +872,8 @@ async function placeOrder() {
         cart = [];
         renderCart();
 
-        // Auto-Home
-        setTimeout(() => window.backToHome(), 2500);
+        // Stay on page — let waiter place more orders
+        showToast('Order placed! Ready for next order.', 'success');
 
     } catch (e) {
         console.error('Order Fail:', e);
@@ -1061,12 +1061,8 @@ window.addEventListener('message', (e) => {
 });
 
 window.backToHome = () => {
-    resetState(); // Always reset before closing
-    if (window.parent && window.parent !== window && window.parent.closeRestWaiter) {
-        window.parent.closeRestWaiter();
-    } else if (window.parent && window.parent !== window) {
-        window.parent.postMessage({ action: 'closeOverlay', overlay: 'rest-waiter' }, '*');
-    }
+    resetState();
+    window.location.href = 'staff_home.html';
 };
 
 window.toggleCart = () => {
