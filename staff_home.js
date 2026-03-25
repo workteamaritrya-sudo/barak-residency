@@ -227,6 +227,7 @@ async function loadProfile(uid) {
 
 function populateDashboard(profile) {
     const el = id => document.getElementById(id);
+    if (el('dashboard')) el('dashboard').style.display = 'block';
     if (el('welcome-name'))  el('welcome-name').textContent  = greeting(profile.name);
     if (el('welcome-dept'))  el('welcome-dept').textContent  = `${profile.department || 'Staff'} · ${profile.email}`;
     if (el('avatar-initials')) el('avatar-initials').textContent = (profile.name || '?').charAt(0).toUpperCase();
