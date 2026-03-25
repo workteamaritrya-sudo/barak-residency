@@ -149,16 +149,9 @@ function startListeners() {
             renderMenu();
         }
     });
-
-    // Listen to Orders for Live View
-    onSnapshot(query(collection(db, 'orders'), orderBy('timestamp', 'desc'), limit(50)), (snap) => {
-        const orders = [];
-        snap.forEach(d => orders.push({ id: d.id, ...d.data() }));
-        kitchenOrders = orders;
-        renderLiveOrders();
-    });
 }
 
+// Removed global 50 limit order fetch; replaced with room-specific fetch in selectRoom
 //  UI Logic 
 
 function populateRoomSelect() {
@@ -201,15 +194,45 @@ window.selectRoom = function(roomNum) {
             .filter(o => String(o.roomNumber) === String(roomNum))
             .reduce((sum, o) => sum + (o.total_price || o.total || 0), 0);
         
-        const sTotal = document.getElementById('summary-total');
-        if (sTotal) sTotal.innerText = `₹${roomTotal}`;
+        if (room.guest && room.guest.foodTotal !== undefined) {
+            const sTotal = document.getElementById('summary-total');
+            if (sTotal) sTotal.innerText = `₹${room.guest.foodTotal || 0}`;
+        } else {
+            const sTotal = document.getElementById('summary-total');
+            // Fallback
+            if (sTotal) sTotal.innerText = `₹${roomTotal}`;
+        }
     } else {
         if (summary) summary.style.display = 'none';
     }
 
     waiterCart = [];
     updateCartUI();
-    renderLiveOrders();
+
+    // Setup room-specific order listener for Live Orders
+    if (window._roomOrderUnsub) window._roomOrderUnsub();
+    if (roomNum) {
+        window._roomOrderUnsub = onSnapshot(query(collection(db, 'orders'), 
+            where('roomNumber', '==', String(roomNum))), 
+            (snap) => {
+                kitchenOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                    .filter(o => ['Pending', 'Kitchen', 'Preparing', 'Ready', 'ontheway', 'On the Way', 'Delivered'].includes(o.status || 'Pending'));
+                kitchenOrders.sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                
+                // Keep the fallback total updated if guest.foodTotal is missing
+                if (!room.guest || room.guest.foodTotal === undefined) {
+                    const fallbackTotal = kitchenOrders.reduce((sum, o) => sum + (o.total_price || o.total || 0), 0);
+                    const sTotal = document.getElementById('summary-total');
+                    if (sTotal) sTotal.innerText = `₹${fallbackTotal}`;
+                }
+                
+                renderLiveOrders();
+            }
+        );
+    } else {
+        kitchenOrders = [];
+        renderLiveOrders();
+    }
 };
 
 function renderMenu(categoryFilter = 'All') {
@@ -426,20 +449,22 @@ window.enterAddonMode = function(orderId) {
 
 //  Actions 
 
-// --- Global order ID using system_counters (shared across all POS modules) ---
-async function getNextGlobalSerial() {
-    const counterRef = doc(db, 'system_counters', 'orders');
-    let newId;
+// --- Room-specific order ID (e.g. 101-1, 101-2) ---
+async function getNextOrderSerial(roomNumber) {
+    const roomRef = doc(db, 'rooms', String(roomNumber));
+    let newSerial = 1;
     try {
         await runTransaction(db, async (tx) => {
-            const snap = await tx.get(counterRef);
-            const current = snap.exists() ? (snap.data().currentId || 100) : 100;
-            newId = current + 1;
-            tx.set(counterRef, { currentId: newId }, { merge: true });
+            const snap = await tx.get(roomRef);
+            if (!snap.exists()) throw new Error("Room does not exist");
+            const data = snap.data();
+            newSerial = (data.orderSerial || 0) + 1;
+            tx.update(roomRef, { orderSerial: newSerial });
         });
-        return `BR-${newId}`;
-    } catch (e) {
-        return `BR-${Date.now().toString().slice(-6)}`;
+        return `${roomNumber}-${newSerial}`;
+    } catch(e) {
+        console.warn('Transaction failed, falling back to time-based ID', e);
+        return `${roomNumber}-${Date.now().toString().slice(-4)}`;
     }
 }
 
@@ -507,7 +532,7 @@ window.placeOrder = async function() {
             });
             showToast('Add-on items added!', 'success');
         } else {
-            const orderId = await getNextGlobalSerial();
+            const orderId = await getNextOrderSerial(roomNum);
             const orderObj = {
                 order_id: orderId,
                 id: orderId,

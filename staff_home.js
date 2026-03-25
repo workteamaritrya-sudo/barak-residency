@@ -431,11 +431,10 @@ function startHotelNotifListener() {
         }, err => console.warn('[CheckoutNotif]', err)
     );
 
-    // Hotel: ROOM food orders that are 'Ready' — hotel staff picks up and delivers to room
-    const roomOrderUnsub = onSnapshot(
-        query(collection(db, 'orders'),
-            where('orderType', '==', 'room'),
-            where('status', 'in', ['Ready', 'Pending', 'Kitchen']),
+        const roomOrderUnsub = onSnapshot(
+            query(collection(db, 'orders'),
+                where('orderType', '==', 'room'),
+                where('status', 'in', ['Ready', 'Pending', 'Kitchen', 'ontheway', 'On the Way']),
             orderBy('timestamp', 'desc'), limit(30)),
         snap => {
             _hotelRoomOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -472,19 +471,29 @@ function _renderHotelCombined() {
     if (!container) return;
 
     const roomOrderHtml = _hotelRoomOrders.map(o => {
-        const isReady = o.status === 'Ready';
+        const isReady = o.status === 'Ready' || o.status === 'ready' || o.status === 'Served';
+        const isOnWay = o.status === 'ontheway' || o.status === 'On the Way';
         const time = o.timestamp ? new Date(o.timestamp?.seconds ? o.timestamp.seconds*1000 : o.timestamp).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '—';
         const items = (o.items||[]).slice(0,3).map(i=>i.name).join(', ');
-        const typeClass = isReady ? 'type-ready' : 'type-order';
+        const typeClass = isReady ? 'type-ready' : (isOnWay ? 'type-onway' : 'type-order');
+        
+        let statusText = (o.status||'PENDING').toUpperCase();
+        let statusColor = '#FBBF24';
+        if (isReady) { statusText = 'READY — Pick up from Kitchen'; statusColor = 'var(--green)'; }
+        else if (isOnWay) { statusText = 'ON THE WAY TO ROOM'; statusColor = '#3B82F6'; }
+
         return `<div class="notif-item ${typeClass}" id="hro-${o.id}">
             <div class="notif-header">
                 <span class="notif-title">️ Room ${o.roomNumber || '?'} Order</span>
                 <span class="notif-time">${time}</span>
             </div>
             <div class="notif-msg">${items || 'Food order'}</div>
-            <div style="font-size:0.72rem;font-weight:700;color:${isReady ? 'var(--green)' : '#FBBF24'};margin-bottom:0.6rem;">${isReady ? 'READY — Pick up from Kitchen' : (o.status||'PENDING').toUpperCase()}</div>
+            <div style="font-size:0.72rem;font-weight:700;color:${statusColor};margin-bottom:0.6rem;">${statusText}</div>
             <div class="notif-actions">
-                ${isReady ? `<button class="btn-notif btn-done" onclick="markOrderDelivered('${o.id}')"> Delivered to Room</button>` : '<span style="font-size:0.7rem;color:var(--text-mute);">Kitchen preparing…</span>'}
+                ${isReady ? `<button class="btn-notif" style="background:#F97316;border-color:#F97316;" onclick="markOrderOnTheWay('${o.id}')"> On The Way</button>
+                             <button class="btn-notif btn-done" onclick="markOrderDelivered('${o.id}')"> Delivered</button>` 
+                  : (isOnWay ? `<button class="btn-notif btn-done" style="width:100%;" onclick="markOrderDelivered('${o.id}')"> Mark Delivered to Guest</button>`
+                             : '<span style="font-size:0.7rem;color:var(--text-mute);">Kitchen preparing…</span>')}
             </div>
         </div>`;
     }).join('');
@@ -728,6 +737,16 @@ window.markOrderDelivered = async function (orderId) {
     } catch (e) { alert('Failed: ' + e.message); }
 };
 
+window.markOrderOnTheWay = async function (orderId) {
+    try {
+        await updateDoc(doc(db, 'orders', orderId), {
+            status: 'ontheway',
+            onWayAt: serverTimestamp(),
+            handledBy: currentProfile?.name || 'Staff'
+        });
+    } catch (e) { alert('Failed: ' + e.message); }
+};
+
 //  Logout 
 window.staffLogout = async function () {
     if (attendanceUnsub) attendanceUnsub();
@@ -850,10 +869,9 @@ window.openUseStockPopup = async function() {
     try {
         const snap  = await getDocs(collection(db, 'stock'));
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-            .filter(i => (i.category || '').toLowerCase().includes('drink')) // Drink filter requested
             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         if (!items.length) {
-            list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:2rem;">No drink items in stock.</div>';
+            list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:2rem;">No items in stock.</div>';
             return;
         }
         list.innerHTML = items.map(item => {
