@@ -741,8 +741,17 @@ window.staffLogout = async function () {
 //  Auth State Observer 
 onAuthStateChanged(auth, async user => {
     if (user) {
+        // --- NEW: Add a small grace period for Profile to sync from Firestore ---
+        // (Prevents immediate kick-out if network is slow right after registration)
         try {
-            const profile = await loadProfile(user.uid);
+            let profile = await loadProfile(user.uid);
+            
+            if (!profile) {
+                console.log("[Auth] Profile not found immediately. Retrying in 2.5s...");
+                await new Promise(r => setTimeout(r, 2500));
+                profile = await loadProfile(user.uid);
+            }
+
             if (!profile) {
                 console.warn("[Auth] No profile found on Home, signing out to break loop.");
                 await signOut(auth);
@@ -902,12 +911,10 @@ window.openPickupOverlay = function() {
     const overlay = document.getElementById('pickup-overlay');
     const iframe  = document.getElementById('pickup-iframe');
     if (!overlay || !iframe) return;
-    const src = iframe.getAttribute('src');
-    if (!src || src === 'about:blank') {
-        iframe.setAttribute('src', 'restaurant_pickup.html');
-    } else {
-        _sendReset(iframe); // cached — reset UI before showing
-    }
+    
+    // ALWAYS force a fresh load to prevent it showing a cached redirect (like index.html)
+    iframe.src = 'restaurant_pickup.html';
+    
     overlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     if (window.pushOverlayState) window.pushOverlayState('pickup');
@@ -923,12 +930,10 @@ window.openRestWaiter = function() {
     const overlay = document.getElementById('rest-waiter-overlay');
     const iframe  = document.getElementById('rest-waiter-iframe');
     if (!overlay || !iframe) return;
-    const src = iframe.getAttribute('src');
-    if (!src || src === 'about:blank') {
-        iframe.setAttribute('src', 'restaurant_waiter.html');
-    } else {
-        _sendReset(iframe); // cached — reset UI before showing
-    }
+    
+    // ALWAYS force a fresh load
+    iframe.src = 'restaurant_waiter.html';
+    
     overlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     if (window.pushOverlayState) window.pushOverlayState('rest-waiter');
@@ -944,12 +949,10 @@ window.openHotelWaiter = function() {
     const overlay = document.getElementById('waiter-overlay');
     const iframe  = document.getElementById('waiter-iframe');
     if (!overlay || !iframe) return;
-    const src = iframe.getAttribute('src');
-    if (!src || src === 'about:blank') {
-        iframe.setAttribute('src', 'hotel_waiter.html');
-    } else {
-        _sendReset(iframe); // cached — reset UI before showing
-    }
+    
+    // ALWAYS force a fresh load
+    iframe.src = 'hotel_waiter.html';
+    
     overlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     if (window.pushOverlayState) window.pushOverlayState('hotel-waiter');
