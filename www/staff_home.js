@@ -98,6 +98,17 @@ function verifyLocationAndPunch(type) {
     }, { enableHighAccuracy: true, timeout: 5000 });
 }
 
+window.switchPortal = function(p) {
+    const ph = document.getElementById('portal-hotel');
+    const pr = document.getElementById('portal-restaurant');
+    const b1 = document.getElementById('pbtn-hotel');
+    const b2 = document.getElementById('pbtn-restaurant');
+    if (ph) ph.classList.toggle('active', p === 'hotel');
+    if (pr) pr.classList.toggle('active', p === 'restaurant');
+    if (b1) b1.classList.toggle('active', p === 'hotel');
+    if (b2) b2.classList.toggle('active', p === 'restaurant');
+};
+
 //  Audio Notification (works even with screen off via AudioContext) 
 let audioCtx = null;
 function playAlertSound() {
@@ -706,6 +717,7 @@ window.staffLogout = async function () {
     if (attendanceUnsub) attendanceUnsub();
     if (hotelNotifUnsub) hotelNotifUnsub();
     if (restNotifUnsub)  restNotifUnsub();
+    localStorage.removeItem('br_session_active');
     await signOut(auth);
     currentProfile = null;
     window.location.href = 'index.html';
@@ -713,16 +725,21 @@ window.staffLogout = async function () {
 
 //  Auth State Observer 
 onAuthStateChanged(auth, async user => {
-    hideLoader();
     if (user) {
+        localStorage.setItem('br_session_active', 'true');
         try {
             const profile = await loadProfile(user.uid);
-            if (!profile) { window.location.href = 'index.html'; return; }
+            if (!profile) {
+                localStorage.removeItem('br_session_active');
+                window.location.href = 'index.html';
+                return;
+            }
             currentProfile = profile;
             populateDashboard(profile);
             startClock();
             listenToday(user.uid);
             loadHistory(user.uid);
+            hideLoader();
 
             // Request notification permission for screen-off alerts
             await requestPushPermission();
@@ -755,9 +772,11 @@ onAuthStateChanged(auth, async user => {
 
         } catch (err) {
             console.error('[Auth]', err);
+            localStorage.removeItem('br_session_active');
             window.location.href = 'index.html';
         }
     } else {
+        localStorage.removeItem('br_session_active');
         window.location.href = 'index.html';
     }
 });
