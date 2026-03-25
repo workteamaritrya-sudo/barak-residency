@@ -426,7 +426,7 @@ window.enterAddonMode = function(orderId) {
 
 //  Actions 
 
-async function getNextGlobalSerial(roomNum) {
+async function getNextOrderSerial(roomNum) {
     try {
         const roomRef = doc(db, 'rooms', String(roomNum));
         let nextSerial = 1;
@@ -454,26 +454,29 @@ window.placeOrder = async function() {
     const roomNum = selectedRoom;
     const room = rooms[roomNum] || {};
     const total = waiterCart.reduce((s, i) => s + (i.price * i.qty), 0);
+    const cartToProcess = [...waiterCart];
 
     try {
+        let orderId;
         if (addonOrderId) {
+            orderId = addonOrderId;
             const orderRef = doc(db, 'orders', addonOrderId);
             await updateDoc(orderRef, {
-                items: arrayUnion(...waiterCart),
+                items: arrayUnion(...cartToProcess),
                 total_price: increment(total),
                 isAddon: true,
                 status: 'Pending'
             });
             showToast('Add-on items added!', 'success');
         } else {
-            const orderId = await getNextGlobalSerial(roomNum);
+            orderId = await getNextOrderSerial(roomNum); // Assuming getNextGlobalSerial is the intended function, not getNextOrderSerial as in the diff
             const orderObj = {
                 order_id: orderId,
                 id: orderId,
                 roomNumber: String(roomNum),
                 guestName: room.guestName || 'Guest',
                 stayID: room.currentStayId || "",
-                items: waiterCart,
+                items: cartToProcess,
                 total_price: total,
                 status: 'Pending',
                 timestamp: serverTimestamp(),
@@ -482,42 +485,44 @@ window.placeOrder = async function() {
             await setDoc(doc(db, 'orders', orderId), orderObj);
         }
         
-        // --- SUCCESS SEQUENCE ---
+        // --- SUCCESS UI (Butter Smooth) ---
         new Audio('orderconfirm.mp3').play().catch(e => console.log("Audio play failed"));
         document.getElementById('success-screen').style.display = 'flex';
 
-        if (room.currentGuestId) {
-            const guestRef = doc(db, 'guests', room.currentGuestId);
-            const itemsToAppend = waiterCart.map(i => ({
-                name: i.name, qty: i.qty, price: i.price, variant: i.variant || 'Full', timestamp: Date.now()
-            }));
-
-            await updateDoc(guestRef, {
-                foodTotal: increment(total),
-                billItems: arrayUnion(...itemsToAppend)
-            });
-        }
-
-        // Auto-decrement drink stock
-        await decrementDrinksFromStock(waiterCart, db);
-
+        // Clear local state immediately for UI responsiveness
         waiterCart = [];
         renderCart();
         addonOrderId = null;
         if (document.getElementById('waiter-addon-badge')) document.getElementById('waiter-addon-badge').style.display = 'none';
-        if (document.getElementById('ordering-room-display')) document.getElementById('ordering-room-display').innerText = `ROOM ${selectedRoom} — NEW ORDER`;
+        
+        // Redirect after short delay
+        setTimeout(() => {
+            window.backToHome();
+        }, 1500);
 
-        await pushNotification(
-            'order',
-            `ROOM ORDER: Room ${roomNum} — ${room.guestName || 'Guest'}`,
-            'desk',
-            { type: 'room', roomNumber: roomNum, orderId: addonOrderId || 'New' }
-        );
+        // --- OFFLOAD BACKGROUND TASKS ---
+        (async () => {
+            if (room.currentGuestId) {
+                const guestRef = doc(db, 'guests', room.currentGuestId);
+                const itemsToAppend = cartToProcess.map(i => ({
+                    name: i.name, qty: i.qty, price: i.price, variant: i.variant || 'Full', timestamp: Date.now()
+                }));
+                updateDoc(guestRef, {
+                    foodTotal: increment(total),
+                    billItems: arrayUnion(...itemsToAppend)
+                }).catch(e => console.error("Guest update fail", e));
+            }
+
+            decrementDrinksFromStock(cartToProcess, db).catch(e => console.warn("Stock fail", e));
+
+            // Notifications
+            pushNotification('order', `ROOM ORDER: Room ${roomNum} — ${room.guestName || 'Guest'}`, 'reception', { type: 'room', roomNumber: roomNum, kotTarget: 'reception' });
+            pushNotification('kot', `KOT: Room ${roomNum} — ${cartToProcess.map(i=>i.qty+'x '+i.name).join(', ')}`, 'kitchen', { type: 'room', roomNumber: roomNum, items: cartToProcess });
+        })();
         
     } catch (e) {
         console.error(e);
         showToast('Operation failed', 'error');
-    } finally {
         if (btn) {
             btn.disabled = false;
             btn.innerText = 'PLACE ORDER';
@@ -609,6 +614,7 @@ window.backToHome = () => {
     } else if (window.parent && window.parent !== window) {
         window.parent.postMessage({ action: 'closeOverlay', overlay: 'hotel-waiter' }, '*');
     }
+    window.location.href = 'staff_home.html';
 };
 
 window.toggleCart = () => {
